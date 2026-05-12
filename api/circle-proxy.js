@@ -1,34 +1,43 @@
-// Vercel serverless function — proxies requests to Circle API.
-// Strips the x-user-agent header that Circle's CORS policy blocks.
+// Vercel serverless function — proxies all requests to Circle API.
+// Strips x-user-agent header that Circle's CORS policy blocks.
 
 export default async function handler(req, res) {
-  // Build the target URL — strip /api/circle-proxy prefix
-  const targetPath = req.url.replace(/^\/api\/circle-proxy/, "");
-  const targetUrl = `https://api.circle.com${targetPath}`;
-
-  // Copy headers, but remove the ones that cause CORS issues
-  const headers = {};
-  for (const [key, value] of Object.entries(req.headers)) {
-    const lower = key.toLowerCase();
-    if (
-      lower === "host" ||
-      lower === "x-user-agent" ||
-      lower === "x-forwarded-for" ||
-      lower === "x-forwarded-proto" ||
-      lower === "x-forwarded-host" ||
-      lower === "x-vercel-id" ||
-      lower === "x-vercel-deployment-url"
-    ) continue;
-    headers[key] = value;
+  // Handle preflight
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "*");
+    return res.status(200).end();
   }
 
-  // Get request body
-  const body = req.method !== "GET" && req.method !== "HEAD"
-    ? JSON.stringify(req.body)
-    : undefined;
+  // req.url will be something like /api/circle-proxy/v1/stablecoinKits/swap
+  // We need to extract everything after /api/circle-proxy
+  const url = new URL(req.url, "http://localhost");
+  const targetPath = url.pathname.replace(/^\/api\/circle-proxy/, "") + (url.search || "");
+  const targetUrl = `https://api.circle.com${targetPath}`;
 
-  if (body) {
+  console.log("Proxying to:", targetUrl);
+
+  // Copy headers, strip problematic ones
+  const headers = {};
+  const skipHeaders = new Set([
+    "host", "x-user-agent", "x-forwarded-for", "x-forwarded-proto",
+    "x-forwarded-host", "x-vercel-id", "x-vercel-deployment-url",
+    "x-real-ip", "x-vercel-forwarded-for"
+  ]);
+
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (!skipHeaders.has(key.toLowerCase())) {
+      headers[key] = value;
+    }
+  }
+
+  // Build body
+  let body;
+  if (req.method !== "GET" && req.method !== "HEAD" && req.body) {
+    body = JSON.stringify(req.body);
     headers["content-type"] = "application/json";
+    headers["content-length"] = Buffer.byteLength(body).toString();
   }
 
   try {
@@ -38,16 +47,14 @@ export default async function handler(req, res) {
       body,
     });
 
-    const data = await response.text();
+    const text = await response.text();
 
-    // Forward response headers
-    res.setHeader("Content-Type", response.headers.get("content-type") || "application/json");
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "*");
+    res.setHeader("Content-Type", response.headers.get("content-type") || "application/json");
+    res.status(response.status).send(text);
 
-    res.status(response.status).send(data);
   } catch (err) {
+    console.error("Proxy error:", err);
     res.status(500).json({ error: "Proxy error", message: err.message });
   }
 }
