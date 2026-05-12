@@ -955,9 +955,9 @@
       var _f = window.fetch.bind(window);
       window.fetch = function(input, init) {
         if (typeof input === "string" && input.includes("api.circle.com"))
-          input = input.replace("https://api.circle.com", "/api/circle-proxy");
+          input = input.replace("https://api.circle.com", "/circle-proxy");
         else if (input instanceof Request && input.url.includes("api.circle.com"))
-          input = new Request(input.url.replace("https://api.circle.com", "/api/circle-proxy"), input);
+          input = new Request(input.url.replace("https://api.circle.com", "/circle-proxy"), input);
         return _f(input, init);
       };
     })();
