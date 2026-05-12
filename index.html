@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ArcSwap — Stablecoin FX on Arc</title>
+  <title>ArcFX — Stablecoin FX on Arc</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -119,16 +119,9 @@
     }
 
     .logo-mark {
-      width: 28px;
-      height: 28px;
-      background: linear-gradient(135deg, #4e8ef7 0%, #22d3a0 100%);
-      border-radius: 7px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: 800;
-      color: #fff;
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
     }
 
     .nav-center {
@@ -1002,8 +995,19 @@
   <!-- ── Nav ───────────────────────────────────────────── -->
   <nav>
     <div class="nav-logo">
-      <div class="logo-mark">A</div>
-      ArcSwap
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="lg1" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#4e8ef7"/>
+              <stop offset="100%" stop-color="#22d3a0"/>
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="8" fill="url(#lg1)"/>
+          <!-- Two swap arrows forming FX motif -->
+          <path d="M8 12 L16 12 L16 9 L24 13.5 L16 18 L16 15 L8 15 Z" fill="white" opacity="0.95"/>
+          <path d="M24 20 L16 20 L16 17 L8 21.5 L16 26 L16 23 L24 23 Z" fill="white" opacity="0.7"/>
+        </svg>
+      ArcFX
     </div>
     <div class="nav-center">
       <a href="#features" class="nav-link">Features</a>
@@ -1080,10 +1084,10 @@
     <div class="container">
       <div class="features-header">
         <div>
-          <div class="section-label">Why ArcSwap</div>
+          <div class="section-label">Why ArcFX</div>
           <div class="section-title">Built for stablecoins.<br>Not retrofitted.</div>
         </div>
-        <p class="section-sub" style="max-width:320px">Arc was designed from the ground up for programmable money. ArcSwap unlocks what that makes possible.</p>
+        <p class="section-sub" style="max-width:320px">Arc was designed from the ground up for programmable money. ArcFX unlocks what that makes possible.</p>
       </div>
       <div class="features-grid">
         <div class="feat reveal">
@@ -1104,7 +1108,7 @@
         <div class="feat reveal" style="transition-delay:.21s">
           <div class="feat-icon">🔒</div>
           <h3>Non-custodial</h3>
-          <p>Your keys, your funds. ArcSwap never holds your assets. Sign once in your wallet. Arc settles instantly.</p>
+          <p>Your keys, your funds. ArcFX never holds your assets. Sign once in your wallet. Arc settles instantly.</p>
         </div>
         <div class="feat reveal" style="transition-delay:.28s">
           <div class="feat-icon">🏦</div>
@@ -1132,7 +1136,7 @@
         <div class="step-cell">
           <div class="step-num">01 — CONNECT</div>
           <h3>Connect your wallet</h3>
-          <p>Connect MetaMask or any EVM wallet. ArcSwap automatically switches to Arc Testnet — no manual setup.</p>
+          <p>Connect MetaMask or any EVM wallet. ArcFX automatically switches to Arc Testnet — no manual setup.</p>
         </div>
         <div class="step-cell">
           <div class="step-num">02 — ENTER</div>
@@ -1245,7 +1249,7 @@
   <section id="waitlist">
     <div class="waitlist-inner">
       <div class="section-label" style="text-align:center">Early access</div>
-      <div class="section-title reveal">Be first on<br><span class="gradient-text">ArcSwap mainnet</span></div>
+      <div class="section-title reveal">Be first on<br><span class="gradient-text">ArcFX mainnet</span></div>
       <p class="section-sub reveal" style="margin:14px auto 36px">
         Mainnet is coming. Join the waitlist for early access to
         institutional-grade stablecoin FX with zero ETH required.
@@ -1296,7 +1300,7 @@
           </div>
         </div>
 
-        <input type="hidden" name="_subject" value="New ArcSwap waitlist signup" />
+        <input type="hidden" name="_subject" value="New ArcFX waitlist signup" />
         <button type="submit" class="submit-btn" id="waitlist-submit">Request early access →</button>
         <p class="form-note">No spam. Mainnet launch notifications only.</p>
       </form>
@@ -1311,8 +1315,19 @@
   <footer>
     <div class="footer-grid">
       <div class="footer-logo">
-        <div class="logo-mark">A</div>
-        ArcSwap
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="lg1" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#4e8ef7"/>
+              <stop offset="100%" stop-color="#22d3a0"/>
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="8" fill="url(#lg1)"/>
+          <!-- Two swap arrows forming FX motif -->
+          <path d="M8 12 L16 12 L16 9 L24 13.5 L16 18 L16 15 L8 15 Z" fill="white" opacity="0.95"/>
+          <path d="M24 20 L16 20 L16 17 L8 21.5 L16 26 L16 23 L24 23 Z" fill="white" opacity="0.7"/>
+        </svg>
+        ArcFX
       </div>
       <div class="footer-links">
         <a href="https://arc.network" target="_blank" rel="noopener">Arc Network</a>
