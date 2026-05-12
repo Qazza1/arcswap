@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/circle-proxy/:path*",
+      "destination": "/api/circle-proxy/:path*"
+    }
+  ]
+}

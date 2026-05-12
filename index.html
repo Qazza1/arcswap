@@ -949,11 +949,9 @@
 </head>
 <body>
 
-  <!-- Circle API proxy intercept: only on localhost (avoids Vercel rewrite issues) -->
+  <!-- Circle API proxy intercept: routes all Circle API calls through local proxy -->
   <script>
     (function() {
-      var isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-      if (!isLocal) return;
       var _f = window.fetch.bind(window);
       window.fetch = function(input, init) {
         if (typeof input === "string" && input.includes("api.circle.com"))
