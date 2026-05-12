@@ -1,5 +1,6 @@
-// Raw proxy — forwards request body exactly as received, no parsing.
-// This fixes Circle API returning 404 due to body format changes.
+// Raw proxy — forwards request to Circle API server-side (no CORS issues).
+// We keep x-user-agent because Circle's API needs it to route requests.
+// CORS only blocks x-user-agent in the browser — server-side it's fine.
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
@@ -15,11 +16,17 @@ export default async function handler(req, res) {
 
   const targetUrl = `https://api.circle.com/${path}`;
 
-  // Headers to strip
+  // Only strip Vercel-specific infrastructure headers — keep everything else
+  // including x-user-agent which Circle's API needs to route correctly
   const skipHeaders = new Set([
-    "host", "x-user-agent", "x-forwarded-for", "x-forwarded-proto",
-    "x-forwarded-host", "x-vercel-id", "x-vercel-deployment-url",
-    "x-real-ip", "x-vercel-forwarded-for"
+    "host",
+    "x-forwarded-for",
+    "x-forwarded-proto",
+    "x-forwarded-host",
+    "x-vercel-id",
+    "x-vercel-deployment-url",
+    "x-real-ip",
+    "x-vercel-forwarded-for",
   ]);
 
   const headers = {};
@@ -27,7 +34,10 @@ export default async function handler(req, res) {
     if (!skipHeaders.has(key.toLowerCase())) headers[key] = value;
   }
 
-  // Read raw body as buffer — no JSON parsing/re-serializing
+  // Override host to point to Circle
+  headers["host"] = "api.circle.com";
+
+  // Read raw body — no parsing, forward exactly as received
   const chunks = [];
   for await (const chunk of req) {
     chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
@@ -55,6 +65,6 @@ export default async function handler(req, res) {
 
 export const config = {
   api: {
-    bodyParser: false, // Read raw stream, don't parse
+    bodyParser: false,
   },
 };
