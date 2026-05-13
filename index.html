@@ -995,18 +995,7 @@
   <!-- ── Nav ───────────────────────────────────────────── -->
   <nav>
     <div class="nav-logo">
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="lg1" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#4e8ef7"/>
-              <stop offset="100%" stop-color="#22d3a0"/>
-            </linearGradient>
-          </defs>
-          <rect width="32" height="32" rx="8" fill="url(#lg1)"/>
-          <!-- Two swap arrows forming FX motif -->
-          <path d="M8 12 L16 12 L16 9 L24 13.5 L16 18 L16 15 L8 15 Z" fill="white" opacity="0.95"/>
-          <path d="M24 20 L16 20 L16 17 L8 21.5 L16 26 L16 23 L24 23 Z" fill="white" opacity="0.7"/>
-        </svg>
+      <img src="/logo.png" alt="ArcFX Logo" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" />
       ArcFX
     </div>
     <div class="nav-center">
@@ -1016,6 +1005,7 @@
       <a href="#waitlist" class="nav-link">Waitlist</a>
     </div>
     <div class="nav-right">
+      <a href="https://x.com/arcfxapp" target="_blank" rel="noopener" class="nav-link" title="Follow @arcfxapp" style="font-size:16px;">𝕏</a>
       <a href="#waitlist" class="btn-outline" style="padding:8px 16px;font-size:13.5px">Join waitlist</a>
       <button id="connect-btn" class="btn-ghost">Connect wallet</button>
     </div>
@@ -1183,7 +1173,9 @@
 
           <!-- Connect prompt -->
           <div class="card" id="connect-card">
-            <div class="connect-icon">⬡</div>
+            <div class="connect-icon" style="background:transparent;border:none;">
+              <img src="/logo.png" alt="ArcFX" style="width:56px;height:56px;border-radius:50%;object-fit:cover;" />
+            </div>
             <h3>Swap stablecoins on Arc</h3>
             <p>Connect your MetaMask wallet to swap USDC ↔ EURC on Arc Testnet with sub-second settlement.</p>
             <button id="big-connect-btn">Connect MetaMask</button>
@@ -1306,7 +1298,8 @@
       </form>
 
       <div class="form-success" id="form-success">
-        ✅ You're on the list. We'll be in touch when mainnet launches.
+        ✅ You're on the list. We'll be in touch when mainnet launches.<br>
+        <span style="font-size:12px;margin-top:8px;display:block;">Follow us for updates: <a href="https://x.com/arcfxapp" target="_blank" rel="noopener" style="color:#22d3a0;">@arcfxapp</a></span>
       </div>
     </div>
   </section>
@@ -1315,18 +1308,7 @@
   <footer>
     <div class="footer-grid">
       <div class="footer-logo">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="lg1" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#4e8ef7"/>
-              <stop offset="100%" stop-color="#22d3a0"/>
-            </linearGradient>
-          </defs>
-          <rect width="32" height="32" rx="8" fill="url(#lg1)"/>
-          <!-- Two swap arrows forming FX motif -->
-          <path d="M8 12 L16 12 L16 9 L24 13.5 L16 18 L16 15 L8 15 Z" fill="white" opacity="0.95"/>
-          <path d="M24 20 L16 20 L16 17 L8 21.5 L16 26 L16 23 L24 23 Z" fill="white" opacity="0.7"/>
-        </svg>
+        <img src="/logo.png" alt="ArcFX Logo" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
         ArcFX
       </div>
       <div class="footer-links">
@@ -1335,8 +1317,13 @@
         <a href="https://testnet.arcscan.app" target="_blank" rel="noopener">ArcScan</a>
         <a href="https://faucet.circle.com" target="_blank" rel="noopener">Faucet</a>
         <a href="https://discord.com/invite/buildonarc" target="_blank" rel="noopener">Discord</a>
+        <a href="https://x.com/arcfxapp" target="_blank" rel="noopener" style="color:var(--blue);">𝕏 @arcfxapp</a>
+        <a href="mailto:arcfxapp@gmail.com" style="color:var(--muted);">arcfxapp@gmail.com</a>
       </div>
-      <div class="footer-right">Built on Arc · Powered by Circle</div>
+      <div class="footer-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <span>Built on Arc · Powered by Circle</span>
+        <a href="mailto:arcfxapp@gmail.com" style="color:var(--muted);font-size:11px;">arcfxapp@gmail.com</a>
+      </div>
     </div>
   </footer>
 
