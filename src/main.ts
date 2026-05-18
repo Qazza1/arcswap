@@ -359,6 +359,7 @@ async function executeBridge(): Promise<void> {
     if (stepsEl) stepsEl.classList.remove("visible");
     showBridgeStatus(err.code===4001||err.message?.includes("rejected") ? "Transaction rejected." : `Bridge failed: ${err.message??"Unknown error"}`,"error");
   } finally {
+    // Set isBridging false BEFORE switching back so chainChanged doesn't reload
     isBridging = false;
     if (btn) {
       btn.removeAttribute("disabled");
@@ -415,15 +416,19 @@ async function loadHistory(): Promise<void> {
 
   try {
     const latestBlock = await ethersProvider.getBlockNumber();
-    // Search last 100,000 blocks to find all history
-    const fromBlock = Math.max(0, latestBlock - 100000);
+    // Use 50k block range — enough for testnet history without timing out
+    const fromBlock = Math.max(0, latestBlock - 50000);
 
-    // Fetch all 4 combinations: USDC/EURC × sent/received
+    // Fetch each combination individually so one failure doesn't kill all
+    const safeGetLogs = async (filter: any) => {
+      try { return await ethersProvider!.getLogs(filter); } catch { return []; }
+    };
+
     const [usdcOut, usdcIn, eurcOut, eurcIn] = await Promise.all([
-      ethersProvider.getLogs({ fromBlock, address: USDC_ADDR, topics: [TRANSFER_TOPIC, paddedAddr, null] }),
-      ethersProvider.getLogs({ fromBlock, address: USDC_ADDR, topics: [TRANSFER_TOPIC, null, paddedAddr] }),
-      ethersProvider.getLogs({ fromBlock, address: EURC_ADDR, topics: [TRANSFER_TOPIC, paddedAddr, null] }),
-      ethersProvider.getLogs({ fromBlock, address: EURC_ADDR, topics: [TRANSFER_TOPIC, null, paddedAddr] }),
+      safeGetLogs({ fromBlock, address: USDC_ADDR, topics: [TRANSFER_TOPIC, paddedAddr, null] }),
+      safeGetLogs({ fromBlock, address: USDC_ADDR, topics: [TRANSFER_TOPIC, null, paddedAddr] }),
+      safeGetLogs({ fromBlock, address: EURC_ADDR, topics: [TRANSFER_TOPIC, paddedAddr, null] }),
+      safeGetLogs({ fromBlock, address: EURC_ADDR, topics: [TRANSFER_TOPIC, null, paddedAddr] }),
     ]);
 
     // Combine and tag each log
@@ -491,8 +496,8 @@ async function loadHistory(): Promise<void> {
         // Find what went out and what came in
         const outItem  = group.find(g => g.direction === "out");
         const inItem   = group.find(g => g.direction === "in");
-        const outAmt   = outItem ? (Number(BigInt(outItem.log.data)) / 1e6).toFixed(4) : "?";
-        const inAmt    = inItem  ? (Number(BigInt(inItem.log.data))  / 1e6).toFixed(4) : "?";
+        const outAmt   = outItem ? (Number(BigInt(outItem.log.data ?? "0x0")) / 1e6).toFixed(4) : "?";
+        const inAmt    = inItem  ? (Number(BigInt(inItem.log.data  ?? "0x0")) / 1e6).toFixed(4) : "?";
         const outSym   = outItem?.sym ?? "USDC";
         const inSym    = inItem?.sym  ?? "EURC";
         typeLabel  = `Swap ${outSym} → ${inSym}`;
@@ -501,7 +506,7 @@ async function loadHistory(): Promise<void> {
         amtDisplay = `${outAmt} → ${inAmt}`;
         amtClass   = "";
       } else {
-        const amt = (Number(BigInt(t.log.data)) / 1e6).toFixed(4);
+        const amt = t.log.data ? (Number(BigInt(t.log.data)) / 1e6).toFixed(4) : "0.00";
         if (t.direction === "out") {
           typeLabel = `Sent ${t.sym}`;
           icon = "↑";
@@ -558,7 +563,10 @@ document.addEventListener("DOMContentLoaded", () => {
     (e: Event) => estimateSwap((e.target as HTMLInputElement).value), 500
   ));
   window.ethereum?.on("accountsChanged", (a: string[]) => { userAddress = a[0] ?? null; if (userAddress) loadBalances(); });
-  window.ethereum?.on("chainChanged", () => window.location.reload());
+  window.ethereum?.on("chainChanged", () => {
+    // Don't reload during bridge — it switches chains intentionally
+    if (!isBridging) window.location.reload();
+  });
 
   // Bridge events
   el("bridge-btn")?.addEventListener("click", executeBridge);
