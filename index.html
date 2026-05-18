@@ -1703,49 +1703,6 @@
   </div>
 
   <!-- ── Features ──────────────────────────────────────── -->
-  <section id="features">
-    <div class="container">
-      <div class="features-header">
-        <div>
-          <div class="section-label">Why ArcFX</div>
-          <div class="section-title">Built for stablecoins.<br>Not retrofitted.</div>
-        </div>
-        <p class="section-sub" style="max-width:320px">Arc was designed from the ground up for programmable money. ArcFX unlocks what that makes possible.</p>
-      </div>
-      <div class="features-grid">
-        <div class="feat reveal">
-          <div class="feat-icon">⚡</div>
-          <h3>Sub-second finality</h3>
-          <p>Transactions are deterministically final in under 1 second. No confirmations, no uncertainty, no failed swaps.</p>
-        </div>
-        <div class="feat reveal" style="transition-delay:.07s">
-          <div class="feat-icon">💵</div>
-          <h3>Stable gas fees</h3>
-          <p>Gas paid in USDC — not ETH. Know exactly what a transaction costs before you sign. No gas price spikes.</p>
-        </div>
-        <div class="feat reveal" style="transition-delay:.14s">
-          <div class="feat-icon">🌍</div>
-          <h3>Native onchain FX</h3>
-          <p>Arc's built-in FX engine converts between stablecoins natively — transparent pricing, no hidden spread.</p>
-        </div>
-        <div class="feat reveal" style="transition-delay:.21s">
-          <div class="feat-icon">🔒</div>
-          <h3>Non-custodial</h3>
-          <p>Your keys, your funds. ArcFX never holds your assets. Sign once in your wallet. Arc settles instantly.</p>
-        </div>
-        <div class="feat reveal" style="transition-delay:.28s">
-          <div class="feat-icon">🏦</div>
-          <h3>Circle infrastructure</h3>
-          <p>Powered by Circle's App Kit and CCTP — the same infrastructure handling trillions in USDC transfers globally.</p>
-        </div>
-        <div class="feat reveal" style="transition-delay:.35s">
-          <div class="feat-icon">🔗</div>
-          <h3>Cross-chain ready</h3>
-          <p>Bridge USDC from Ethereum, Solana, Base, and 20+ chains. Unified balance means liquidity wherever you are.</p>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <!-- ── How it works ───────────────────────────────────── -->
   <section id="how">
@@ -1933,21 +1890,21 @@
               <span class="bridge-badge">● CCTP Powered</span>
             </div>
 
-            <!-- Chain selector -->
-            <div class="chain-row">
-              <div class="chain-pill">
+            <!-- Chain selector — bidirectional -->
+            <div class="chain-row" id="bridge-chain-row">
+              <div class="chain-pill" id="bridge-from-pill">
                 <div class="chain-pill-label">From</div>
-                <div class="chain-pill-name">
+                <div class="chain-pill-name" id="bridge-from-name">
                   <div class="chain-dot" style="background:#627eea"></div>
-                  Ethereum Sepolia
+                  <span id="bridge-from-label">Ethereum Sepolia</span>
                 </div>
               </div>
-              <div class="chain-arrow">→</div>
-              <div class="chain-pill">
+              <button id="bridge-flip-btn" title="Flip direction" onclick="flipBridgeDirection()" style="background:var(--bg-raised);border:1px solid var(--border-med);border-radius:var(--r-sm);width:36px;height:36px;color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .15s,color .15s,transform .2s;flex-shrink:0;">⇅</button>
+              <div class="chain-pill" id="bridge-to-pill">
                 <div class="chain-pill-label">To</div>
-                <div class="chain-pill-name">
-                  <div class="chain-dot" style="background:#4e8ef7;box-shadow:0 0 6px #4e8ef7"></div>
-                  Arc Testnet
+                <div class="chain-pill-name" id="bridge-to-name">
+                  <div class="chain-dot" id="bridge-to-dot" style="background:#4e8ef7;box-shadow:0 0 6px #4e8ef7"></div>
+                  <span id="bridge-to-label">Arc Testnet</span>
                 </div>
               </div>
             </div>
@@ -1979,7 +1936,7 @@
                 <span class="bridge-info-val">Circle CCTP v2</span>
               </div>
               <div class="bridge-info-row">
-                <span>You receive on Arc</span>
+                <span id="bridge-receive-label">You receive on Arc</span>
                 <span class="bridge-info-val" id="bridge-receive-amt">—</span>
               </div>
               <div class="bridge-info-row">
@@ -1999,11 +1956,11 @@
             <div class="bridge-steps" id="bridge-steps">
               <div class="bridge-step" id="bstep-approve">
                 <div class="bridge-step-dot"></div>
-                <span>Approve USDC spending</span>
+                <span id="bstep-approve-label">Approve USDC spending</span>
               </div>
               <div class="bridge-step" id="bstep-burn">
                 <div class="bridge-step-dot"></div>
-                <span>Burn USDC on Ethereum Sepolia</span>
+                <span id="bstep-burn-label">Burn USDC on Ethereum Sepolia</span>
               </div>
               <div class="bridge-step" id="bstep-attest">
                 <div class="bridge-step-dot"></div>
@@ -2011,7 +1968,7 @@
               </div>
               <div class="bridge-step" id="bstep-mint">
                 <div class="bridge-step-dot"></div>
-                <span>Mint USDC on Arc Testnet</span>
+                <span id="bstep-mint-label">Mint USDC on Arc Testnet</span>
               </div>
             </div>
 
@@ -2296,6 +2253,51 @@
 
     </div>
   </section>
+
+  <section id="features">
+    <div class="container">
+      <div class="features-header">
+        <div>
+          <div class="section-label">Why ArcFX</div>
+          <div class="section-title">Built for stablecoins.<br>Not retrofitted.</div>
+        </div>
+        <p class="section-sub" style="max-width:320px">Arc was designed from the ground up for programmable money. ArcFX unlocks what that makes possible.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feat reveal">
+          <div class="feat-icon">⚡</div>
+          <h3>Sub-second finality</h3>
+          <p>Transactions are deterministically final in under 1 second. No confirmations, no uncertainty, no failed swaps.</p>
+        </div>
+        <div class="feat reveal" style="transition-delay:.07s">
+          <div class="feat-icon">💵</div>
+          <h3>Stable gas fees</h3>
+          <p>Gas paid in USDC — not ETH. Know exactly what a transaction costs before you sign. No gas price spikes.</p>
+        </div>
+        <div class="feat reveal" style="transition-delay:.14s">
+          <div class="feat-icon">🌍</div>
+          <h3>Native onchain FX</h3>
+          <p>Arc's built-in FX engine converts between stablecoins natively — transparent pricing, no hidden spread.</p>
+        </div>
+        <div class="feat reveal" style="transition-delay:.21s">
+          <div class="feat-icon">🔒</div>
+          <h3>Non-custodial</h3>
+          <p>Your keys, your funds. ArcFX never holds your assets. Sign once in your wallet. Arc settles instantly.</p>
+        </div>
+        <div class="feat reveal" style="transition-delay:.28s">
+          <div class="feat-icon">🏦</div>
+          <h3>Circle infrastructure</h3>
+          <p>Powered by Circle's App Kit and CCTP — the same infrastructure handling trillions in USDC transfers globally.</p>
+        </div>
+        <div class="feat reveal" style="transition-delay:.35s">
+          <div class="feat-icon">🔗</div>
+          <h3>Cross-chain ready</h3>
+          <p>Bridge USDC from Ethereum, Solana, Base, and 20+ chains. Unified balance means liquidity wherever you are.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
 
   <!-- ── Waitlist ───────────────────────────────────────── -->
   <section id="waitlist">

@@ -223,6 +223,7 @@ const ETHEREUM_SEPOLIA = {
 };
 
 let isBridging = false;
+let bridgeDirection: "to-arc" | "to-sepolia" = "to-arc";
 
 function setBridgeStep(id: string, state: "active"|"done"|"reset"): void {
   const s = el(id);
@@ -237,60 +238,131 @@ function showBridgeStatus(msg: string, type: "success"|"error"|"info"|""): void 
   setHTML("bridge-global-status", html);
 }
 
+function flipBridgeDirection(): void {
+  bridgeDirection = bridgeDirection === "to-arc" ? "to-sepolia" : "to-arc";
+  const toArc = bridgeDirection === "to-arc";
+
+  // Update from/to labels
+  const fromLabel = document.getElementById("bridge-from-label");
+  const toLabel   = document.getElementById("bridge-to-label");
+  const toDot     = document.getElementById("bridge-to-dot");
+  const fromDot   = document.querySelector("#bridge-from-name .chain-dot") as HTMLElement;
+  const recvLabel = document.getElementById("bridge-receive-label");
+  const burnLabel = document.getElementById("bstep-burn-label");
+  const mintLabel = document.getElementById("bstep-mint-label");
+  const bridgeBtn = el("bridge-btn");
+
+  if (toArc) {
+    if (fromLabel) fromLabel.textContent = "Ethereum Sepolia";
+    if (toLabel)   toLabel.textContent   = "Arc Testnet";
+    if (fromDot)   fromDot.style.background = "#627eea";
+    if (toDot)   { toDot.style.background = "#4e8ef7"; toDot.style.boxShadow = "0 0 6px #4e8ef7"; }
+    if (recvLabel) recvLabel.textContent = "You receive on Arc";
+    if (burnLabel) burnLabel.textContent = "Burn USDC on Ethereum Sepolia";
+    if (mintLabel) mintLabel.textContent = "Mint USDC on Arc Testnet";
+    if (bridgeBtn) bridgeBtn.textContent = "Bridge to Arc →";
+  } else {
+    if (fromLabel) fromLabel.textContent = "Arc Testnet";
+    if (toLabel)   toLabel.textContent   = "Ethereum Sepolia";
+    if (fromDot)   fromDot.style.background = "#4e8ef7";
+    if (toDot)   { toDot.style.background = "#627eea"; toDot.style.boxShadow = "none"; }
+    if (recvLabel) recvLabel.textContent = "You receive on Sepolia";
+    if (burnLabel) burnLabel.textContent = "Burn USDC on Arc Testnet";
+    if (mintLabel) mintLabel.textContent = "Mint USDC on Ethereum Sepolia";
+    if (bridgeBtn) bridgeBtn.textContent = "Bridge to Sepolia →";
+  }
+
+  // Reset amount and status
+  const amtInput = el<HTMLInputElement>("bridge-amount-input");
+  if (amtInput) amtInput.value = "";
+  setText("bridge-receive-amt","—");
+  setHTML("bridge-status","");
+
+  // Rotate the flip button
+  const flipBtn = el("bridge-flip-btn");
+  if (flipBtn) {
+    flipBtn.style.transform = toArc ? "rotate(0deg)" : "rotate(180deg)";
+    flipBtn.style.borderColor = "var(--blue)";
+    flipBtn.style.color = "var(--blue)";
+    setTimeout(() => {
+      if (flipBtn) { flipBtn.style.borderColor = ""; flipBtn.style.color = ""; }
+    }, 400);
+  }
+}
+
 async function executeBridge(): Promise<void> {
   if (isBridging || !window.ethereum) return;
   const amtInput = el<HTMLInputElement>("bridge-amount-input");
   const amount   = amtInput?.value.trim() ?? "";
   if (!amount || parseFloat(amount) <= 0) { showBridgeStatus("Enter an amount to bridge.","error"); return; }
+
+  const toArc     = bridgeDirection === "to-arc";
+  const fromChain = toArc ? "Ethereum_Sepolia" : "Arc_Testnet";
+  const toChain   = toArc ? "Arc_Testnet"       : "Ethereum_Sepolia";
+  const switchTo  = toArc ? ETHEREUM_SEPOLIA     : ARC_TESTNET;
+  const destName  = toArc ? "Arc Testnet"        : "Ethereum Sepolia";
+
   isBridging = true;
   const btn = el("bridge-btn");
   if (btn) { btn.setAttribute("disabled","true"); btn.textContent = "Bridging…"; }
   const stepsEl = el("bridge-steps");
   if (stepsEl) stepsEl.classList.add("visible");
   ["bstep-approve","bstep-burn","bstep-attest","bstep-mint"].forEach(id => setBridgeStep(id,"reset"));
-  showBridgeStatus("Switching to Ethereum Sepolia…","info");
+  showBridgeStatus(`Switching to ${toArc ? "Ethereum Sepolia" : "Arc Testnet"}…`,"info");
+
   try {
+    // Switch wallet to source chain
     try {
-      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:ETHEREUM_SEPOLIA.chainId}] });
+      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:switchTo.chainId}] });
     } catch (e: any) {
       const code = e.code ?? e.error?.code ?? e.info?.error?.code;
       const msg  = e.message ?? "";
       if (code===4902||msg.includes("4902")||msg.includes("wallet_addEthereumChain")) {
-        await window.ethereum.request({ method:"wallet_addEthereumChain", params:[ETHEREUM_SEPOLIA] });
+        await window.ethereum.request({ method:"wallet_addEthereumChain", params:[switchTo] });
       } else throw e;
     }
-    showBridgeStatus("Confirm the bridge transaction in MetaMask…","info");
+
+    showBridgeStatus("Confirm the transaction in MetaMask…","info");
     const adapter = await createViemAdapterFromProvider({ provider: window.ethereum });
     setBridgeStep("bstep-approve","active");
+
     const result = await (kit as any).bridge({
-      from: { adapter, chain: "Ethereum_Sepolia" },
-      to:   { adapter, chain: "Arc_Testnet" },
+      from: { adapter, chain: fromChain },
+      to:   { adapter, chain: toChain },
       amount,
       config: { kitKey: import.meta.env.VITE_KIT_KEY as string },
       onStatusChange: (status: any) => {
         const name = status?.currentStep?.name ?? "";
-        if (name==="approve")  { setBridgeStep("bstep-approve","active"); showBridgeStatus("Approve USDC spending…","info"); }
-        if (name==="burn")     { setBridgeStep("bstep-approve","done"); setBridgeStep("bstep-burn","active"); showBridgeStatus("Burning USDC on Sepolia…","info"); }
-        if (name==="attest")   { setBridgeStep("bstep-burn","done"); setBridgeStep("bstep-attest","active"); showBridgeStatus("Waiting for Circle attestation…","info"); }
-        if (name==="mint")     { setBridgeStep("bstep-attest","done"); setBridgeStep("bstep-mint","active"); showBridgeStatus("Minting USDC on Arc…","info"); }
+        if (name==="approve") { setBridgeStep("bstep-approve","active"); showBridgeStatus("Approve USDC spending…","info"); }
+        if (name==="burn")    { setBridgeStep("bstep-approve","done"); setBridgeStep("bstep-burn","active"); showBridgeStatus("Burning USDC…","info"); }
+        if (name==="attest")  { setBridgeStep("bstep-burn","done"); setBridgeStep("bstep-attest","active"); showBridgeStatus("Waiting for Circle attestation…","info"); }
+        if (name==="mint")    { setBridgeStep("bstep-attest","done"); setBridgeStep("bstep-mint","active"); showBridgeStatus(`Minting USDC on ${destName}…`,"info"); }
       },
     });
+
     ["bstep-approve","bstep-burn","bstep-attest","bstep-mint"].forEach(id => setBridgeStep(id,"done"));
     const last = (result as any)?.steps?.[(result as any).steps.length-1];
-    const explorerUrl = last?.data?.explorerUrl ?? "https://testnet.arcscan.app";
-    setHTML("bridge-status",`<div class="status success"><div class="status-title">✅ Bridge complete</div><div class="status-row"><span>${amount} USDC</span><span class="arrow">→</span><strong>${amount} USDC on Arc</strong></div><a class="explorer-link" href="${explorerUrl}" target="_blank" rel="noopener">View on ArcScan ↗</a></div>`);
+    const explorerUrl = last?.data?.explorerUrl ?? (toArc ? "https://testnet.arcscan.app" : "https://sepolia.etherscan.io");
+
+    setHTML("bridge-status",`<div class="status success"><div class="status-title">✅ Bridge complete</div><div class="status-row"><span>${amount} USDC</span><span class="arrow">→</span><strong>${amount} USDC on ${destName}</strong></div><a class="explorer-link" href="${explorerUrl}" target="_blank" rel="noopener">View on explorer ↗</a></div>`);
     if (amtInput) amtInput.value = "";
+
+    // Switch back to Arc and refresh balances
     try {
       await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:ARC_TESTNET.chainId}] });
       await loadBalances();
     } catch { /* non-critical */ }
+
   } catch (err: any) {
     ["bstep-approve","bstep-burn","bstep-attest","bstep-mint"].forEach(id => setBridgeStep(id,"reset"));
     if (stepsEl) stepsEl.classList.remove("visible");
     showBridgeStatus(err.code===4001||err.message?.includes("rejected") ? "Transaction rejected." : `Bridge failed: ${err.message??"Unknown error"}`,"error");
   } finally {
     isBridging = false;
-    if (btn) { btn.removeAttribute("disabled"); btn.textContent = "Bridge to Arc →"; }
+    if (btn) {
+      btn.removeAttribute("disabled");
+      btn.textContent = bridgeDirection === "to-arc" ? "Bridge to Arc →" : "Bridge to Sepolia →";
+    }
   }
 }
 
@@ -318,6 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Expose functions globally so inline HTML onclick can reach them
   (window as any).executeBridge = executeBridge;
   (window as any).updateBridgeReceiveAmt = updateBridgeReceiveAmt;
+  (window as any).flipBridgeDirection = flipBridgeDirection;
 });
 
 declare global {
