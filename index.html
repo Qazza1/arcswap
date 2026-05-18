@@ -1130,6 +1130,214 @@
       .compare-table .hide-mobile { display: none; }
       .compare-input { width: 100px; font-size: 18px; }
     }
+
+    /* ── Bridge Section ────────────────────────────────── */
+    #bridge { background: var(--bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+    .bridge-grid {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 72px;
+      align-items: center;
+    }
+    @media (max-width: 960px) { .bridge-grid { grid-template-columns: 1fr; } }
+
+    .bridge-card {
+      position: relative;
+      z-index: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border-med);
+      border-radius: var(--r-lg);
+      padding: 28px;
+      width: 100%;
+    }
+
+    .bridge-card::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      background: linear-gradient(135deg, rgba(34,211,160,0.2), rgba(78,142,247,0.15));
+      border-radius: calc(var(--r-lg) + 1px);
+      z-index: -1;
+    }
+
+    .bridge-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+    .bridge-title {
+      font-family: "Syne", sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .bridge-badge {
+      font-family: "DM Mono", monospace;
+      font-size: 10.5px;
+      color: var(--teal, #22d3a0);
+      background: rgba(34,211,160,0.1);
+      border: 1px solid rgba(34,211,160,0.25);
+      padding: 3px 9px;
+      border-radius: 100px;
+    }
+
+    /* Chain selector row */
+    .chain-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .chain-pill {
+      flex: 1;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 12px 16px;
+    }
+    .chain-pill-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .chain-pill-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .chain-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .chain-arrow {
+      color: var(--muted);
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    /* Amount input */
+    .bridge-amount-wrap {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      transition: border-color .2s;
+    }
+    .bridge-amount-wrap:focus-within { border-color: var(--blue); }
+    .bridge-amount-label { font-size: 11px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .bridge-amount-row { display: flex; align-items: center; gap: 10px; }
+    .bridge-amount-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: "DM Mono", monospace;
+      font-size: 26px;
+      font-weight: 500;
+      color: var(--text);
+      min-width: 0;
+    }
+    .bridge-amount-input::placeholder { color: var(--subtle, #3a4a62); }
+    .bridge-token-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-med);
+      border-radius: 100px;
+      padding: 6px 12px;
+      font-family: "DM Mono", monospace;
+      font-size: 13px; font-weight: 500;
+      color: var(--text);
+    }
+
+    /* Info rows */
+    .bridge-info {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+    .bridge-info-row { display: flex; justify-content: space-between; }
+    .bridge-info-val { color: var(--text); font-family: "DM Mono", monospace; }
+
+    /* Bridge button */
+    #bridge-btn {
+      display: block;
+      width: 100%;
+      background: linear-gradient(135deg, #22d3a0, #4e8ef7);
+      color: #fff;
+      border: none;
+      border-radius: var(--r);
+      padding: 15px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: "DM Sans", sans-serif;
+      transition: opacity .15s, transform .1s;
+    }
+    #bridge-btn:hover { opacity: .88; transform: translateY(-1px); }
+    #bridge-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* Steps progress */
+    .bridge-steps {
+      margin-top: 14px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .bridge-steps.visible { display: flex; }
+    .bridge-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .bridge-step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+      transition: background .3s;
+    }
+    .bridge-step.done .bridge-step-dot { background: var(--green); }
+    .bridge-step.active .bridge-step-dot { background: var(--blue); animation: blink 1s infinite; }
+    .bridge-step.done { color: var(--green); }
+    .bridge-step.active { color: var(--text); }
+
+    #bridge-status { margin-top: 12px; }
+
+    .bridge-copy-points {
+      margin-top: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .bridge-point {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 300;
+    }
+    .bridge-point-icon {
+      width: 32px; height: 32px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .bridge-point strong { color: var(--text); display: block; margin-bottom: 2px; }
   </style>
 </head>
 <body>
@@ -1186,7 +1394,9 @@
     <div class="nav-center">
       <a href="#features" class="nav-link">Features</a>
       <a href="#how" class="nav-link">How it works</a>
-      <a href="#demo" class="nav-link">Live demo</a>
+      <a href="#demo" class="nav-link">Swap</a>
+      <a href="#bridge" class="nav-link">Bridge</a>
+      <a href="#compare" class="nav-link">Compare</a>
       <a href="#waitlist" class="nav-link">Waitlist</a>
     </div>
     <div class="nav-right">
@@ -1422,6 +1632,163 @@
     </div>
   </section>
 
+
+
+  <!-- ── Bridge ─────────────────────────────────────────── -->
+  <section id="bridge">
+    <div class="container">
+      <div class="bridge-grid">
+
+        <!-- Left: copy -->
+        <div class="demo-copy">
+          <div class="section-label">Bridge</div>
+          <div class="section-title">Bring USDC<br>to Arc from any chain</div>
+          <p class="section-sub">
+            Bridge USDC from Ethereum or Base directly into Arc Testnet
+            using Circle's CCTP. No wrapping, no third-party bridges —
+            native USDC, instantly.
+          </p>
+
+          <div class="bridge-copy-points">
+            <div class="bridge-point">
+              <div class="bridge-point-icon">⚡</div>
+              <div>
+                <strong>Powered by Circle CCTP</strong>
+                Native USDC transfer — not wrapped tokens. The same 
+                infrastructure Circle uses for institutional transfers.
+              </div>
+            </div>
+            <div class="bridge-point">
+              <div class="bridge-point-icon">🔒</div>
+              <div>
+                <strong>Non-custodial</strong>
+                Your MetaMask signs every step. ArcFX never holds your funds
+                during bridging.
+              </div>
+            </div>
+            <div class="bridge-point">
+              <div class="bridge-point-icon">🌍</div>
+              <div>
+                <strong>More chains coming</strong>
+                Ethereum Sepolia is live now. Base, Solana, Polygon
+                and more will follow as Arc expands.
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:24px;padding:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;color:var(--muted);line-height:1.7;">
+            ⚠️ <strong style="color:var(--text)">Testnet only.</strong>
+            You need Sepolia ETH for gas and testnet USDC on Ethereum Sepolia.
+            Get both free at
+            <a href="https://faucet.circle.com" target="_blank" rel="noopener">faucet.circle.com</a>
+            and
+            <a href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noopener">alchemy.com/faucets</a>.
+          </div>
+        </div>
+
+        <!-- Right: bridge card -->
+        <div>
+          <div id="bridge-global-status"></div>
+          <div class="bridge-card">
+            <div class="bridge-header">
+              <span class="bridge-title">Bridge USDC</span>
+              <span class="bridge-badge">● CCTP Powered</span>
+            </div>
+
+            <!-- Chain selector -->
+            <div class="chain-row">
+              <div class="chain-pill">
+                <div class="chain-pill-label">From</div>
+                <div class="chain-pill-name">
+                  <div class="chain-dot" style="background:#627eea"></div>
+                  Ethereum Sepolia
+                </div>
+              </div>
+              <div class="chain-arrow">→</div>
+              <div class="chain-pill">
+                <div class="chain-pill-label">To</div>
+                <div class="chain-pill-name">
+                  <div class="chain-dot" style="background:#4e8ef7;box-shadow:0 0 6px #4e8ef7"></div>
+                  Arc Testnet
+                </div>
+              </div>
+            </div>
+
+            <!-- Amount -->
+            <div class="bridge-amount-wrap">
+              <div class="bridge-amount-label">Amount to bridge</div>
+              <div class="bridge-amount-row">
+                <input
+                  id="bridge-amount-input"
+                  class="bridge-amount-input"
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="0.00"
+                  autocomplete="off"
+                />
+                <div class="bridge-token-badge">
+                  <span>💲</span>
+                  <span>USDC</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Info rows -->
+            <div class="bridge-info">
+              <div class="bridge-info-row">
+                <span>Protocol</span>
+                <span class="bridge-info-val">Circle CCTP v2</span>
+              </div>
+              <div class="bridge-info-row">
+                <span>You receive on Arc</span>
+                <span class="bridge-info-val" id="bridge-receive-amt">—</span>
+              </div>
+              <div class="bridge-info-row">
+                <span>Bridge fee</span>
+                <span class="bridge-info-val">~$0.00 (testnet)</span>
+              </div>
+              <div class="bridge-info-row">
+                <span>Est. time</span>
+                <span class="bridge-info-val">~30 seconds</span>
+              </div>
+            </div>
+
+            <!-- Bridge button -->
+            <button id="bridge-btn">Bridge to Arc →</button>
+
+            <!-- Progress steps -->
+            <div class="bridge-steps" id="bridge-steps">
+              <div class="bridge-step" id="bstep-approve">
+                <div class="bridge-step-dot"></div>
+                <span>Approve USDC spending</span>
+              </div>
+              <div class="bridge-step" id="bstep-burn">
+                <div class="bridge-step-dot"></div>
+                <span>Burn USDC on Ethereum Sepolia</span>
+              </div>
+              <div class="bridge-step" id="bstep-attest">
+                <div class="bridge-step-dot"></div>
+                <span>Circle attestation (CCTP)</span>
+              </div>
+              <div class="bridge-step" id="bstep-mint">
+                <div class="bridge-step-dot"></div>
+                <span>Mint USDC on Arc Testnet</span>
+              </div>
+            </div>
+
+            <div id="bridge-status"></div>
+
+            <div class="widget-footer" style="margin-top:14px">
+              <a href="https://faucet.circle.com" target="_blank" rel="noopener">Get testnet USDC →</a>
+              <a href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noopener">Get Sepolia ETH →</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
 
   <!-- ── Rate Comparison ────────────────────────────────── -->
   <section id="compare">

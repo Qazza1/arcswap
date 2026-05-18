@@ -223,6 +223,10 @@ document.addEventListener("DOMContentLoaded", () => {
   ));
   window.ethereum?.on("accountsChanged", (a: string[]) => { userAddress = a[0] ?? null; if (userAddress) loadBalances(); });
   window.ethereum?.on("chainChanged", () => window.location.reload());
+
+  // Bridge events
+  el("bridge-btn")?.addEventListener("click", executeBridge);
+  el("bridge-amount-input")?.addEventListener("input", updateBridgeReceiveAmt);
 });
 
 declare global {
