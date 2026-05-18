@@ -84,6 +84,7 @@ async function connectWallet(): Promise<void> {
     addClass("connect-card", "hidden");
     showStatus("Connected to Arc Testnet ✓", "success");
     await loadBalances();
+    await loadHistory();
 
   } catch (err: any) {
     if (btn) btn.textContent = "Connect wallet";
@@ -371,6 +372,183 @@ function updateBridgeReceiveAmt(e: Event): void {
   setText("bridge-receive-amt", parseFloat(val)>0 ? `${parseFloat(val).toFixed(2)} USDC` : "—");
 }
 
+
+// ─── Transaction History ──────────────────────────────────────────────────────
+
+const ARCSCAN_API = "https://testnet.arcscan.app/api/v2";
+const USDC_ADDR   = "0x3600000000000000000000000000000000000000";
+const EURC_ADDR   = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
+
+function timeAgo(dateStr: string): string {
+  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+  if (diff < 60)   return `${Math.floor(diff)}s ago`;
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400)return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
+}
+
+function formatAmount(value: string, decimals: string): string {
+  const dec = parseInt(decimals) || 6;
+  const amt = parseFloat(value) / Math.pow(10, dec);
+  return amt.toFixed(amt < 1 ? 4 : 2);
+}
+
+function tokenSymbol(addr: string): string {
+  if (addr.toLowerCase() === USDC_ADDR.toLowerCase()) return "USDC";
+  if (addr.toLowerCase() === EURC_ADDR.toLowerCase()) return "EURC";
+  return "TOKEN";
+}
+
+async function loadHistory(): Promise<void> {
+  const historyEl = el("history-content");
+  if (!historyEl) return;
+
+  if (!userAddress) {
+    historyEl.innerHTML = `<div style="text-align:center;padding:32px 0;color:var(--muted);font-size:13px;">Connect your wallet to view transaction history</div>`;
+    return;
+  }
+
+  historyEl.innerHTML = `<div class="history-loading">Loading transactions</div>`;
+
+  try {
+    // Fetch ERC-20 token transfers for this address from ArcScan (Blockscout API)
+    const res = await fetch(
+      `${ARCSCAN_API}/addresses/${userAddress}/token-transfers?type=ERC-20&limit=20`,
+      { headers: { "Accept": "application/json" } }
+    );
+
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const data = await res.json();
+
+    const items: any[] = data.items ?? [];
+
+    // Filter to only USDC and EURC transfers
+    const stableItems = items.filter((tx: any) => {
+      const tokenAddr = tx.token?.address?.toLowerCase() ?? "";
+      return tokenAddr === USDC_ADDR.toLowerCase() || tokenAddr === EURC_ADDR.toLowerCase();
+    });
+
+    if (stableItems.length === 0) {
+      historyEl.innerHTML = `
+        <div style="text-align:center;padding:32px 0;color:var(--muted);font-size:13px;">
+          No stablecoin transactions found yet.<br>
+          <span style="font-size:11px;margin-top:6px;display:block;">Make your first swap above!</span>
+        </div>`;
+      return;
+    }
+
+    // Build rows
+    const rows = stableItems.slice(0, 15).map((tx: any) => {
+      const isOut    = tx.from?.hash?.toLowerCase() === userAddress?.toLowerCase();
+      const symbol   = tokenSymbol(tx.token?.address ?? "");
+      const amount   = formatAmount(tx.total?.value ?? "0", tx.total?.decimals ?? "6");
+      const time     = timeAgo(tx.timestamp ?? "");
+      const hash     = tx.transaction_hash ?? "";
+      const shortHash= hash ? `${hash.slice(0,6)}...${hash.slice(-4)}` : "—";
+
+      // Determine type
+      let typeLabel = isOut ? "Sent" : "Received";
+      let icon = isOut ? "↑" : "↓";
+      let iconClass = isOut ? "tx-icon-out" : "tx-icon-in";
+      let amtClass  = isOut ? "tx-out" : "tx-in";
+      let prefix    = isOut ? "−" : "+";
+
+      // If it's a contract interaction (swap), label it differently
+      const toAddr = tx.to?.hash?.toLowerCase() ?? "";
+      if (toAddr === USDC_ADDR.toLowerCase() || toAddr === EURC_ADDR.toLowerCase()) {
+        typeLabel = "Swap / Bridge";
+        icon = "⇄";
+        iconClass = "tx-icon-swap";
+        amtClass = "";
+        prefix = "";
+      }
+
+      const explorerUrl = `https://testnet.arcscan.app/tx/${hash}`;
+
+      return `
+        <div class="tx-row">
+          <div class="tx-icon ${iconClass}">${icon}</div>
+          <div class="tx-info">
+            <div class="tx-type">${typeLabel} ${symbol}</div>
+            <div class="tx-time">${time}</div>
+          </div>
+          <div class="tx-amount">
+            <div class="tx-amount-val ${amtClass}">${prefix}${amount}</div>
+            <div class="tx-amount-token">${symbol}</div>
+          </div>
+          ${hash ? `<a class="tx-link" href="${explorerUrl}" target="_blank" rel="noopener">${shortHash} ↗</a>` : ""}
+        </div>
+      `;
+    }).join("");
+
+    historyEl.innerHTML = rows;
+
+  } catch (err: any) {
+    // Fallback: try ethers getLogs directly
+    await loadHistoryFallback(historyEl);
+  }
+}
+
+async function loadHistoryFallback(historyEl: HTMLElement): Promise<void> {
+  if (!ethersProvider || !userAddress) return;
+
+  try {
+    const iface = new (await import("ethers")).Interface([
+      "event Transfer(address indexed from, address indexed to, uint256 value)"
+    ]);
+
+    const latestBlock = await ethersProvider.getBlockNumber();
+    const fromBlock   = Math.max(0, latestBlock - 5000);
+
+    const filter = {
+      fromBlock,
+      toBlock: "latest",
+      address: [USDC_ADDR, EURC_ADDR],
+      topics: [
+        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+        null,
+        ("0x000000000000000000000000" + userAddress.slice(2)).toLowerCase()
+      ]
+    };
+
+    const logs = await ethersProvider.getLogs(filter as any);
+
+    if (logs.length === 0) {
+      historyEl.innerHTML = `<div style="text-align:center;padding:32px 0;color:var(--muted);font-size:13px;">No recent transactions found. <a href="https://testnet.arcscan.app/address/${userAddress}" target="_blank" rel="noopener" style="color:var(--blue);">View on ArcScan ↗</a></div>`;
+      return;
+    }
+
+    const rows = logs.slice(-10).reverse().map(log => {
+      const sym    = tokenSymbol(log.address);
+      const parsed = iface.parseLog(log);
+      const amount = (parseFloat(parsed?.args[2]?.toString() ?? "0") / 1e6).toFixed(4);
+      const hash   = log.transactionHash;
+      const short  = `${hash.slice(0,6)}...${hash.slice(-4)}`;
+      return `
+        <div class="tx-row">
+          <div class="tx-icon tx-icon-in">↓</div>
+          <div class="tx-info">
+            <div class="tx-type">Received ${sym}</div>
+            <div class="tx-time">Block ${log.blockNumber}</div>
+          </div>
+          <div class="tx-amount">
+            <div class="tx-amount-val tx-in">+${amount}</div>
+            <div class="tx-amount-token">${sym}</div>
+          </div>
+          <a class="tx-link" href="https://testnet.arcscan.app/tx/${hash}" target="_blank" rel="noopener">${short} ↗</a>
+        </div>`;
+    }).join("");
+
+    historyEl.innerHTML = rows;
+
+  } catch {
+    historyEl.innerHTML = `
+      <div style="text-align:center;padding:28px 0;color:var(--muted);font-size:13px;">
+        Could not load history. <a href="https://testnet.arcscan.app/address/${userAddress}" target="_blank" rel="noopener" style="color:var(--blue);">View on ArcScan ↗</a>
+      </div>`;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   el("connect-btn")?.addEventListener("click", connectWallet);
   el("big-connect-btn")?.addEventListener("click", connectWallet);
@@ -391,6 +569,7 @@ document.addEventListener("DOMContentLoaded", () => {
   (window as any).executeBridge = executeBridge;
   (window as any).updateBridgeReceiveAmt = updateBridgeReceiveAmt;
   (window as any).flipBridgeDirection = flipBridgeDirection;
+  (window as any).loadHistory = loadHistory;
 });
 
 declare global {

@@ -1600,6 +1600,74 @@
       color: var(--muted) !important;
       border-bottom: 2px solid transparent !important;
     }
+
+    /* ── Transaction History ───────────────────────────── */
+    .tx-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      transition: background .15s;
+    }
+    .tx-row:last-child { border-bottom: none; }
+    .tx-row:hover { background: var(--bg-raised); margin: 0 -8px; padding: 12px 8px; border-radius: var(--r-sm); }
+
+    .tx-icon {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .tx-icon-swap   { background: rgba(78,142,247,.12); }
+    .tx-icon-bridge { background: rgba(34,211,160,.12); }
+    .tx-icon-out    { background: rgba(240,107,107,.1); }
+    .tx-icon-in     { background: rgba(63,185,80,.1); }
+
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-type { font-weight: 500; color: var(--text); margin-bottom: 2px; }
+    .tx-time { font-size: 11px; color: var(--muted); font-family: "DM Mono", monospace; }
+
+    .tx-amount { text-align: right; flex-shrink: 0; }
+    .tx-amount-val { font-family: "DM Mono", monospace; font-weight: 500; color: var(--text); }
+    .tx-amount-token { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    .tx-link {
+      color: var(--blue);
+      font-size: 11px;
+      text-decoration: none;
+      border: 1px solid rgba(78,142,247,.25);
+      border-radius: var(--r-sm);
+      padding: 2px 7px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .tx-link:hover { background: var(--blue-dim); text-decoration: none; }
+
+    .tx-in  { color: var(--green); }
+    .tx-out { color: var(--red); }
+
+    .history-loading {
+      text-align: center;
+      padding: 28px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .history-loading::after {
+      content: '';
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -1739,6 +1807,10 @@
               style="flex:1;padding:14px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;border:none;cursor:pointer;transition:all .15s;background:var(--bg-card);color:var(--muted);border-bottom:2px solid transparent;">
               ⇅ Bridge
             </button>
+            <button id="tab-history" onclick="switchAppTab('history')"
+              style="flex:1;padding:14px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;border:none;cursor:pointer;transition:all .15s;background:var(--bg-card);color:var(--muted);border-bottom:2px solid transparent;">
+              📋 History
+            </button>
           </div>
 
           <!-- Swap panel -->
@@ -1862,7 +1934,7 @@
     </div>
   </section>
 
-
+  <!-- ── Social proof ──────────────────────────────────── -->
   <!-- ── Social proof ──────────────────────────────────── -->
   <div class="proof-strip">
     <div class="proof-inner">
@@ -1883,57 +1955,6 @@
   <!-- ── Features ──────────────────────────────────────── -->
 
   <!-- ── How it works ───────────────────────────────────── -->
-
-  <section id="compare">
-    <div class="compare-inner container">
-
-      <div class="compare-header reveal">
-        <div>
-          <div class="section-label">Why ArcFX</div>
-          <div class="section-title">See how much you save</div>
-          <p class="section-sub">Compare ArcFX against traditional FX providers in real time.</p>
-        </div>
-
-        <div class="compare-input-wrap">
-          <span class="compare-input-label">You send</span>
-          <input
-            id="compare-amount"
-            class="compare-input"
-            type="number"
-            value="1000"
-            min="1"
-            step="any"
-            autocomplete="off"
-          />
-          <span class="compare-currency">USDC</span>
-        </div>
-      </div>
-
-      <div class="reveal">
-        <table class="compare-table">
-          <thead>
-            <tr>
-              <th style="width:220px">Provider</th>
-              <th>You receive</th>
-              <th class="hide-mobile">Fee</th>
-              <th class="hide-mobile">Speed</th>
-              <th>Savings</th>
-            </tr>
-          </thead>
-          <tbody id="compare-body">
-            <!-- filled by JS -->
-          </tbody>
-        </table>
-
-        <p class="compare-footer">
-          ⚠️ Traditional provider rates are estimates based on typical fees and spreads. 
-          ArcFX rate is fetched live from Arc Testnet via Circle App Kit. 
-          Rates update as you type. Not financial advice.
-        </p>
-      </div>
-
-    </div>
-  </section>
 
 
   <!-- ── Arc Ecosystem ──────────────────────────────────── -->
@@ -2152,6 +2173,59 @@
     </div>
   </section>
 
+  <!-- ── Rate Comparison ────────────────────────────────── -->
+  <section id="compare">
+    <div class="compare-inner container">
+
+      <div class="compare-header reveal">
+        <div>
+          <div class="section-label">Why ArcFX</div>
+          <div class="section-title">See how much you save</div>
+          <p class="section-sub">Compare ArcFX against traditional FX providers in real time.</p>
+        </div>
+
+        <div class="compare-input-wrap">
+          <span class="compare-input-label">You send</span>
+          <input
+            id="compare-amount"
+            class="compare-input"
+            type="number"
+            value="1000"
+            min="1"
+            step="any"
+            autocomplete="off"
+          />
+          <span class="compare-currency">USDC</span>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th style="width:220px">Provider</th>
+              <th>You receive</th>
+              <th class="hide-mobile">Fee</th>
+              <th class="hide-mobile">Speed</th>
+              <th>Savings</th>
+            </tr>
+          </thead>
+          <tbody id="compare-body">
+            <!-- filled by JS -->
+          </tbody>
+        </table>
+
+        <p class="compare-footer">
+          ⚠️ Traditional provider rates are estimates based on typical fees and spreads. 
+          ArcFX rate is fetched live from Arc Testnet via Circle App Kit. 
+          Rates update as you type. Not financial advice.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Why ArcFX (Features) ───────────────────────────── -->
   <section id="features">
     <div class="container">
       <div class="features-header">
@@ -2196,7 +2270,7 @@
     </div>
   </section>
 
-
+  <!-- ── How it works ───────────────────────────────────── -->
   <section id="how">
     <div class="container">
       <div style="margin-bottom:48px">
@@ -2228,11 +2302,6 @@
       </div>
     </div>
   </section>
-
-
-  <!-- ── Bridge ─────────────────────────────────────────── -->
-
-  <!-- ── Rate Comparison ────────────────────────────────── -->
 
   <!-- ── Waitlist ───────────────────────────────────────── -->
   <section id="waitlist">
@@ -2300,6 +2369,10 @@
       </div>
     </div>
   </section>
+
+  <!-- ── Footer ─────────────────────────────────────────── -->
+
+
 
   <!-- ── Footer ─────────────────────────────────────────── -->
   <footer>
@@ -2589,24 +2662,30 @@
   <!-- ── App tab switcher ──────────────────────────────── -->
   <script>
     function switchAppTab(tab) {
-      const swapPanel   = document.getElementById("panel-swap");
-      const bridgePanel = document.getElementById("panel-bridge");
-      const swapTab     = document.getElementById("tab-swap");
-      const bridgeTab   = document.getElementById("tab-bridge");
-      if (!swapPanel || !bridgePanel || !swapTab || !bridgeTab) return;
+      const panels = { swap: "panel-swap", bridge: "panel-bridge", history: "panel-history" };
+      const tabs   = { swap: "tab-swap",   bridge: "tab-bridge",   history: "tab-history" };
+      const colors = { swap: "var(--blue)", bridge: "var(--green)", history: "var(--amber,#f5a623)" };
 
-      if (tab === "swap") {
-        swapPanel.style.display   = "block";
-        bridgePanel.style.display = "none";
-        swapTab.className   = "app-tab-active";
-        bridgeTab.className = "app-tab-inactive";
-      } else {
-        swapPanel.style.display   = "none";
-        bridgePanel.style.display = "block";
-        swapTab.className   = "app-tab-inactive";
-        bridgeTab.className = "app-tab-active";
-        // Update bridge tab border color to teal
-        bridgeTab.style.borderBottomColor = "var(--green)";
+      Object.keys(panels).forEach(t => {
+        const panel = document.getElementById(panels[t]);
+        const btn   = document.getElementById(tabs[t]);
+        if (!panel || !btn) return;
+        if (t === tab) {
+          panel.style.display = "block";
+          btn.style.background = "var(--bg)";
+          btn.style.color = "var(--text)";
+          btn.style.borderBottom = `2px solid ${colors[tab]}`;
+        } else {
+          panel.style.display = "none";
+          btn.style.background = "var(--bg-card)";
+          btn.style.color = "var(--muted)";
+          btn.style.borderBottom = "2px solid transparent";
+        }
+      });
+
+      // Load history when tab is clicked
+      if (tab === "history" && typeof window.loadHistory === "function") {
+        window.loadHistory();
       }
     }
   </script>
