@@ -227,6 +227,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Bridge events
   el("bridge-btn")?.addEventListener("click", executeBridge);
   el("bridge-amount-input")?.addEventListener("input", updateBridgeReceiveAmt);
+
+  // Expose functions globally so inline HTML onclick can reach them
+  (window as any).executeBridge = executeBridge;
+  (window as any).updateBridgeReceiveAmt = updateBridgeReceiveAmt;
 });
 
 declare global {
