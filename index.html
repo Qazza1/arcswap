@@ -1576,6 +1576,30 @@
       transition: opacity .15s;
     }
     .eco-submit-btn:hover { opacity: .88; text-decoration: none; }
+
+    /* ── Hero grid responsive ──────────────────────────── */
+    #hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 480px;
+      gap: 64px;
+      align-items: flex-start;
+    }
+    @media (max-width: 1024px) {
+      #hero-grid { grid-template-columns: 1fr; gap: 40px; }
+      #app { position: static !important; }
+    }
+
+    /* ── Tab buttons ───────────────────────────────────── */
+    .app-tab-active {
+      background: var(--bg) !important;
+      color: var(--text) !important;
+      border-bottom: 2px solid var(--blue) !important;
+    }
+    .app-tab-inactive {
+      background: var(--bg-card) !important;
+      color: var(--muted) !important;
+      border-bottom: 2px solid transparent !important;
+    }
   </style>
 </head>
 <body>
@@ -1626,16 +1650,14 @@
   <!-- ── Nav ───────────────────────────────────────────── -->
   <nav>
     <div class="nav-logo">
-      <img src="/logo.png" alt="ArcFX Logo" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" />
+      <img src="/logo.png" alt="ArcFX Logo" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
       ArcFX
     </div>
     <div class="nav-center">
-      <a href="#features" class="nav-link">Features</a>
-      <a href="#demo" class="nav-link">Swap</a>
-      <a href="#bridge" class="nav-link">Bridge</a>
-      <a href="#compare" class="nav-link">Compare</a>
+      <a href="#app" class="nav-link">App</a>
+      <a href="#compare" class="nav-link">Compare rates</a>
       <a href="#ecosystem" class="nav-link">Ecosystem</a>
-      <a href="#waitlist" class="nav-link">Waitlist</a>
+      <a href="#features" class="nav-link">Why ArcFX</a>
     </div>
     <div class="nav-right">
       <a href="https://x.com/arcfxapp" target="_blank" rel="noopener" class="nav-link" title="Follow @arcfxapp" style="font-size:16px;">𝕏</a>
@@ -1644,46 +1666,202 @@
     </div>
   </nav>
 
-  <!-- ── Hero ─────────────────────────────────────────── -->
-  <section id="hero">
-    <div class="hero-content">
-      <div class="hero-eyebrow">
-        <span class="live"></span>
-        Live on Arc Testnet &nbsp;·&nbsp; Powered by Circle
-      </div>
-      <h1>
-        Swap stablecoins<br>
-        <span class="gradient-text">at the speed of Arc</span>
-      </h1>
-      <p class="hero-sub">
-        Non-custodial stablecoin FX exchange. USDC ↔ EURC with
-        sub-second settlement, predictable fees, and zero ETH required.
-      </p>
-      <div class="hero-actions">
-        <a href="#demo" class="btn-hero">Try live demo</a>
-        <a href="#waitlist" class="btn-outline">Join the waitlist</a>
-      </div>
+  <!-- ── Hero + App ──────────────────────────────────── -->
+  <section id="hero" style="padding:60px 32px 0;position:relative;overflow:hidden;">
+    <!-- dot grid -->
+    <div style="position:absolute;inset:0;background-image:radial-gradient(circle,var(--border) 1px,transparent 1px);background-size:28px 28px;opacity:0.45;pointer-events:none;z-index:0;"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 100%,transparent 30%,var(--bg) 100%);pointer-events:none;z-index:0;"></div>
 
-      <div class="stats-bar reveal">
-        <div class="stat-cell">
-          <div class="stat-val">&lt; 1s</div>
-          <div class="stat-label">Settlement time</div>
+    <div class="container" style="position:relative;z-index:1;">
+      <div style="display:grid;grid-template-columns:1fr 480px;gap:64px;align-items:flex-start;" id="hero-grid">
+
+        <!-- LEFT: Marketing copy -->
+        <div style="padding-top:20px;">
+          <div class="hero-eyebrow">
+            <img src="/logo.png" alt="" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" />
+            Live on Arc Testnet &nbsp;·&nbsp; Powered by Circle
+          </div>
+
+          <h1 style="font-family:'Syne',sans-serif;font-size:clamp(44px,6vw,72px);font-weight:800;letter-spacing:-2.5px;line-height:1.0;margin-bottom:22px;color:var(--text);">
+            The stablecoin<br>
+            <span class="gradient-text">FX exchange.</span>
+          </h1>
+
+          <p style="font-size:18px;color:var(--muted);margin-bottom:36px;font-weight:300;line-height:1.75;max-width:460px;">
+            Swap USDC ↔ EURC in under one second.
+            Bridge from any chain. No ETH, no middleman,
+            no compromise.
+          </p>
+
+          <!-- 4 stats inline -->
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:400px;margin-bottom:40px;">
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;">
+              <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:var(--text);letter-spacing:-0.5px;">&lt; 1s</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px;">Settlement time</div>
+            </div>
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;">
+              <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:var(--text);letter-spacing:-0.5px;">$0.0002</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px;">Typical fee</div>
+            </div>
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;">
+              <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:var(--text);letter-spacing:-0.5px;">USDC</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px;">Gas token — no ETH</div>
+            </div>
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;">
+              <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:var(--text);letter-spacing:-0.5px;">$3B</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px;">Arc valuation</div>
+            </div>
+          </div>
+
+          <!-- Trust strip -->
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:12px;color:var(--muted);">Backed by</span>
+            <span style="font-size:12px;font-weight:500;color:var(--text);">a16z</span>
+            <span style="color:var(--border);font-size:12px;">·</span>
+            <span style="font-size:12px;font-weight:500;color:var(--text);">BlackRock</span>
+            <span style="color:var(--border);font-size:12px;">·</span>
+            <span style="font-size:12px;font-weight:500;color:var(--text);">Apollo</span>
+            <span style="color:var(--border);font-size:12px;">·</span>
+            <span style="font-size:12px;color:var(--muted);">$222M raised</span>
+          </div>
         </div>
-        <div class="stat-cell">
-          <div class="stat-val">$0.0002</div>
-          <div class="stat-label">Typical fee</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-val">USDC</div>
-          <div class="stat-label">Gas token</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-val">$3B</div>
-          <div class="stat-label">Arc valuation</div>
+
+        <!-- RIGHT: App widget with tabs -->
+        <div id="app" style="position:sticky;top:80px;">
+
+          <!-- Tab switcher -->
+          <div style="display:flex;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-lg) var(--r-lg) 0 0;overflow:hidden;border-bottom:none;">
+            <button id="tab-swap" onclick="switchAppTab('swap')"
+              style="flex:1;padding:14px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;border:none;cursor:pointer;transition:all .15s;background:var(--bg);color:var(--text);border-bottom:2px solid var(--blue);">
+              ⇄ Swap
+            </button>
+            <button id="tab-bridge" onclick="switchAppTab('bridge')"
+              style="flex:1;padding:14px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;border:none;cursor:pointer;transition:all .15s;background:var(--bg-card);color:var(--muted);border-bottom:2px solid transparent;">
+              ⇅ Bridge
+            </button>
+          </div>
+
+          <!-- Swap panel -->
+          <div id="panel-swap" style="background:var(--bg);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r-lg) var(--r-lg);padding:24px;">
+            <div id="global-status"></div>
+
+            <!-- Connect card -->
+            <div id="connect-card" style="text-align:center;padding:20px 0;">
+              <div class="connect-icon" style="background:transparent;border:none;">
+                <img src="/logo.png" alt="ArcFX" style="width:56px;height:56px;border-radius:50%;object-fit:cover;" />
+              </div>
+              <h3 style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin:12px 0 8px;letter-spacing:-0.3px;">Swap stablecoins on Arc</h3>
+              <p style="color:var(--muted);font-size:14px;margin-bottom:24px;font-weight:300;">Connect MetaMask to swap USDC ↔ EURC with sub-second settlement.</p>
+              <button id="big-connect-btn" style="display:block;width:100%;background:linear-gradient(135deg,#4e8ef7,#22d3a0);color:#fff;border:none;border-radius:var(--r);padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s;">Connect MetaMask</button>
+            </div>
+
+            <!-- Swap widget -->
+            <div class="hidden" id="swap-card">
+              <div class="widget-header">
+                <span class="widget-title">Swap</span>
+                <span class="widget-badge">● Arc Testnet</span>
+              </div>
+              <div class="token-block">
+                <div class="token-block-label">YOU PAY</div>
+                <div class="token-row">
+                  <div class="token-pill">
+                    <div class="token-logo logo-usdc" id="token-in-flag">$</div>
+                    <span class="token-name" id="token-in-symbol">USDC</span>
+                  </div>
+                  <input id="amount-input" class="amount-input" type="number" min="0" step="any" placeholder="0.00" autocomplete="off" />
+                </div>
+                <div class="balance-row">
+                  <span class="balance-label" id="balance-in-label">Balance: — USDC</span>
+                  <button id="max-btn">MAX</button>
+                </div>
+              </div>
+              <div class="flip-wrap"><button id="flip-btn" title="Flip tokens">⇅</button></div>
+              <div class="output-block">
+                <div class="token-block-label">YOU RECEIVE</div>
+                <div class="output-row">
+                  <div class="token-pill">
+                    <div class="token-logo logo-eurc" id="token-out-flag">€</div>
+                    <span class="token-name" id="token-out-symbol">EURC</span>
+                  </div>
+                  <div class="estimate-amount" id="estimate-output">—</div>
+                </div>
+                <div id="estimate-row" class="hidden">
+                  <span id="estimate-fee"></span>
+                  <span>Arc Testnet</span>
+                </div>
+              </div>
+              <button id="swap-btn">Swap</button>
+              <div id="swap-status"></div>
+              <div class="widget-footer">
+                <span>Need tokens? <a href="https://faucet.circle.com" target="_blank" rel="noopener">faucet.circle.com →</a></span>
+                <a href="https://testnet.arcscan.app" target="_blank" rel="noopener">ArcScan ↗</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bridge panel (hidden by default) -->
+          <div id="panel-bridge" style="display:none;background:var(--bg);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r-lg) var(--r-lg);padding:24px;">
+            <div id="bridge-global-status"></div>
+            <div class="bridge-header">
+              <span class="bridge-title">Bridge USDC</span>
+              <span class="bridge-badge">● CCTP Powered</span>
+            </div>
+
+            <div class="chain-row" id="bridge-chain-row">
+              <div class="chain-pill">
+                <div class="chain-pill-label">From</div>
+                <div class="chain-pill-name">
+                  <div class="chain-dot" style="background:#627eea"></div>
+                  <span id="bridge-from-label">Ethereum Sepolia</span>
+                </div>
+              </div>
+              <button id="bridge-flip-btn" title="Flip direction" onclick="flipBridgeDirection()" style="background:var(--bg-raised);border:1px solid var(--border-med);border-radius:var(--r-sm);width:36px;height:36px;color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .15s,color .15s,transform .2s;flex-shrink:0;">⇅</button>
+              <div class="chain-pill">
+                <div class="chain-pill-label">To</div>
+                <div class="chain-pill-name">
+                  <div class="chain-dot" id="bridge-to-dot" style="background:#4e8ef7;box-shadow:0 0 6px #4e8ef7"></div>
+                  <span id="bridge-to-label">Arc Testnet</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bridge-amount-wrap">
+              <div class="bridge-amount-label">Amount to bridge</div>
+              <div class="bridge-amount-row">
+                <input id="bridge-amount-input" class="bridge-amount-input" type="number" min="0" step="any" placeholder="0.00" autocomplete="off" />
+                <div class="bridge-token-badge"><span>💲</span><span>USDC</span></div>
+              </div>
+            </div>
+
+            <div class="bridge-info">
+              <div class="bridge-info-row"><span>Protocol</span><span class="bridge-info-val">Circle CCTP v2</span></div>
+              <div class="bridge-info-row"><span id="bridge-receive-label">You receive on Arc</span><span class="bridge-info-val" id="bridge-receive-amt">—</span></div>
+              <div class="bridge-info-row"><span>Bridge fee</span><span class="bridge-info-val">~$0.00 (testnet)</span></div>
+              <div class="bridge-info-row"><span>Est. time</span><span class="bridge-info-val">~30 seconds</span></div>
+            </div>
+
+            <button id="bridge-btn">Bridge to Arc →</button>
+
+            <div class="bridge-steps" id="bridge-steps">
+              <div class="bridge-step" id="bstep-approve"><div class="bridge-step-dot"></div><span id="bstep-approve-label">Approve USDC spending</span></div>
+              <div class="bridge-step" id="bstep-burn"><div class="bridge-step-dot"></div><span id="bstep-burn-label">Burn USDC on Ethereum Sepolia</span></div>
+              <div class="bridge-step" id="bstep-attest"><div class="bridge-step-dot"></div><span>Circle attestation (CCTP)</span></div>
+              <div class="bridge-step" id="bstep-mint"><div class="bridge-step-dot"></div><span id="bstep-mint-label">Mint USDC on Arc Testnet</span></div>
+            </div>
+
+            <div id="bridge-status"></div>
+
+            <div class="widget-footer" style="margin-top:14px;">
+              <a href="https://faucet.circle.com" target="_blank" rel="noopener">Get testnet USDC →</a>
+              <a href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noopener">Get Sepolia ETH →</a>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
   </section>
+
 
   <!-- ── Social proof ──────────────────────────────────── -->
   <div class="proof-strip">
@@ -1705,287 +1883,7 @@
   <!-- ── Features ──────────────────────────────────────── -->
 
   <!-- ── How it works ───────────────────────────────────── -->
-  <section id="how">
-    <div class="container">
-      <div style="margin-bottom:48px">
-        <div class="section-label">How it works</div>
-        <div class="section-title">Three steps to swap</div>
-        <p class="section-sub">No accounts. No KYC. Just your wallet and your stablecoins.</p>
-      </div>
-      <div class="steps-grid reveal">
-        <div class="step-cell">
-          <div class="step-num">01 — CONNECT</div>
-          <h3>Connect your wallet</h3>
-          <p>Connect MetaMask or any EVM wallet. ArcFX automatically switches to Arc Testnet — no manual setup.</p>
-        </div>
-        <div class="step-cell">
-          <div class="step-num">02 — ENTER</div>
-          <h3>Enter an amount</h3>
-          <p>Type how much USDC or EURC you want to swap. A live rate estimate appears instantly before you commit.</p>
-        </div>
-        <div class="step-cell">
-          <div class="step-num">03 — CONFIRM</div>
-          <h3>Approve in wallet</h3>
-          <p>Sign the transaction in MetaMask. Arc settles in under a second with a verifiable onchain record.</p>
-        </div>
-        <div class="step-cell">
-          <div class="step-num">04 — DONE</div>
-          <h3>Funds in your wallet</h3>
-          <p>See your updated balance immediately. View every swap on ArcScan with full transaction transparency.</p>
-        </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- ── Live demo ──────────────────────────────────────── -->
-  <section id="demo">
-    <div class="container">
-      <div class="demo-grid">
-        <div class="demo-copy">
-          <div class="section-label">Live demo</div>
-          <div class="section-title">Try a real swap<br>right now</div>
-          <p class="section-sub">
-            The widget executes real transactions on Arc Testnet with actual
-            testnet USDC and EURC. Connect your wallet and swap —
-            everything settles onchain.
-          </p>
-          <div class="demo-points">
-            <div class="demo-point"><span class="check">✓</span> Real onchain transactions on Arc Testnet</div>
-            <div class="demo-point"><span class="check">✓</span> Live rate fetched before every swap</div>
-            <div class="demo-point"><span class="check">✓</span> Verified instantly on ArcScan</div>
-            <div class="demo-point"><span class="check">✓</span> USDC gas — no ETH wallet top-up needed</div>
-            <div class="demo-point"><span class="check">✓</span> Free testnet tokens at faucet.circle.com</div>
-          </div>
-        </div>
-
-        <div class="widget-shell reveal">
-          <div id="global-status"></div>
-
-          <!-- Connect prompt -->
-          <div class="card" id="connect-card">
-            <div class="connect-icon" style="background:transparent;border:none;">
-              <img src="/logo.png" alt="ArcFX" style="width:56px;height:56px;border-radius:50%;object-fit:cover;" />
-            </div>
-            <h3>Swap stablecoins on Arc</h3>
-            <p>Connect your MetaMask wallet to swap USDC ↔ EURC on Arc Testnet with sub-second settlement.</p>
-            <button id="big-connect-btn">Connect MetaMask</button>
-          </div>
-
-          <!-- Swap widget -->
-          <div class="card hidden" id="swap-card">
-            <div class="widget-header">
-              <span class="widget-title">Swap</span>
-              <span class="widget-badge">● Arc Testnet</span>
-            </div>
-
-            <!-- FROM -->
-            <div class="token-block">
-              <div class="token-block-label">YOU PAY</div>
-              <div class="token-row">
-                <div class="token-pill">
-                  <div class="token-logo logo-usdc" id="token-in-flag">$</div>
-                  <span class="token-name" id="token-in-symbol">USDC</span>
-                </div>
-                <input id="amount-input" class="amount-input" type="number" min="0" step="any" placeholder="0.00" autocomplete="off" />
-              </div>
-              <div class="balance-row">
-                <span class="balance-label" id="balance-in-label">Balance: — USDC</span>
-                <button id="max-btn">MAX</button>
-              </div>
-            </div>
-
-            <div class="flip-wrap">
-              <button id="flip-btn" title="Flip tokens">⇅</button>
-            </div>
-
-            <!-- TO -->
-            <div class="output-block">
-              <div class="token-block-label">YOU RECEIVE</div>
-              <div class="output-row">
-                <div class="token-pill">
-                  <div class="token-logo logo-eurc" id="token-out-flag">€</div>
-                  <span class="token-name" id="token-out-symbol">EURC</span>
-                </div>
-                <div class="estimate-amount" id="estimate-output">—</div>
-              </div>
-              <div id="estimate-row" class="hidden">
-                <span id="estimate-fee"></span>
-                <span>Arc Testnet</span>
-              </div>
-            </div>
-
-            <button id="swap-btn">Swap</button>
-            <div id="swap-status"></div>
-
-            <div class="widget-footer">
-              <span>Need tokens? <a href="https://faucet.circle.com" target="_blank" rel="noopener">faucet.circle.com →</a></span>
-              <a href="https://testnet.arcscan.app" target="_blank" rel="noopener">ArcScan ↗</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-
-
-  <!-- ── Bridge ─────────────────────────────────────────── -->
-  <section id="bridge">
-    <div class="container">
-      <div class="bridge-grid">
-
-        <!-- Left: copy -->
-        <div class="demo-copy">
-          <div class="section-label">Bridge</div>
-          <div class="section-title">Bring USDC<br>to Arc from any chain</div>
-          <p class="section-sub">
-            Bridge USDC from Ethereum or Base directly into Arc Testnet
-            using Circle's CCTP. No wrapping, no third-party bridges —
-            native USDC, instantly.
-          </p>
-
-          <div class="bridge-copy-points">
-            <div class="bridge-point">
-              <div class="bridge-point-icon">⚡</div>
-              <div>
-                <strong>Powered by Circle CCTP</strong>
-                Native USDC transfer — not wrapped tokens. The same 
-                infrastructure Circle uses for institutional transfers.
-              </div>
-            </div>
-            <div class="bridge-point">
-              <div class="bridge-point-icon">🔒</div>
-              <div>
-                <strong>Non-custodial</strong>
-                Your MetaMask signs every step. ArcFX never holds your funds
-                during bridging.
-              </div>
-            </div>
-            <div class="bridge-point">
-              <div class="bridge-point-icon">🌍</div>
-              <div>
-                <strong>More chains coming</strong>
-                Ethereum Sepolia is live now. Base, Solana, Polygon
-                and more will follow as Arc expands.
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-top:24px;padding:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;color:var(--muted);line-height:1.7;">
-            ⚠️ <strong style="color:var(--text)">Testnet only.</strong>
-            You need Sepolia ETH for gas and testnet USDC on Ethereum Sepolia.
-            Get both free at
-            <a href="https://faucet.circle.com" target="_blank" rel="noopener">faucet.circle.com</a>
-            and
-            <a href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noopener">alchemy.com/faucets</a>.
-          </div>
-        </div>
-
-        <!-- Right: bridge card -->
-        <div>
-          <div id="bridge-global-status"></div>
-          <div class="bridge-card">
-            <div class="bridge-header">
-              <span class="bridge-title">Bridge USDC</span>
-              <span class="bridge-badge">● CCTP Powered</span>
-            </div>
-
-            <!-- Chain selector — bidirectional -->
-            <div class="chain-row" id="bridge-chain-row">
-              <div class="chain-pill" id="bridge-from-pill">
-                <div class="chain-pill-label">From</div>
-                <div class="chain-pill-name" id="bridge-from-name">
-                  <div class="chain-dot" style="background:#627eea"></div>
-                  <span id="bridge-from-label">Ethereum Sepolia</span>
-                </div>
-              </div>
-              <button id="bridge-flip-btn" title="Flip direction" onclick="flipBridgeDirection()" style="background:var(--bg-raised);border:1px solid var(--border-med);border-radius:var(--r-sm);width:36px;height:36px;color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .15s,color .15s,transform .2s;flex-shrink:0;">⇅</button>
-              <div class="chain-pill" id="bridge-to-pill">
-                <div class="chain-pill-label">To</div>
-                <div class="chain-pill-name" id="bridge-to-name">
-                  <div class="chain-dot" id="bridge-to-dot" style="background:#4e8ef7;box-shadow:0 0 6px #4e8ef7"></div>
-                  <span id="bridge-to-label">Arc Testnet</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Amount -->
-            <div class="bridge-amount-wrap">
-              <div class="bridge-amount-label">Amount to bridge</div>
-              <div class="bridge-amount-row">
-                <input
-                  id="bridge-amount-input"
-                  class="bridge-amount-input"
-                  type="number"
-                  min="0"
-                  step="any"
-                  placeholder="0.00"
-                  autocomplete="off"
-                />
-                <div class="bridge-token-badge">
-                  <span>💲</span>
-                  <span>USDC</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Info rows -->
-            <div class="bridge-info">
-              <div class="bridge-info-row">
-                <span>Protocol</span>
-                <span class="bridge-info-val">Circle CCTP v2</span>
-              </div>
-              <div class="bridge-info-row">
-                <span id="bridge-receive-label">You receive on Arc</span>
-                <span class="bridge-info-val" id="bridge-receive-amt">—</span>
-              </div>
-              <div class="bridge-info-row">
-                <span>Bridge fee</span>
-                <span class="bridge-info-val">~$0.00 (testnet)</span>
-              </div>
-              <div class="bridge-info-row">
-                <span>Est. time</span>
-                <span class="bridge-info-val">~30 seconds</span>
-              </div>
-            </div>
-
-            <!-- Bridge button -->
-            <button id="bridge-btn">Bridge to Arc →</button>
-
-            <!-- Progress steps -->
-            <div class="bridge-steps" id="bridge-steps">
-              <div class="bridge-step" id="bstep-approve">
-                <div class="bridge-step-dot"></div>
-                <span id="bstep-approve-label">Approve USDC spending</span>
-              </div>
-              <div class="bridge-step" id="bstep-burn">
-                <div class="bridge-step-dot"></div>
-                <span id="bstep-burn-label">Burn USDC on Ethereum Sepolia</span>
-              </div>
-              <div class="bridge-step" id="bstep-attest">
-                <div class="bridge-step-dot"></div>
-                <span>Circle attestation (CCTP)</span>
-              </div>
-              <div class="bridge-step" id="bstep-mint">
-                <div class="bridge-step-dot"></div>
-                <span id="bstep-mint-label">Mint USDC on Arc Testnet</span>
-              </div>
-            </div>
-
-            <div id="bridge-status"></div>
-
-            <div class="widget-footer" style="margin-top:14px">
-              <a href="https://faucet.circle.com" target="_blank" rel="noopener">Get testnet USDC →</a>
-              <a href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noopener">Get Sepolia ETH →</a>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Rate Comparison ────────────────────────────────── -->
   <section id="compare">
     <div class="compare-inner container">
 
@@ -2298,6 +2196,43 @@
     </div>
   </section>
 
+
+  <section id="how">
+    <div class="container">
+      <div style="margin-bottom:48px">
+        <div class="section-label">How it works</div>
+        <div class="section-title">Three steps to swap</div>
+        <p class="section-sub">No accounts. No KYC. Just your wallet and your stablecoins.</p>
+      </div>
+      <div class="steps-grid reveal">
+        <div class="step-cell">
+          <div class="step-num">01 — CONNECT</div>
+          <h3>Connect your wallet</h3>
+          <p>Connect MetaMask or any EVM wallet. ArcFX automatically switches to Arc Testnet — no manual setup.</p>
+        </div>
+        <div class="step-cell">
+          <div class="step-num">02 — ENTER</div>
+          <h3>Enter an amount</h3>
+          <p>Type how much USDC or EURC you want to swap. A live rate estimate appears instantly before you commit.</p>
+        </div>
+        <div class="step-cell">
+          <div class="step-num">03 — CONFIRM</div>
+          <h3>Approve in wallet</h3>
+          <p>Sign the transaction in MetaMask. Arc settles in under a second with a verifiable onchain record.</p>
+        </div>
+        <div class="step-cell">
+          <div class="step-num">04 — DONE</div>
+          <h3>Funds in your wallet</h3>
+          <p>See your updated balance immediately. View every swap on ArcScan with full transaction transparency.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── Bridge ─────────────────────────────────────────── -->
+
+  <!-- ── Rate Comparison ────────────────────────────────── -->
 
   <!-- ── Waitlist ───────────────────────────────────────── -->
   <section id="waitlist">
@@ -2650,5 +2585,31 @@
       });
     }
   </script>
+
+  <!-- ── App tab switcher ──────────────────────────────── -->
+  <script>
+    function switchAppTab(tab) {
+      const swapPanel   = document.getElementById("panel-swap");
+      const bridgePanel = document.getElementById("panel-bridge");
+      const swapTab     = document.getElementById("tab-swap");
+      const bridgeTab   = document.getElementById("tab-bridge");
+      if (!swapPanel || !bridgePanel || !swapTab || !bridgeTab) return;
+
+      if (tab === "swap") {
+        swapPanel.style.display   = "block";
+        bridgePanel.style.display = "none";
+        swapTab.className   = "app-tab-active";
+        bridgeTab.className = "app-tab-inactive";
+      } else {
+        swapPanel.style.display   = "none";
+        bridgePanel.style.display = "block";
+        swapTab.className   = "app-tab-inactive";
+        bridgeTab.className = "app-tab-active";
+        // Update bridge tab border color to teal
+        bridgeTab.style.borderBottomColor = "var(--green)";
+      }
+    }
+  </script>
+
 </body>
 </html>
