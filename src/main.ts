@@ -126,7 +126,8 @@ function flipTokens(): void {
   showStatus("", "");
 }
 
-async function estimateSwap(amount: string): Promise<void> {
+async function estimateSwap(amountIn: string): Promise<void> {
+  const amount = amountIn;
   if (!amount || parseFloat(amount) <= 0 || !window.ethereum) {
     setText("estimate-output", "—");
     addClass("estimate-row", "hidden");
@@ -141,9 +142,18 @@ async function estimateSwap(amount: string): Promise<void> {
       tokenIn, tokenOut, amountIn: amount,
       config: { kitKey: import.meta.env.VITE_KIT_KEY as string },
     });
-    setText("estimate-output", `≈ ${est.estimatedOutput?.amount ?? "—"} ${tokenOut}`);
+    const outAmt = est.estimatedOutput?.amount;
+    setText("estimate-output", `≈ ${outAmt ?? "—"} ${tokenOut}`);
     const fee = est.fees?.[0];
     setText("estimate-fee", fee ? `Fee: ${fee.amount} ${fee.token}` : "");
+
+    // Update compare table with live rate
+    if (outAmt && amountIn) {
+      const liveRate = parseFloat(outAmt) / parseFloat(amountIn);
+      if (liveRate > 0 && typeof (window as any).updateCompareRate === "function") {
+        (window as any).updateCompareRate(liveRate);
+      }
+    }
   } catch {
     setText("estimate-output", "Rate unavailable");
     setText("estimate-fee", "");

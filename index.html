@@ -945,6 +945,191 @@
       @keyframes shimmer { from,to { background-position: 0; } }
       @keyframes ticker { from,to { transform: none; } }
     }
+
+    /* ── Rate Comparison Widget ────────────────────────── */
+    #compare {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .compare-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .compare-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .compare-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border-med);
+      border-radius: var(--r);
+      padding: 10px 18px;
+      transition: border-color .15s;
+    }
+    .compare-input-wrap:focus-within { border-color: var(--blue); }
+
+    .compare-input-label {
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .compare-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: "DM Mono", monospace;
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--text);
+      width: 140px;
+      text-align: right;
+    }
+
+    .compare-currency {
+      font-family: "DM Mono", monospace;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* Table */
+    .compare-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 8px;
+    }
+
+    .compare-table thead th {
+      font-family: "DM Mono", monospace;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      padding: 0 20px 8px;
+      text-align: left;
+    }
+    .compare-table thead th:last-child { text-align: right; }
+
+    .compare-row {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      transition: border-color .2s, transform .15s;
+      cursor: default;
+    }
+    .compare-row:hover { border-color: var(--border-med); transform: translateY(-1px); }
+    .compare-row.best-row {
+      background: linear-gradient(135deg, rgba(78,142,247,0.06), rgba(34,211,160,0.04));
+      border-color: rgba(78,142,247,0.35);
+    }
+    .compare-row.best-row:hover { border-color: rgba(78,142,247,0.6); }
+
+    .compare-table td {
+      padding: 16px 20px;
+      font-size: 14px;
+    }
+    .compare-table td:first-child { border-radius: var(--r) 0 0 var(--r); }
+    .compare-table td:last-child  { border-radius: 0 var(--r) var(--r) 0; text-align: right; }
+
+    .provider-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .provider-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .provider-name {
+      font-weight: 600;
+      color: var(--text);
+      font-size: 15px;
+    }
+    .provider-type {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .amount-received {
+      font-family: "DM Mono", monospace;
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .best-row .amount-received { color: var(--green); }
+
+    .fee-cell {
+      font-family: "DM Mono", monospace;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .fee-cell .fee-val { color: var(--text); }
+
+    .speed-cell {
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .savings-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(34,211,160,0.12);
+      border: 1px solid rgba(34,211,160,0.3);
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+
+    .best-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: linear-gradient(135deg, var(--blue), var(--green));
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+
+    .compare-footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 700px) {
+      .compare-table .hide-mobile { display: none; }
+      .compare-input { width: 100px; font-size: 18px; }
+    }
   </style>
 </head>
 <body>
@@ -1237,6 +1422,59 @@
     </div>
   </section>
 
+
+  <!-- ── Rate Comparison ────────────────────────────────── -->
+  <section id="compare">
+    <div class="compare-inner container">
+
+      <div class="compare-header reveal">
+        <div>
+          <div class="section-label">Why ArcFX</div>
+          <div class="section-title">See how much you save</div>
+          <p class="section-sub">Compare ArcFX against traditional FX providers in real time.</p>
+        </div>
+
+        <div class="compare-input-wrap">
+          <span class="compare-input-label">You send</span>
+          <input
+            id="compare-amount"
+            class="compare-input"
+            type="number"
+            value="1000"
+            min="1"
+            step="any"
+            autocomplete="off"
+          />
+          <span class="compare-currency">USDC</span>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th style="width:220px">Provider</th>
+              <th>You receive</th>
+              <th class="hide-mobile">Fee</th>
+              <th class="hide-mobile">Speed</th>
+              <th>Savings</th>
+            </tr>
+          </thead>
+          <tbody id="compare-body">
+            <!-- filled by JS -->
+          </tbody>
+        </table>
+
+        <p class="compare-footer">
+          ⚠️ Traditional provider rates are estimates based on typical fees and spreads. 
+          ArcFX rate is fetched live from Arc Testnet via Circle App Kit. 
+          Rates update as you type. Not financial advice.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
   <!-- ── Waitlist ───────────────────────────────────────── -->
   <section id="waitlist">
     <div class="waitlist-inner">
@@ -1371,5 +1609,203 @@
       document.getElementById("big-connect-btn").click();
     });
   </script>
+
+  <!-- ── Rate Comparison Logic ─────────────────────────── -->
+  <script>
+    // Provider data — fees and FX rate offsets vs mid-market
+    // All rates relative to USDC→EURC where 1 USDC ≈ 0.9047 EURC (mid-market)
+    const PROVIDERS = [
+      {
+        name: "ArcFX",
+        type: "Onchain DEX · Arc Testnet",
+        icon: "/logo.png",
+        isLogo: true,
+        bgColor: "#0A1525",
+        feeFixed: 0.0002,      // $0.0002 flat fee
+        feePercent: 0,         // 0% spread
+        spreadOffset: 0,       // uses Arc native rate
+        speed: "< 1 second",
+        speedColor: "var(--green)",
+        isArcFX: true,
+      },
+      {
+        name: "Wise",
+        type: "Bank transfer",
+        icon: "💚",
+        bgColor: "#1a3a1a",
+        feeFixed: 0,
+        feePercent: 0.41,      // ~0.41% fee
+        spreadOffset: 0.002,   // small spread
+        speed: "1–2 business days",
+        speedColor: "var(--muted)",
+      },
+      {
+        name: "Revolut",
+        type: "Fintech app",
+        icon: "🖤",
+        bgColor: "#1a1a2e",
+        feeFixed: 0,
+        feePercent: 0.5,       // 0.5% on weekends, ~0% on weekdays (we show avg)
+        spreadOffset: 0.004,
+        speed: "Instant (limits apply)",
+        speedColor: "var(--muted)",
+      },
+      {
+        name: "PayPal",
+        type: "Digital wallet",
+        icon: "🔵",
+        bgColor: "#0a1a3a",
+        feeFixed: 0,
+        feePercent: 3.5,       // ~3-4% spread
+        spreadOffset: 0.02,
+        speed: "Instant",
+        speedColor: "var(--muted)",
+      },
+      {
+        name: "Western Union",
+        type: "Money transfer",
+        icon: "🟡",
+        bgColor: "#2a1f00",
+        feeFixed: 4.99,
+        feePercent: 2.0,       // ~2% exchange rate margin
+        spreadOffset: 0.025,
+        speed: "Minutes–3 days",
+        speedColor: "var(--muted)",
+      },
+      {
+        name: "Bank wire",
+        type: "Traditional bank",
+        icon: "🏦",
+        bgColor: "#1a1a1a",
+        feeFixed: 15,
+        feePercent: 1.5,
+        spreadOffset: 0.03,
+        speed: "1–5 business days",
+        speedColor: "var(--muted)",
+      },
+    ];
+
+    // Mid-market rate USDC→EURC (approx, updates from swap widget if available)
+    let MID_RATE = 0.9047;
+
+    function calcReceived(provider, amount) {
+      const feeAmt  = provider.feeFixed + (amount * provider.feePercent / 100);
+      const netAmt  = amount - feeAmt;
+      const rate    = MID_RATE - provider.spreadOffset;
+      return {
+        received: Math.max(0, netAmt * rate),
+        fee: feeAmt,
+        rate: rate,
+      };
+    }
+
+    function fmtEUR(n) {
+      return "€" + n.toFixed(2);
+    }
+
+    function fmtFee(provider, amount) {
+      const fee = provider.feeFixed + (amount * provider.feePercent / 100);
+      if (provider.feeFixed > 0 && provider.feePercent > 0) {
+        return `$${provider.feeFixed.toFixed(2)} + ${provider.feePercent}%`;
+      } else if (provider.feeFixed > 0) {
+        return `$${provider.feeFixed.toFixed(2)} fixed`;
+      } else if (provider.feePercent > 0) {
+        return `${provider.feePercent}% spread`;
+      } else {
+        return `$${fee.toFixed(4)}`;
+      }
+    }
+
+    function renderTable(amount) {
+      if (!amount || amount <= 0) amount = 1000;
+
+      // Calculate all results
+      const results = PROVIDERS.map(p => ({
+        provider: p,
+        ...calcReceived(p, amount),
+      }));
+
+      // Sort by received (best first)
+      results.sort((a, b) => b.received - a.received);
+
+      const best = results[0].received;
+
+      const tbody = document.getElementById("compare-body");
+      if (!tbody) return;
+
+      tbody.innerHTML = results.map((r, idx) => {
+        const p       = r.provider;
+        const savings = r.received - results[results.length - 1].received;
+        const isBest  = idx === 0;
+        const isArcFX = p.isArcFX;
+
+        const iconHtml = p.isLogo
+          ? `<img src="${p.icon}" alt="ArcFX" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" />`
+          : `<div class="provider-icon" style="background:${p.bgColor}">${p.icon}</div>`;
+
+        const savingsHtml = isBest
+          ? `<span class="best-badge">✦ Best rate</span>`
+          : savings > 0
+            ? `<span class="savings-badge">+${fmtEUR(savings)}</span>`
+            : `<span style="color:var(--muted);font-size:13px;">—</span>`;
+
+        return `
+          <tr class="compare-row${isBest ? " best-row" : ""}">
+            <td>
+              <div class="provider-cell">
+                ${iconHtml}
+                <div>
+                  <div class="provider-name">${p.name}</div>
+                  <div class="provider-type">${p.type}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="amount-received">${fmtEUR(r.received)}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace;">
+                rate: ${r.rate.toFixed(4)}
+              </div>
+            </td>
+            <td class="fee-cell hide-mobile">
+              <span class="fee-val">${p.isArcFX ? "$0.0002" : fmtFee(p, amount)}</span>
+            </td>
+            <td class="speed-cell hide-mobile" style="color:${p.speedColor}">
+              ${p.speed}
+            </td>
+            <td>${savingsHtml}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    // Init + debounce input
+    function debounceCompare(fn, ms) {
+      let t;
+      return function(...args) { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      renderTable(1000);
+
+      const inp = document.getElementById("compare-amount");
+      if (inp) {
+        inp.addEventListener("input", debounceCompare(function(e) {
+          const val = parseFloat(e.target.value);
+          renderTable(val);
+        }, 300));
+      }
+    });
+
+    // Update mid-rate from live swap estimate if available
+    // Called by main.ts when an estimate is fetched
+    window.updateCompareRate = function(rate) {
+      if (rate && rate > 0) {
+        MID_RATE = rate;
+        const inp = document.getElementById("compare-amount");
+        renderTable(inp ? parseFloat(inp.value) || 1000 : 1000);
+      }
+    };
+  </script>
+
 </body>
 </html>
