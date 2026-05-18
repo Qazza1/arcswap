@@ -403,148 +403,147 @@ async function loadHistory(): Promise<void> {
   const historyEl = el("history-content");
   if (!historyEl) return;
 
-  if (!userAddress) {
+  if (!userAddress || !ethersProvider) {
     historyEl.innerHTML = `<div style="text-align:center;padding:32px 0;color:var(--muted);font-size:13px;">Connect your wallet to view transaction history</div>`;
     return;
   }
 
   historyEl.innerHTML = `<div class="history-loading">Loading transactions</div>`;
 
+  const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+  const paddedAddr = "0x000000000000000000000000" + userAddress.slice(2).toLowerCase();
+
   try {
-    // Fetch ERC-20 token transfers for this address from ArcScan (Blockscout API)
-    const res = await fetch(
-      `${ARCSCAN_API}/addresses/${userAddress}/token-transfers?type=ERC-20&limit=20`,
-      { headers: { "Accept": "application/json" } }
-    );
+    const latestBlock = await ethersProvider.getBlockNumber();
+    // Search last 100,000 blocks to find all history
+    const fromBlock = Math.max(0, latestBlock - 100000);
 
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    const data = await res.json();
+    // Fetch all 4 combinations: USDC/EURC × sent/received
+    const [usdcOut, usdcIn, eurcOut, eurcIn] = await Promise.all([
+      ethersProvider.getLogs({ fromBlock, address: USDC_ADDR, topics: [TRANSFER_TOPIC, paddedAddr, null] }),
+      ethersProvider.getLogs({ fromBlock, address: USDC_ADDR, topics: [TRANSFER_TOPIC, null, paddedAddr] }),
+      ethersProvider.getLogs({ fromBlock, address: EURC_ADDR, topics: [TRANSFER_TOPIC, paddedAddr, null] }),
+      ethersProvider.getLogs({ fromBlock, address: EURC_ADDR, topics: [TRANSFER_TOPIC, null, paddedAddr] }),
+    ]);
 
-    const items: any[] = data.items ?? [];
+    // Combine and tag each log
+    type TaggedLog = { log: any; sym: string; direction: "out"|"in" };
+    const tagged: TaggedLog[] = [
+      ...usdcOut.map(l => ({ log: l, sym: "USDC", direction: "out" as const })),
+      ...usdcIn.map(l  => ({ log: l, sym: "USDC", direction: "in"  as const })),
+      ...eurcOut.map(l => ({ log: l, sym: "EURC", direction: "out" as const })),
+      ...eurcIn.map(l  => ({ log: l, sym: "EURC", direction: "in"  as const })),
+    ];
 
-    // Filter to only USDC and EURC transfers
-    const stableItems = items.filter((tx: any) => {
-      const tokenAddr = tx.token?.address?.toLowerCase() ?? "";
-      return tokenAddr === USDC_ADDR.toLowerCase() || tokenAddr === EURC_ADDR.toLowerCase();
+    // Deduplicate by txHash + direction (swaps appear in both in and out)
+    const seen = new Set<string>();
+    const deduped = tagged.filter(t => {
+      const key = t.log.transactionHash + t.direction;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
 
-    if (stableItems.length === 0) {
+    if (deduped.length === 0) {
       historyEl.innerHTML = `
         <div style="text-align:center;padding:32px 0;color:var(--muted);font-size:13px;">
-          No stablecoin transactions found yet.<br>
-          <span style="font-size:11px;margin-top:6px;display:block;">Make your first swap above!</span>
+          No transactions found yet.<br>
+          <span style="font-size:11px;margin-top:6px;display:block;">Make your first swap above to see history here!</span>
+          <a href="https://testnet.arcscan.app/address/${userAddress}" target="_blank" rel="noopener" style="color:var(--blue);font-size:11px;margin-top:8px;display:block;">View on ArcScan ↗</a>
         </div>`;
       return;
     }
 
-    // Build rows
-    const rows = stableItems.slice(0, 15).map((tx: any) => {
-      const isOut    = tx.from?.hash?.toLowerCase() === userAddress?.toLowerCase();
-      const symbol   = tokenSymbol(tx.token?.address ?? "");
-      const amount   = formatAmount(tx.total?.value ?? "0", tx.total?.decimals ?? "6");
-      const time     = timeAgo(tx.timestamp ?? "");
-      const hash     = tx.transaction_hash ?? "";
-      const shortHash= hash ? `${hash.slice(0,6)}...${hash.slice(-4)}` : "—";
+    // Sort by block number descending (newest first)
+    deduped.sort((a, b) => b.log.blockNumber - a.log.blockNumber);
 
-      // Determine type
-      let typeLabel = isOut ? "Sent" : "Received";
-      let icon = isOut ? "↑" : "↓";
-      let iconClass = isOut ? "tx-icon-out" : "tx-icon-in";
-      let amtClass  = isOut ? "tx-out" : "tx-in";
-      let prefix    = isOut ? "−" : "+";
+    // Group by txHash to detect swaps (tx has both USDC out and EURC in, or vice versa)
+    const txGroups = new Map<string, TaggedLog[]>();
+    deduped.forEach(t => {
+      const hash = t.log.transactionHash;
+      if (!txGroups.has(hash)) txGroups.set(hash, []);
+      txGroups.get(hash)!.push(t);
+    });
 
-      // If it's a contract interaction (swap), label it differently
-      const toAddr = tx.to?.hash?.toLowerCase() ?? "";
-      if (toAddr === USDC_ADDR.toLowerCase() || toAddr === EURC_ADDR.toLowerCase()) {
-        typeLabel = "Swap / Bridge";
-        icon = "⇄";
-        iconClass = "tx-icon-swap";
-        amtClass = "";
-        prefix = "";
+    // Build rows — one row per unique tx
+    const rows: string[] = [];
+    const processedTx = new Set<string>();
+
+    for (const t of deduped) {
+      const hash = t.log.transactionHash;
+      if (processedTx.has(hash)) continue;
+      processedTx.add(hash);
+
+      const group  = txGroups.get(hash) ?? [t];
+      const isSwap = group.some(g => g.sym === "USDC") && group.some(g => g.sym === "EURC");
+      const isBridge = group.some(g => g.direction === "in") && group.length === 1 && group[0].sym === "USDC";
+      const blockNum = t.log.blockNumber;
+      const short  = `${hash.slice(0,6)}...${hash.slice(-4)}`;
+      const url    = `https://testnet.arcscan.app/tx/${hash}`;
+
+      let typeLabel: string;
+      let icon: string;
+      let iconClass: string;
+      let amtDisplay: string;
+      let amtClass: string;
+
+      if (isSwap) {
+        // Find what went out and what came in
+        const outItem  = group.find(g => g.direction === "out");
+        const inItem   = group.find(g => g.direction === "in");
+        const outAmt   = outItem ? (Number(BigInt(outItem.log.data)) / 1e6).toFixed(4) : "?";
+        const inAmt    = inItem  ? (Number(BigInt(inItem.log.data))  / 1e6).toFixed(4) : "?";
+        const outSym   = outItem?.sym ?? "USDC";
+        const inSym    = inItem?.sym  ?? "EURC";
+        typeLabel  = `Swap ${outSym} → ${inSym}`;
+        icon       = "⇄";
+        iconClass  = "tx-icon-swap";
+        amtDisplay = `${outAmt} → ${inAmt}`;
+        amtClass   = "";
+      } else {
+        const amt = (Number(BigInt(t.log.data)) / 1e6).toFixed(4);
+        if (t.direction === "out") {
+          typeLabel = `Sent ${t.sym}`;
+          icon = "↑";
+          iconClass = "tx-icon-out";
+          amtDisplay = `−${amt}`;
+          amtClass = "tx-out";
+        } else {
+          typeLabel = `Received ${t.sym}`;
+          icon = "↓";
+          iconClass = "tx-icon-in";
+          amtDisplay = `+${amt}`;
+          amtClass = "tx-in";
+        }
       }
 
-      const explorerUrl = `https://testnet.arcscan.app/tx/${hash}`;
-
-      return `
+      rows.push(`
         <div class="tx-row">
           <div class="tx-icon ${iconClass}">${icon}</div>
           <div class="tx-info">
-            <div class="tx-type">${typeLabel} ${symbol}</div>
-            <div class="tx-time">${time}</div>
+            <div class="tx-type">${typeLabel}</div>
+            <div class="tx-time">Block ${blockNum.toLocaleString()}</div>
           </div>
           <div class="tx-amount">
-            <div class="tx-amount-val ${amtClass}">${prefix}${amount}</div>
-            <div class="tx-amount-token">${symbol}</div>
+            <div class="tx-amount-val ${amtClass}" style="font-size:12px;">${amtDisplay}</div>
+            <div class="tx-amount-token">${isSwap ? "USDC/EURC" : t.sym}</div>
           </div>
-          ${hash ? `<a class="tx-link" href="${explorerUrl}" target="_blank" rel="noopener">${shortHash} ↗</a>` : ""}
-        </div>
-      `;
-    }).join("");
+          <a class="tx-link" href="${url}" target="_blank" rel="noopener">${short} ↗</a>
+        </div>`);
 
-    historyEl.innerHTML = rows;
-
-  } catch (err: any) {
-    // Fallback: try ethers getLogs directly
-    await loadHistoryFallback(historyEl);
-  }
-}
-
-async function loadHistoryFallback(historyEl: HTMLElement): Promise<void> {
-  if (!ethersProvider || !userAddress) return;
-
-  try {
-    const iface = new (await import("ethers")).Interface([
-      "event Transfer(address indexed from, address indexed to, uint256 value)"
-    ]);
-
-    const latestBlock = await ethersProvider.getBlockNumber();
-    const fromBlock   = Math.max(0, latestBlock - 5000);
-
-    const filter = {
-      fromBlock,
-      toBlock: "latest",
-      address: [USDC_ADDR, EURC_ADDR],
-      topics: [
-        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-        null,
-        ("0x000000000000000000000000" + userAddress.slice(2)).toLowerCase()
-      ]
-    };
-
-    const logs = await ethersProvider.getLogs(filter as any);
-
-    if (logs.length === 0) {
-      historyEl.innerHTML = `<div style="text-align:center;padding:32px 0;color:var(--muted);font-size:13px;">No recent transactions found. <a href="https://testnet.arcscan.app/address/${userAddress}" target="_blank" rel="noopener" style="color:var(--blue);">View on ArcScan ↗</a></div>`;
-      return;
+      if (rows.length >= 15) break;
     }
 
-    const rows = logs.slice(-10).reverse().map(log => {
-      const sym    = tokenSymbol(log.address);
-      const parsed = iface.parseLog(log);
-      const amount = (parseFloat(parsed?.args[2]?.toString() ?? "0") / 1e6).toFixed(4);
-      const hash   = log.transactionHash;
-      const short  = `${hash.slice(0,6)}...${hash.slice(-4)}`;
-      return `
-        <div class="tx-row">
-          <div class="tx-icon tx-icon-in">↓</div>
-          <div class="tx-info">
-            <div class="tx-type">Received ${sym}</div>
-            <div class="tx-time">Block ${log.blockNumber}</div>
-          </div>
-          <div class="tx-amount">
-            <div class="tx-amount-val tx-in">+${amount}</div>
-            <div class="tx-amount-token">${sym}</div>
-          </div>
-          <a class="tx-link" href="https://testnet.arcscan.app/tx/${hash}" target="_blank" rel="noopener">${short} ↗</a>
-        </div>`;
-    }).join("");
+    historyEl.innerHTML = rows.join("") + `
+      <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
+        <a href="https://testnet.arcscan.app/address/${userAddress}" target="_blank" rel="noopener" style="color:var(--blue);">View full history on ArcScan ↗</a>
+      </div>`;
 
-    historyEl.innerHTML = rows;
-
-  } catch {
+  } catch (err: any) {
     historyEl.innerHTML = `
       <div style="text-align:center;padding:28px 0;color:var(--muted);font-size:13px;">
-        Could not load history. <a href="https://testnet.arcscan.app/address/${userAddress}" target="_blank" rel="noopener" style="color:var(--blue);">View on ArcScan ↗</a>
+        Could not load history.<br>
+        <a href="https://testnet.arcscan.app/address/${userAddress}" target="_blank" rel="noopener" style="color:var(--blue);margin-top:8px;display:block;">View on ArcScan ↗</a>
       </div>`;
   }
 }
