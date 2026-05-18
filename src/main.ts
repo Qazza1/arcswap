@@ -212,6 +212,93 @@ function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): T {
   return ((...a: any[]) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }) as T;
 }
 
+
+// ─── Bridge Config ────────────────────────────────────────────────────────────
+const ETHEREUM_SEPOLIA = {
+  chainId: "0xaa36a7",
+  chainName: "Ethereum Sepolia",
+  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+  rpcUrls: ["https://rpc.sepolia.org"],
+  blockExplorerUrls: ["https://sepolia.etherscan.io"],
+};
+
+let isBridging = false;
+
+function setBridgeStep(id: string, state: "active"|"done"|"reset"): void {
+  const s = el(id);
+  if (!s) return;
+  s.classList.remove("active","done");
+  if (state !== "reset") s.classList.add(state);
+}
+
+function showBridgeStatus(msg: string, type: "success"|"error"|"info"|""): void {
+  const html = msg ? `<div class="status ${type}">${msg}</div>` : "";
+  setHTML("bridge-status", html);
+  setHTML("bridge-global-status", html);
+}
+
+async function executeBridge(): Promise<void> {
+  if (isBridging || !window.ethereum) return;
+  const amtInput = el<HTMLInputElement>("bridge-amount-input");
+  const amount   = amtInput?.value.trim() ?? "";
+  if (!amount || parseFloat(amount) <= 0) { showBridgeStatus("Enter an amount to bridge.","error"); return; }
+  isBridging = true;
+  const btn = el("bridge-btn");
+  if (btn) { btn.setAttribute("disabled","true"); btn.textContent = "Bridging…"; }
+  const stepsEl = el("bridge-steps");
+  if (stepsEl) stepsEl.classList.add("visible");
+  ["bstep-approve","bstep-burn","bstep-attest","bstep-mint"].forEach(id => setBridgeStep(id,"reset"));
+  showBridgeStatus("Switching to Ethereum Sepolia…","info");
+  try {
+    try {
+      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:ETHEREUM_SEPOLIA.chainId}] });
+    } catch (e: any) {
+      const code = e.code ?? e.error?.code ?? e.info?.error?.code;
+      const msg  = e.message ?? "";
+      if (code===4902||msg.includes("4902")||msg.includes("wallet_addEthereumChain")) {
+        await window.ethereum.request({ method:"wallet_addEthereumChain", params:[ETHEREUM_SEPOLIA] });
+      } else throw e;
+    }
+    showBridgeStatus("Confirm the bridge transaction in MetaMask…","info");
+    const adapter = await createViemAdapterFromProvider({ provider: window.ethereum });
+    setBridgeStep("bstep-approve","active");
+    const result = await (kit as any).bridge({
+      from: { adapter, chain: "Ethereum_Sepolia" },
+      to:   { adapter, chain: "Arc_Testnet" },
+      amount,
+      config: { kitKey: import.meta.env.VITE_KIT_KEY as string },
+      onStatusChange: (status: any) => {
+        const name = status?.currentStep?.name ?? "";
+        if (name==="approve")  { setBridgeStep("bstep-approve","active"); showBridgeStatus("Approve USDC spending…","info"); }
+        if (name==="burn")     { setBridgeStep("bstep-approve","done"); setBridgeStep("bstep-burn","active"); showBridgeStatus("Burning USDC on Sepolia…","info"); }
+        if (name==="attest")   { setBridgeStep("bstep-burn","done"); setBridgeStep("bstep-attest","active"); showBridgeStatus("Waiting for Circle attestation…","info"); }
+        if (name==="mint")     { setBridgeStep("bstep-attest","done"); setBridgeStep("bstep-mint","active"); showBridgeStatus("Minting USDC on Arc…","info"); }
+      },
+    });
+    ["bstep-approve","bstep-burn","bstep-attest","bstep-mint"].forEach(id => setBridgeStep(id,"done"));
+    const last = (result as any)?.steps?.[(result as any).steps.length-1];
+    const explorerUrl = last?.data?.explorerUrl ?? "https://testnet.arcscan.app";
+    setHTML("bridge-status",`<div class="status success"><div class="status-title">✅ Bridge complete</div><div class="status-row"><span>${amount} USDC</span><span class="arrow">→</span><strong>${amount} USDC on Arc</strong></div><a class="explorer-link" href="${explorerUrl}" target="_blank" rel="noopener">View on ArcScan ↗</a></div>`);
+    if (amtInput) amtInput.value = "";
+    try {
+      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:ARC_TESTNET.chainId}] });
+      await loadBalances();
+    } catch { /* non-critical */ }
+  } catch (err: any) {
+    ["bstep-approve","bstep-burn","bstep-attest","bstep-mint"].forEach(id => setBridgeStep(id,"reset"));
+    if (stepsEl) stepsEl.classList.remove("visible");
+    showBridgeStatus(err.code===4001||err.message?.includes("rejected") ? "Transaction rejected." : `Bridge failed: ${err.message??"Unknown error"}`,"error");
+  } finally {
+    isBridging = false;
+    if (btn) { btn.removeAttribute("disabled"); btn.textContent = "Bridge to Arc →"; }
+  }
+}
+
+function updateBridgeReceiveAmt(e: Event): void {
+  const val = (e.target as HTMLInputElement).value;
+  setText("bridge-receive-amt", parseFloat(val)>0 ? `${parseFloat(val).toFixed(2)} USDC` : "—");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   el("connect-btn")?.addEventListener("click", connectWallet);
   el("big-connect-btn")?.addEventListener("click", connectWallet);
