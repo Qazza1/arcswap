@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
+import { resolve } from "path";
 
 export default defineConfig({
   plugins: [
@@ -8,13 +9,17 @@ export default defineConfig({
       globals: { Buffer: true, global: true, process: true },
     }),
   ],
-  build: { target: "esnext" },
+  build: {
+    target: "esnext",
+    rollupOptions: {
+      input: {
+        main:      resolve(__dirname, "index.html"),
+        multisend: resolve(__dirname, "multisend.html"),
+      },
+    },
+  },
   server: {
     proxy: {
-      // Proxy Circle API calls through Vite to avoid CORS in development.
-      // The App Kit calls https://api.circle.com — we intercept via fetch
-      // patch in index.html and redirect to /circle-proxy, which Vite
-      // forwards to api.circle.com server-side (no CORS restriction).
       "/circle-proxy": {
         target: "https://api.circle.com",
         changeOrigin: true,
