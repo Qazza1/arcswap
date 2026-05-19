@@ -1,0 +1,42 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "C:\\Users\\golis\\Desktop\\ARC Dapp\\contracts\\ArcFXMultisender.sol": {
+      "lastModificationDate": 1779203323808,
+      "contentHash": "dd356f351224fb5b0acc53b60d009eef",
+      "sourceName": "contracts/ArcFXMultisender.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "ArcFXMultisender",
+        "IERC20"
+      ]
+    }
+  }
+}

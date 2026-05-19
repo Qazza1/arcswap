@@ -1,12 +1,14 @@
 {
   "name": "fx-swap-widget",
-  "version": "0.1.0",
-  "description": "Stablecoin FX swap widget on Arc Testnet (USDC <-> EURC)",
+  "version": "0.2.0",
+  "description": "ArcFX — Stablecoin FX exchange on Arc. Swap, Bridge, Multisend.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:multisender": "hardhat run scripts/deploy-multisender.cjs --network arc_testnet --config hardhat.config.cjs",
+    "deploy:multisender:local": "hardhat run scripts/deploy-multisender.cjs --network hardhat --config hardhat.config.cjs"
   },
   "dependencies": {
     "@circle-fin/app-kit": "^1.0.0",
@@ -15,8 +17,11 @@
     "viem": "^2.0.0"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.0",
     "typescript": "^5.4.0",
     "vite": "^5.0.0",
-    "vite-plugin-node-polyfills": "^0.22.0"
+    "vite-plugin-node-polyfills": "^0.22.0",
+    "dotenv": "^16.0.0"
   }
 }

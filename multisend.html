@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcFX Multisender — Batch USDC/EURC transfers on Arc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #060810;
+      --bg-card:   #0b0f1a;
+      --bg-raised: #101420;
+      --border:    #1a2035;
+      --border-med:#252d45;
+      --text:      #e8edf8;
+      --muted:     #4a5578;
+      --subtle:    #2a3350;
+      --blue:      #3d7eff;
+      --blue-dim:  rgba(61,126,255,0.1);
+      --green:     #00d4aa;
+      --green-dim: rgba(0,212,170,0.08);
+      --orange:    #ff6b35;
+      --red:       #ff4d6a;
+      --amber:     #f5a623;
+      --r:         10px;
+      --r-sm:      6px;
+      --r-lg:      14px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Space Grotesk", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Nav ── */
+    nav {
+      height: 62px;
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      background: rgba(6,8,16,0.96);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 11px; font-size: 17px; font-weight: 700; color: var(--text); }
+    .nav-logo img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border-med); }
+    .nav-back { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .nav-back:hover { color: var(--text); text-decoration: none; }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border-med); color: var(--text); font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--r-sm); cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: border-color .15s, background .15s; }
+    .btn-ghost:hover { border-color: var(--blue); background: var(--blue-dim); }
+    .btn-ghost.connected { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
+
+    /* ── Page layout ── */
+    .page { max-width: 900px; margin: 0 auto; padding: 48px 28px 80px; }
+
+    /* ── Hero ── */
+    .page-hero { margin-bottom: 40px; }
+    .page-eyebrow {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--bg-card); border: 1px solid var(--border-med);
+      color: var(--muted); font-size: 11.5px; font-weight: 500;
+      padding: 4px 12px; border-radius: 100px; margin-bottom: 20px;
+    }
+    .page-eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+    .page-title { font-size: clamp(32px, 5vw, 52px); font-weight: 700; letter-spacing: -1.5px; line-height: 1.1; margin-bottom: 14px; }
+    .page-title .accent { background: linear-gradient(135deg, #3d7eff, #00d4aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .page-sub { font-size: 15.5px; color: var(--muted); max-width: 520px; line-height: 1.7; margin-bottom: 28px; }
+
+    /* ── Feature pills ── */
+    .feature-pills { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 0; }
+    .pill { display: flex; align-items: center; gap: 6px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 100px; padding: 5px 12px; font-size: 12px; color: var(--muted); font-weight: 500; }
+    .pill-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+    /* ── Main card ── */
+    .main-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+    }
+
+    /* Card sections */
+    .card-section { padding: 24px; border-bottom: 1px solid var(--border); }
+    .card-section:last-child { border-bottom: none; }
+    .section-label { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 14px; }
+
+    /* ── Step indicators ── */
+    .steps-row { display: flex; align-items: center; gap: 0; margin-bottom: 0; }
+    .step-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+    .step-item.active { color: var(--text); }
+    .step-item.done { color: var(--green); }
+    .step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--bg-raised); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-family: "JetBrains Mono", monospace; flex-shrink: 0; }
+    .step-item.active .step-num { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+    .step-item.done .step-num { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+    .step-sep { width: 32px; height: 1px; background: var(--border); margin: 0 8px; flex-shrink: 0; }
+
+    /* ── Connect section ── */
+    .connect-section { text-align: center; padding: 48px 24px; }
+    .connect-icon { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; margin: 0 auto 16px; border: 2px solid var(--border-med); }
+    .connect-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .connect-title { font-size: 19px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.3px; }
+    .connect-sub { font-size: 13.5px; color: var(--muted); margin-bottom: 24px; }
+    .btn-connect { display: inline-block; background: linear-gradient(135deg, #3d7eff, #00d4aa); color: #fff; border: none; border-radius: var(--r); padding: 13px 32px; font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: opacity .15s; }
+    .btn-connect:hover { opacity: .88; }
+
+    /* ── Token + tier selector ── */
+    .selector-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .selector-group { display: flex; flex-direction: column; gap: 6px; }
+    .selector-group label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .token-selector { display: flex; gap: 6px; }
+    .token-btn {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--bg-raised); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 8px 14px;
+      font-size: 13.5px; font-weight: 600;
+      font-family: "Space Grotesk", sans-serif;
+      cursor: pointer; transition: all .15s; color: var(--muted);
+    }
+    .token-btn:hover { border-color: var(--border-med); color: var(--text); }
+    .token-btn.active { background: var(--blue-dim); border-color: rgba(61,126,255,.4); color: var(--blue); }
+    .token-logo { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+    .logo-usdc { background: #2775ca; color: #fff; }
+    .logo-eurc { background: #1a3ca8; color: #fff; }
+
+    .tier-selector { display: flex; gap: 6px; }
+    .tier-btn {
+      background: var(--bg-raised); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 8px 16px;
+      font-size: 13px; font-weight: 600;
+      font-family: "Space Grotesk", sans-serif;
+      cursor: pointer; transition: all .15s; color: var(--muted);
+    }
+    .tier-btn:hover { border-color: var(--border-med); color: var(--text); }
+    .tier-btn.active.free  { background: var(--green-dim); border-color: rgba(0,212,170,.4); color: var(--green); }
+    .tier-btn.active.pro   { background: rgba(245,166,35,.1); border-color: rgba(245,166,35,.4); color: var(--amber); }
+
+    .balance-display {
+      background: var(--bg-raised); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 8px 14px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13px; color: var(--muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .balance-display strong { color: var(--text); }
+
+    /* ── Recipients input ── */
+    .input-mode-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+    .mode-tab { background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm); padding: 6px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--muted); font-family: "Space Grotesk", sans-serif; transition: all .15s; }
+    .mode-tab:hover { border-color: var(--border-med); color: var(--text); }
+    .mode-tab.active { background: var(--blue-dim); border-color: rgba(61,126,255,.4); color: var(--blue); }
+
+    /* Manual add row */
+    .add-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .add-address {
+      flex: 1; background: var(--bg-raised); border: 1px solid var(--border);
+      border-radius: var(--r-sm); color: var(--text);
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+      padding: 10px 13px; outline: none; transition: border-color .15s;
+    }
+    .add-address:focus { border-color: var(--blue); }
+    .add-address::placeholder { color: var(--subtle); }
+    .add-amount {
+      width: 120px; background: var(--bg-raised); border: 1px solid var(--border);
+      border-radius: var(--r-sm); color: var(--text);
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+      padding: 10px 13px; outline: none; transition: border-color .15s;
+      text-align: right;
+    }
+    .add-amount:focus { border-color: var(--blue); }
+    .add-amount::placeholder { color: var(--subtle); }
+    .btn-add {
+      background: var(--blue); color: #fff; border: none;
+      border-radius: var(--r-sm); padding: 10px 16px;
+      font-size: 18px; cursor: pointer; transition: opacity .15s;
+      flex-shrink: 0;
+    }
+    .btn-add:hover { opacity: .88; }
+
+    /* CSV textarea */
+    .csv-area {
+      width: 100%; background: var(--bg-raised); border: 1px solid var(--border);
+      border-radius: var(--r-sm); color: var(--text);
+      font-family: "JetBrains Mono", monospace; font-size: 12.5px;
+      padding: 12px 13px; outline: none; transition: border-color .15s;
+      resize: vertical; min-height: 120px; line-height: 1.7;
+    }
+    .csv-area:focus { border-color: var(--blue); }
+    .csv-area::placeholder { color: var(--subtle); }
+    .csv-hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+
+    /* Recipients table */
+    .recipients-table-wrap { margin-top: 14px; }
+    .recipients-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; }
+    .recipients-table thead th { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); padding: 0 12px 6px; text-align: left; }
+    .recipients-table thead th:last-child { text-align: right; }
+    .rec-row { background: var(--bg-raised); }
+    .rec-row:hover { background: var(--bg); }
+    .rec-row td { padding: 10px 12px; font-size: 13px; border: none; }
+    .rec-row td:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); }
+    .rec-row td:last-child  { border-radius: 0 var(--r-sm) var(--r-sm) 0; text-align: right; }
+    .rec-num { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); }
+    .rec-addr { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--text); }
+    .rec-amount { font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 500; color: var(--text); }
+    .btn-remove { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 4px; transition: color .15s; }
+    .btn-remove:hover { color: var(--red); }
+
+    /* ── Summary ── */
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+    @media (max-width: 600px) { .summary-grid { grid-template-columns: 1fr 1fr; } }
+    .summary-cell { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; }
+    .summary-val { font-family: "JetBrains Mono", monospace; font-size: 20px; font-weight: 500; color: var(--text); letter-spacing: -0.5px; margin-bottom: 3px; }
+    .summary-lbl { font-size: 11.5px; color: var(--muted); }
+    .summary-val.highlight { color: var(--blue); }
+
+    /* ── Action buttons ── */
+    .action-row { display: flex; gap: 10px; }
+    .btn-approve {
+      flex: 1; background: var(--bg-raised);
+      border: 1px solid var(--border-med);
+      color: var(--text); border-radius: var(--r);
+      padding: 14px; font-size: 15px; font-weight: 600;
+      cursor: pointer; font-family: "Space Grotesk", sans-serif;
+      transition: all .15s;
+    }
+    .btn-approve:hover { border-color: var(--blue); background: var(--blue-dim); }
+    .btn-approve:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-approve.done { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+    .btn-send {
+      flex: 1; background: linear-gradient(135deg, #3d7eff, #00d4aa);
+      color: #fff; border: none; border-radius: var(--r);
+      padding: 14px; font-size: 15px; font-weight: 600;
+      cursor: pointer; font-family: "Space Grotesk", sans-serif;
+      transition: opacity .15s;
+    }
+    .btn-send:hover { opacity: .88; }
+    .btn-send:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Status ── */
+    .status-box { margin-top: 14px; }
+    .status { border-radius: var(--r-sm); padding: 12px 14px; font-size: 13px; line-height: 1.6; }
+    .status.info    { background: var(--blue-dim); border: 1px solid rgba(61,126,255,.25); color: #7eb3ff; }
+    .status.success { background: var(--green-dim); border: 1px solid rgba(0,212,170,.25); color: var(--green); }
+    .status.error   { background: rgba(255,77,106,.07); border: 1px solid rgba(255,77,106,.25); color: var(--red); }
+    .status-title { font-weight: 700; margin-bottom: 5px; }
+
+    /* ── Tier info ── */
+    .tier-info {
+      background: var(--bg-raised); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 12px 14px;
+      font-size: 12.5px; color: var(--muted); line-height: 1.8;
+    }
+    .tier-info strong { color: var(--text); }
+
+    /* ── Empty state ── */
+    .empty-state { text-align: center; padding: 28px 0; color: var(--muted); font-size: 13px; }
+
+    /* ── Tx success ── */
+    .tx-success-card {
+      background: var(--green-dim); border: 1px solid rgba(0,212,170,.25);
+      border-radius: var(--r-lg); padding: 28px; text-align: center;
+    }
+    .tx-success-icon { font-size: 40px; margin-bottom: 12px; }
+    .tx-success-title { font-size: 20px; font-weight: 700; color: var(--green); margin-bottom: 8px; }
+    .tx-success-sub { font-size: 13.5px; color: var(--muted); margin-bottom: 18px; }
+    .tx-link { display: inline-block; color: var(--blue); font-size: 13px; font-family: "JetBrains Mono", monospace; border: 1px solid rgba(61,126,255,.25); border-radius: var(--r-sm); padding: 6px 14px; }
+    .tx-link:hover { background: var(--blue-dim); text-decoration: none; }
+
+    /* ── Footer note ── */
+    .page-footer { margin-top: 40px; text-align: center; font-size: 12px; color: var(--muted); line-height: 1.8; }
+    .page-footer a { color: var(--blue); }
+  </style>
+</head>
+<body>
+
+  <!-- ── Nav ── -->
+  <nav>
+    <div class="nav-logo">
+      <img src="/logo.png" alt="ArcFX" />
+      ArcFX
+    </div>
+    <a href="/" class="nav-back">← Back to ArcFX</a>
+    <div class="nav-right">
+      <button id="connect-btn" class="btn-ghost">Connect wallet</button>
+    </div>
+  </nav>
+
+  <!-- ── Page ── -->
+  <div class="page">
+
+    <!-- Hero -->
+    <div class="page-hero">
+      <div class="page-eyebrow">
+        <div class="page-eyebrow-dot"></div>
+        Arc Testnet · USDC & EURC
+      </div>
+      <h1 class="page-title">
+        Send to <span class="accent">many wallets.</span><br>
+        One transaction.
+      </h1>
+      <p class="page-sub">
+        Distribute USDC or EURC to up to 500 wallets in a single
+        on-chain transaction on Arc. Pay salaries, distribute
+        airdrops, or batch DAO payments instantly.
+      </p>
+      <div class="feature-pills">
+        <div class="pill"><div class="pill-dot" style="background:var(--green)"></div> Free up to 5 recipients</div>
+        <div class="pill"><div class="pill-dot" style="background:var(--amber)"></div> Pro: up to 500 — 0.1% fee</div>
+        <div class="pill"><div class="pill-dot" style="background:var(--blue)"></div> CSV upload supported</div>
+        <div class="pill"><div class="pill-dot" style="background:var(--blue)"></div> One MetaMask signature</div>
+      </div>
+    </div>
+
+    <!-- Main card -->
+    <div class="main-card" id="main-card">
+
+      <!-- Connect state -->
+      <div id="connect-section" class="connect-section">
+        <div class="connect-icon"><img src="/logo.png" alt="ArcFX" /></div>
+        <div class="connect-title">Connect your wallet</div>
+        <div class="connect-sub">Connect MetaMask on Arc Testnet to start sending.</div>
+        <button class="btn-connect" id="big-connect-btn">Connect MetaMask</button>
+      </div>
+
+      <!-- App (hidden until connected) -->
+      <div id="app-section" style="display:none;">
+
+        <!-- Step indicator -->
+        <div class="card-section" style="padding:18px 24px;">
+          <div class="steps-row" id="steps-row">
+            <div class="step-item active" id="step1">
+              <div class="step-num">1</div>
+              <span>Configure</span>
+            </div>
+            <div class="step-sep"></div>
+            <div class="step-item" id="step2">
+              <div class="step-num">2</div>
+              <span>Add recipients</span>
+            </div>
+            <div class="step-sep"></div>
+            <div class="step-item" id="step3">
+              <div class="step-num">3</div>
+              <span>Approve & Send</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: Configure -->
+        <div class="card-section">
+          <div class="section-label">Configuration</div>
+          <div class="selector-row">
+            <div class="selector-group">
+              <label>Token</label>
+              <div class="token-selector">
+                <button class="token-btn active" id="btn-usdc" onclick="selectToken('USDC')">
+                  <div class="token-logo logo-usdc">$</div> USDC
+                </button>
+                <button class="token-btn" id="btn-eurc" onclick="selectToken('EURC')">
+                  <div class="token-logo logo-eurc">€</div> EURC
+                </button>
+              </div>
+            </div>
+
+            <div class="selector-group">
+              <label>Tier</label>
+              <div class="tier-selector">
+                <button class="tier-btn active free" id="btn-free" onclick="selectTier('free')">
+                  Free (≤5)
+                </button>
+                <button class="tier-btn pro" id="btn-pro" onclick="selectTier('pro')">
+                  Pro (≤500) — 0.1% fee
+                </button>
+              </div>
+            </div>
+
+            <div class="selector-group">
+              <label>Your balance</label>
+              <div class="balance-display" id="balance-display">
+                <strong id="balance-val">—</strong> <span id="balance-sym">USDC</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Add recipients -->
+        <div class="card-section">
+          <div class="section-label">Recipients</div>
+
+          <div class="input-mode-tabs">
+            <button class="mode-tab active" id="tab-manual" onclick="setMode('manual')">Manual</button>
+            <button class="mode-tab" id="tab-csv" onclick="setMode('csv')">Paste CSV</button>
+          </div>
+
+          <!-- Manual mode -->
+          <div id="manual-mode">
+            <div class="add-row">
+              <input
+                id="input-address"
+                class="add-address"
+                type="text"
+                placeholder="0x... wallet address"
+                autocomplete="off"
+              />
+              <input
+                id="input-amount"
+                class="add-amount"
+                type="number"
+                min="0"
+                step="any"
+                placeholder="Amount"
+                autocomplete="off"
+              />
+              <button class="btn-add" onclick="addRecipient()" title="Add recipient">+</button>
+            </div>
+          </div>
+
+          <!-- CSV mode -->
+          <div id="csv-mode" style="display:none;">
+            <textarea
+              id="csv-input"
+              class="csv-area"
+              placeholder="0x1234...abcd, 100&#10;0x5678...efgh, 50&#10;0x9abc...ijkl, 75"
+            ></textarea>
+            <div class="csv-hint">One recipient per line: <code style="color:var(--blue)">address, amount</code> — comma or tab separated.</div>
+            <button onclick="parseCSV()" style="margin-top:10px;background:var(--blue-dim);border:1px solid rgba(61,126,255,.3);color:var(--blue);border-radius:var(--r-sm);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">
+              Parse CSV →
+            </button>
+          </div>
+
+          <!-- Recipients list -->
+          <div class="recipients-table-wrap" id="recipients-wrap" style="display:none;">
+            <table class="recipients-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Wallet address</th>
+                  <th>Amount</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="recipients-body"></tbody>
+            </table>
+          </div>
+
+          <div class="empty-state" id="empty-state">
+            No recipients added yet. Add addresses above.
+          </div>
+        </div>
+
+        <!-- Section 3: Summary + Send -->
+        <div class="card-section" id="summary-section">
+          <div class="section-label">Summary & Send</div>
+
+          <div class="summary-grid">
+            <div class="summary-cell">
+              <div class="summary-val highlight" id="sum-recipients">0</div>
+              <div class="summary-lbl">Recipients</div>
+            </div>
+            <div class="summary-cell">
+              <div class="summary-val" id="sum-total">0.00</div>
+              <div class="summary-lbl">Total to send</div>
+            </div>
+            <div class="summary-cell">
+              <div class="summary-val" id="sum-fee">0.00</div>
+              <div class="summary-lbl">ArcFX fee (0.1%)</div>
+            </div>
+          </div>
+
+          <div class="tier-info" id="tier-info" style="margin-bottom:16px;">
+            <strong>Free tier:</strong> Up to 5 recipients — no fee.
+            Switch to Pro for up to 500 recipients (0.1% fee).
+          </div>
+
+          <div class="action-row">
+            <button class="btn-approve" id="btn-approve" onclick="approveTokens()" disabled>
+              1. Approve USDC
+            </button>
+            <button class="btn-send" id="btn-send" onclick="sendTokens()" disabled>
+              2. Send to all →
+            </button>
+          </div>
+
+          <div class="status-box" id="status-box"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Success overlay -->
+    <div id="success-card" style="display:none;margin-top:24px;">
+      <div class="tx-success-card">
+        <div class="tx-success-icon">✅</div>
+        <div class="tx-success-title">All transfers sent!</div>
+        <div class="tx-success-sub" id="success-sub">—</div>
+        <a id="success-link" href="#" target="_blank" rel="noopener" class="tx-link">View on ArcScan ↗</a>
+        <br><br>
+        <button onclick="resetForm()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:var(--r-sm);padding:8px 18px;font-size:13px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">
+          Send another batch →
+        </button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="page-footer">
+      Built by <a href="/">ArcFX</a> on Arc Testnet · Powered by Circle USDC ·
+      <a href="https://testnet.arcscan.app" target="_blank" rel="noopener">ArcScan ↗</a>
+      <br>
+      Contract: <span id="contract-address-display" style="font-family:'JetBrains Mono',monospace;font-size:11px;">loading...</span>
+    </div>
+  </div>
+
+  <script type="module">
+    import { BrowserProvider, Contract, parseUnits, formatUnits } from "https://esm.sh/ethers@6";
+
+    // ─── Config ──────────────────────────────────────────────────────────────
+    // 🔴 Replace this with your deployed contract address after running:
+    //    npm run deploy:multisender
+    const MULTISENDER_ADDRESS = "0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398";
+
+    const TOKENS = {
+      USDC: { address: "0x3600000000000000000000000000000000000000", decimals: 6, symbol: "USDC" },
+      EURC: { address: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", decimals: 6, symbol: "EURC" },
+    };
+
+    const ARC_TESTNET = {
+      chainId: "0x4CEF52",
+      chainName: "Arc Network Testnet",
+      nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+      rpcUrls: ["https://rpc.testnet.arc.network"],
+      blockExplorerUrls: ["https://testnet.arcscan.app"],
+    };
+
+    const ERC20_ABI = [
+      "function balanceOf(address) view returns (uint256)",
+      "function allowance(address owner, address spender) view returns (uint256)",
+      "function approve(address spender, uint256 amount) returns (bool)",
+    ];
+
+    const MULTISENDER_ABI = [
+      "function multisendFree(address token, address[] recipients, uint256[] amounts) external",
+      "function multisend(address token, address[] recipients, uint256[] amounts) external",
+      "event Multisent(address indexed sender, address indexed token, uint256 totalAmount, uint256 recipientCount, uint256 fee, bool isPro)",
+    ];
+
+    // ─── State ────────────────────────────────────────────────────────────────
+    let provider    = null;
+    let signer      = null;
+    let userAddress = null;
+    let selectedToken = "USDC";
+    let selectedTier  = "free";
+    let recipients    = []; // [{address, amount}]
+    let approvedAmount = 0n;
+    let inputMode = "manual";
+
+    // ─── DOM helpers ─────────────────────────────────────────────────────────
+    const el  = (id) => document.getElementById(id);
+    const txt = (id, v) => { const n = el(id); if (n) n.textContent = v; };
+    const show = (id) => { const n = el(id); if (n) n.style.display = "block"; };
+    const hide = (id) => { const n = el(id); if (n) n.style.display = "none"; };
+
+    // ─── Init ─────────────────────────────────────────────────────────────────
+    el("contract-address-display").textContent =
+      MULTISENDER_ADDRESS === "0x0000000000000000000000000000000000000000"
+        ? "Not deployed yet — see README"
+        : MULTISENDER_ADDRESS.slice(0,10)+"..."+MULTISENDER_ADDRESS.slice(-8);
+
+    // ─── Wallet ───────────────────────────────────────────────────────────────
+    async function connectWallet() {
+      if (!window.ethereum) { showStatus("MetaMask not found.", "error"); return; }
+      try {
+        el("connect-btn").textContent = "Connecting…";
+        provider = new BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+
+        // Switch to Arc Testnet
+        try {
+          await provider.send("wallet_switchEthereumChain", [{ chainId: ARC_TESTNET.chainId }]);
+        } catch (e) {
+          const code = e.code ?? e.error?.code ?? e.info?.error?.code;
+          const msg = e.message ?? "";
+          if (code === 4902 || msg.includes("4902")) {
+            await provider.send("wallet_addEthereumChain", [ARC_TESTNET]);
+          } else if (!msg.includes("already") && !msg.includes("same RPC")) throw e;
+        }
+
+        signer      = await provider.getSigner();
+        userAddress = await signer.getAddress();
+        const short = userAddress.slice(0,6)+"…"+userAddress.slice(-4);
+        el("connect-btn").textContent = short;
+        el("connect-btn").classList.add("connected");
+
+        hide("connect-section");
+        show("app-section");
+
+        await loadBalance();
+        updateSummary();
+
+      } catch (err) {
+        el("connect-btn").textContent = "Connect wallet";
+        showStatus("Connection failed: "+err.message, "error");
+      }
+    }
+
+    async function loadBalance() {
+      if (!provider || !userAddress) return;
+      const token = TOKENS[selectedToken];
+      const contract = new Contract(token.address, ERC20_ABI, provider);
+      const bal = await contract.balanceOf(userAddress);
+      el("balance-val").textContent = parseFloat(formatUnits(bal, token.decimals)).toFixed(4);
+      el("balance-sym").textContent = selectedToken;
+    }
+
+    // ─── Token / Tier selection ───────────────────────────────────────────────
+    window.selectToken = function(sym) {
+      selectedToken = sym;
+      el("btn-usdc").classList.toggle("active", sym === "USDC");
+      el("btn-eurc").classList.toggle("active", sym === "EURC");
+      el("btn-approve").textContent = `1. Approve ${sym}`;
+      approvedAmount = 0n;
+      el("btn-approve").classList.remove("done");
+      el("btn-send").disabled = true;
+      if (userAddress) loadBalance();
+      updateSummary();
+    };
+
+    window.selectTier = function(tier) {
+      selectedTier = tier;
+      el("btn-free").classList.toggle("active", tier === "free");
+      el("btn-pro").classList.toggle("active", tier === "pro");
+      updateSummary();
+    };
+
+    // ─── Input mode ───────────────────────────────────────────────────────────
+    window.setMode = function(mode) {
+      inputMode = mode;
+      el("tab-manual").classList.toggle("active", mode === "manual");
+      el("tab-csv").classList.toggle("active", mode === "csv");
+      el("manual-mode").style.display = mode === "manual" ? "block" : "none";
+      el("csv-mode").style.display    = mode === "csv"    ? "block" : "none";
+    };
+
+    // ─── Recipients ───────────────────────────────────────────────────────────
+    window.addRecipient = function() {
+      const addr = el("input-address").value.trim();
+      const amt  = el("input-amount").value.trim();
+
+      if (!addr.match(/^0x[0-9a-fA-F]{40}$/)) {
+        showStatus("Invalid address — must start with 0x and be 42 characters.", "error");
+        return;
+      }
+      if (!amt || parseFloat(amt) <= 0) {
+        showStatus("Enter a valid amount.", "error");
+        return;
+      }
+
+      // Tier limit check
+      const limit = selectedTier === "free" ? 5 : 500;
+      if (recipients.length >= limit) {
+        showStatus(`${selectedTier === "free" ? "Free" : "Pro"} tier limit: ${limit} recipients.`, "error");
+        return;
+      }
+
+      recipients.push({ address: addr, amount: amt });
+      el("input-address").value = "";
+      el("input-amount").value  = "";
+      el("input-address").focus();
+      renderTable();
+      updateSummary();
+      showStatus("", "");
+    };
+
+    // Enter key on amount field
+    el("input-amount")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") window.addRecipient();
+    });
+
+    window.removeRecipient = function(i) {
+      recipients.splice(i, 1);
+      approvedAmount = 0n;
+      el("btn-approve").classList.remove("done");
+      el("btn-send").disabled = true;
+      renderTable();
+      updateSummary();
+    };
+
+    window.parseCSV = function() {
+      const lines = el("csv-input").value.trim().split("\n");
+      let added = 0; let errors = 0;
+      const limit = selectedTier === "free" ? 5 : 500;
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const parts = line.split(/[,\t]+/).map(p => p.trim());
+        if (parts.length < 2) { errors++; continue; }
+        const addr = parts[0];
+        const amt  = parts[1];
+        if (!addr.match(/^0x[0-9a-fA-F]{40}$/) || !amt || parseFloat(amt) <= 0) { errors++; continue; }
+        if (recipients.length >= limit) break;
+        recipients.push({ address: addr, amount: amt });
+        added++;
+      }
+
+      renderTable();
+      updateSummary();
+      if (errors > 0) showStatus(`Added ${added} recipients. ${errors} lines skipped (invalid format).`, "info");
+      else showStatus(`Added ${added} recipients from CSV.`, "success");
+    };
+
+    function renderTable() {
+      const body = el("recipients-body");
+      if (!body) return;
+
+      const empty = el("empty-state");
+      const wrap  = el("recipients-wrap");
+
+      if (recipients.length === 0) {
+        if (empty) empty.style.display = "block";
+        if (wrap)  wrap.style.display  = "none";
+        return;
+      }
+
+      if (empty) empty.style.display = "none";
+      if (wrap)  wrap.style.display  = "block";
+
+      body.innerHTML = recipients.map((r, i) => `
+        <tr class="rec-row">
+          <td><span class="rec-num">${i+1}</span></td>
+          <td><span class="rec-addr">${r.address.slice(0,8)}…${r.address.slice(-6)}</span></td>
+          <td><span class="rec-amount">${r.amount} ${selectedToken}</span></td>
+          <td><button class="btn-remove" onclick="removeRecipient(${i})" title="Remove">×</button></td>
+        </tr>
+      `).join("");
+    }
+
+    // ─── Summary ──────────────────────────────────────────────────────────────
+    function updateSummary() {
+      const count  = recipients.length;
+      const total  = recipients.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+      const fee    = selectedTier === "pro" ? total * 0.001 : 0;
+      const isPro  = selectedTier === "pro";
+
+      txt("sum-recipients", count);
+      txt("sum-total",      total.toFixed(4) + " " + selectedToken);
+      txt("sum-fee",        fee > 0 ? fee.toFixed(4) + " " + selectedToken : "Free");
+
+      el("tier-info").innerHTML = isPro
+        ? `<strong>Pro tier:</strong> Up to 500 recipients. A <strong>0.1% fee</strong> (${fee.toFixed(4)} ${selectedToken}) is added. Total needed: <strong>${(total+fee).toFixed(4)} ${selectedToken}</strong>.`
+        : `<strong>Free tier:</strong> Up to 5 recipients — no fee. Total needed: <strong>${total.toFixed(4)} ${selectedToken}</strong>.`;
+
+      // Update step indicators
+      setStep(count > 0 ? 2 : 1);
+
+      // Enable approve button if there are recipients
+      el("btn-approve").disabled = count === 0;
+      if (count > 0) {
+        el("btn-approve").textContent = `1. Approve ${selectedToken}`;
+        el("btn-approve").classList.remove("done");
+        el("btn-send").disabled = true;
+        approvedAmount = 0n;
+      }
+    }
+
+    function setStep(n) {
+      [1,2,3].forEach(i => {
+        const s = el(`step${i}`);
+        if (!s) return;
+        s.classList.remove("active","done");
+        if (i < n) s.classList.add("done");
+        else if (i === n) s.classList.add("active");
+      });
+    }
+
+    // ─── Approve ─────────────────────────────────────────────────────────────
+    window.approveTokens = async function() {
+      if (!signer || recipients.length === 0) return;
+
+      if (MULTISENDER_ADDRESS === "0x0000000000000000000000000000000000000000") {
+        showStatus("Contract not deployed yet. Run: npm run deploy:multisender", "error");
+        return;
+      }
+
+      const token   = TOKENS[selectedToken];
+      const total   = recipients.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+      const fee     = selectedTier === "pro" ? total * 0.001 : 0;
+      const needed  = total + fee;
+      const neededWei = parseUnits(needed.toFixed(token.decimals), token.decimals);
+
+      const btn = el("btn-approve");
+      btn.disabled = true; btn.textContent = "Approving…";
+      showStatus("Confirm approval in MetaMask…", "info");
+
+      try {
+        const tokenContract = new Contract(token.address, ERC20_ABI, signer);
+
+        // Check current allowance
+        const current = await tokenContract.allowance(userAddress, MULTISENDER_ADDRESS);
+        if (current >= neededWei) {
+          approvedAmount = current;
+          btn.textContent = `✓ ${selectedToken} approved`;
+          btn.classList.add("done");
+          el("btn-send").disabled = false;
+          setStep(3);
+          showStatus(`Already approved! You can now send.`, "success");
+          return;
+        }
+
+        const tx = await tokenContract.approve(MULTISENDER_ADDRESS, neededWei);
+        showStatus("Waiting for approval confirmation…", "info");
+        await tx.wait();
+
+        approvedAmount = neededWei;
+        btn.textContent = `✓ ${selectedToken} approved`;
+        btn.classList.add("done");
+        el("btn-send").disabled = false;
+        setStep(3);
+        showStatus(`${selectedToken} approved! Ready to send.`, "success");
+
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = `1. Approve ${selectedToken}`;
+        showStatus(err.code === 4001 ? "Approval rejected." : `Approval failed: ${err.message}`, "error");
+      }
+    };
+
+    // ─── Send ─────────────────────────────────────────────────────────────────
+    window.sendTokens = async function() {
+      if (!signer || recipients.length === 0 || approvedAmount === 0n) return;
+
+      const token   = TOKENS[selectedToken];
+      const addrs   = recipients.map(r => r.address);
+      const amounts = recipients.map(r => parseUnits(parseFloat(r.amount).toFixed(token.decimals), token.decimals));
+      const isPro   = selectedTier === "pro";
+      const total   = recipients.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+
+      const btn = el("btn-send");
+      btn.disabled = true; btn.textContent = "Sending…";
+      el("btn-approve").disabled = true;
+      showStatus("Confirm the send transaction in MetaMask…", "info");
+
+      try {
+        const msContract = new Contract(MULTISENDER_ADDRESS, MULTISENDER_ABI, signer);
+        const fn  = isPro ? "multisend" : "multisendFree";
+        const tx  = await msContract[fn](token.address, addrs, amounts);
+        showStatus("Transaction submitted — waiting for confirmation…", "info");
+        const receipt = await tx.wait();
+
+        // Show success
+        hide("main-card");
+        show("success-card");
+        el("success-sub").textContent =
+          `Sent ${total.toFixed(4)} ${selectedToken} to ${recipients.length} wallets in 1 transaction.`;
+        el("success-link").href = `https://testnet.arcscan.app/tx/${receipt.hash}`;
+
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = "2. Send to all →";
+        el("btn-approve").disabled = false;
+        showStatus(err.code === 4001 ? "Transaction rejected." : `Send failed: ${err.message}`, "error");
+      }
+    };
+
+    // ─── Reset ────────────────────────────────────────────────────────────────
+    window.resetForm = function() {
+      recipients = [];
+      approvedAmount = 0n;
+      renderTable();
+      updateSummary();
+      showStatus("", "");
+      el("btn-approve").classList.remove("done");
+      el("btn-approve").disabled = true;
+      el("btn-send").disabled = true;
+      show("main-card");
+      hide("success-card");
+    };
+
+    // ─── Status ───────────────────────────────────────────────────────────────
+    function showStatus(msg, type) {
+      const box = el("status-box");
+      if (!box) return;
+      box.innerHTML = msg ? `<div class="status ${type}">${msg}</div>` : "";
+    }
+
+    // ─── Wire events ─────────────────────────────────────────────────────────
+    el("connect-btn")?.addEventListener("click", connectWallet);
+    el("big-connect-btn")?.addEventListener("click", connectWallet);
+
+    window.ethereum?.on("accountsChanged", async (accounts) => {
+      if (accounts.length === 0) {
+        userAddress = null;
+        show("connect-section"); hide("app-section");
+        el("connect-btn").textContent = "Connect wallet";
+      } else {
+        userAddress = accounts[0];
+        signer = await provider.getSigner();
+        loadBalance();
+      }
+    });
+
+    window.ethereum?.on("chainChanged", () => window.location.reload());
+  </script>
+
+</body>
+</html>
