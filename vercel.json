@@ -4,5 +4,15 @@
       "source": "/circle-proxy/:path*",
       "destination": "https://api.circle.com/:path*"
     }
+  ],
+  "routes": [
+    {
+      "src": "/multisend",
+      "dest": "/multisend.html"
+    },
+    {
+      "src": "/multisend/",
+      "dest": "/multisend.html"
+    }
   ]
 }
