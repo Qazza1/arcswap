@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcFX History — Your transaction history on Arc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:     #060810; --card:   #0b0f1a; --raised: #101420;
+      --border: #1a2035; --bmed:   #252d45; --text:   #e8edf8;
+      --muted:  #4a5578; --subtle: #2a3350;
+      --blue:   #3d7eff; --bdim:   rgba(61,126,255,0.1);
+      --teal:   #00d4aa; --tdim:   rgba(0,212,170,0.08);
+      --orange: #ff6b35; --red:    #ff4d6a;
+      --r: 10px; --rsm: 6px; --rlg: 14px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: "Space Grotesk", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Nav */
+    nav { height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; background: rgba(6,8,16,.96); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; color: var(--text); }
+    .nav-logo img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--bmed); }
+    .btn-ghost { background: transparent; border: 1px solid var(--bmed); color: var(--text); font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--rsm); cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: border-color .15s, background .15s; }
+    .btn-ghost:hover { border-color: var(--blue); background: var(--bdim); }
+    .btn-ghost.connected { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
+
+    /* Page */
+    .page { max-width: 1100px; margin: 0 auto; padding: 48px 28px 80px; }
+
+    /* Header */
+    .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 36px; flex-wrap: wrap; gap: 16px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 7px; background: var(--card); border: 1px solid var(--bmed); color: var(--muted); font-size: 11.5px; font-weight: 500; padding: 4px 12px; border-radius: 100px; margin-bottom: 14px; }
+    h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 700; letter-spacing: -1px; }
+    .gradient { background: linear-gradient(135deg, #3d7eff, #00d4aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .sub { font-size: 13.5px; color: var(--muted); margin-top: 6px; }
+
+    /* Stats row */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+    @media (max-width: 700px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; transition: border-color .2s; }
+    .stat-card:hover { border-color: var(--bmed); }
+    .stat-val { font-family: "JetBrains Mono", monospace; font-size: 22px; font-weight: 500; color: var(--text); letter-spacing: -0.5px; margin-bottom: 4px; }
+    .stat-val.green { color: var(--teal); }
+    .stat-val.red   { color: var(--red); }
+    .stat-val.blue  { color: var(--blue); }
+    .stat-lbl { font-size: 11.5px; color: var(--muted); }
+
+    /* Toolbar */
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-tab { font-size: 12.5px; font-weight: 600; padding: 6px 14px; border: 1px solid var(--border); border-radius: 100px; cursor: pointer; color: var(--muted); background: transparent; transition: all .15s; font-family: "Space Grotesk", sans-serif; }
+    .filter-tab:hover { border-color: var(--bmed); color: var(--text); }
+    .filter-tab.active { background: var(--bdim); border-color: rgba(61,126,255,.4); color: var(--blue); }
+    .toolbar-right { display: flex; gap: 8px; align-items: center; }
+    .btn-export { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; transition: all .15s; font-family: "Space Grotesk", sans-serif; }
+    .btn-export:hover { border-color: var(--teal); color: var(--teal); }
+    .btn-refresh { display: flex; align-items: center; gap: 5px; background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; transition: all .15s; font-family: "Space Grotesk", sans-serif; }
+    .btn-refresh:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* Table */
+    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: var(--rlg); overflow: hidden; }
+    .history-table { width: 100%; border-collapse: collapse; }
+    .history-table thead th { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--border); background: var(--raised); white-space: nowrap; }
+    .history-table thead th:last-child { text-align: right; }
+    .tx-row { border-bottom: 1px solid var(--border); transition: background .15s; }
+    .tx-row:last-child { border-bottom: none; }
+    .tx-row:hover { background: var(--raised); }
+    .tx-row td { padding: 14px 18px; font-size: 13.5px; vertical-align: middle; }
+    .tx-row td:last-child { text-align: right; }
+
+    /* Type cell */
+    .tx-type-cell { display: flex; align-items: center; gap: 10px; }
+    .tx-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+    .icon-swap    { background: rgba(61,126,255,.1); }
+    .icon-bridge  { background: rgba(0,212,170,.1); }
+    .icon-in      { background: rgba(0,212,170,.1); }
+    .icon-out     { background: rgba(255,77,106,.08); }
+    .icon-multi   { background: rgba(255,107,53,.1); }
+    .tx-type-name { font-weight: 600; color: var(--text); font-size: 13.5px; }
+    .tx-type-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: "JetBrains Mono", monospace; }
+
+    /* Amount */
+    .tx-amount { font-family: "JetBrains Mono", monospace; font-weight: 500; font-size: 14px; }
+    .amt-in     { color: var(--teal); }
+    .amt-out    { color: var(--red); }
+    .amt-swap   { color: var(--text); }
+    .tx-token   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* Block / hash */
+    .tx-block { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
+    .tx-hash-link { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--blue); border: 1px solid rgba(61,126,255,.2); border-radius: var(--rsm); padding: 3px 8px; white-space: nowrap; transition: background .15s; display: inline-block; }
+    .tx-hash-link:hover { background: var(--bdim); text-decoration: none; }
+
+    /* Empty / loading states */
+    .state-box { text-align: center; padding: 60px 24px; color: var(--muted); }
+    .state-icon { font-size: 40px; margin-bottom: 16px; }
+    .state-title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .state-sub { font-size: 13.5px; line-height: 1.7; margin-bottom: 24px; }
+    .btn-connect-center { display: inline-block; background: linear-gradient(135deg, #3d7eff, #00d4aa); color: #fff; border: none; border-radius: var(--r); padding: 13px 28px; font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: opacity .15s; }
+    .btn-connect-center:hover { opacity: .88; }
+    .loading-spin { display: inline-block; width: 20px; height: 20px; border: 2.5px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Footer */
+    .page-footer { margin-top: 32px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
+    .page-footer a { color: var(--muted); }
+    .page-footer a:hover { color: var(--blue); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <img src="/logo.png" alt="ArcFX" />
+    ArcFX
+  </div>
+  <a href="/" style="font-size:13px;color:var(--muted);">← Back</a>
+  <button id="connect-btn" class="btn-ghost">Connect wallet</button>
+</nav>
+
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <div class="eyebrow">📋 Arc Testnet · USDC & EURC</div>
+      <h1>Payment <span class="gradient">history.</span></h1>
+      <p class="sub">All your USDC and EURC transactions on Arc — swaps, bridges, sends and receives.</p>
+    </div>
+    <div id="wallet-display" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);display:none;background:var(--card);border:1px solid var(--border);padding:8px 14px;border-radius:var(--rsm);"></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card">
+      <div class="stat-val blue" id="stat-txs">—</div>
+      <div class="stat-lbl">Transactions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val green" id="stat-received">—</div>
+      <div class="stat-lbl">Total received (USDC+EURC)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val red" id="stat-sent">—</div>
+      <div class="stat-lbl">Total sent (USDC+EURC)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-swaps">—</div>
+      <div class="stat-lbl">Swap transactions</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="filter-tabs" id="filter-tabs">
+      <button class="filter-tab active" onclick="setFilter('all', this)">All</button>
+      <button class="filter-tab" onclick="setFilter('swap', this)">Swaps</button>
+      <button class="filter-tab" onclick="setFilter('in', this)">Received</button>
+      <button class="filter-tab" onclick="setFilter('out', this)">Sent</button>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn-refresh" onclick="refresh()">↻ Refresh</button>
+      <button class="btn-export" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap" id="table-wrap">
+    <div class="state-box" id="state-box">
+      <div class="state-icon">🔌</div>
+      <div class="state-title">Connect your wallet</div>
+      <div class="state-sub">Connect MetaMask on Arc Testnet to view your<br>full USDC and EURC transaction history.</div>
+      <button class="btn-connect-center" onclick="connectWallet()">Connect MetaMask</button>
+    </div>
+    <table class="history-table hidden" id="history-table">
+      <thead>
+        <tr>
+          <th>Transaction</th>
+          <th>Block</th>
+          <th class="hide-sm">Token</th>
+          <th>Amount</th>
+          <th>Hash</th>
+        </tr>
+      </thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </div>
+
+  <div class="page-footer">
+    <span>Showing USDC & EURC transactions on Arc Testnet · Last 100,000 blocks</span>
+    <div style="display:flex;gap:20px;">
+      <a href="/invoice">Create invoice →</a>
+      <a href="/pay">Pay link →</a>
+      <a href="https://testnet.arcscan.app" target="_blank" rel="noopener">ArcScan ↗</a>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { BrowserProvider, Contract, formatUnits } from "https://esm.sh/ethers@6";
+
+// ── Config ─────────────────────────────────────────────────────────────────
+const USDC = "0x3600000000000000000000000000000000000000";
+const EURC = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
+const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+const ARC_TESTNET = {
+  chainId: "0x4CEF52",
+  chainName: "Arc Network Testnet",
+  nativeCurrency: { name:"USDC", symbol:"USDC", decimals:18 },
+  rpcUrls: ["https://rpc.testnet.arc.network"],
+  blockExplorerUrls: ["https://testnet.arcscan.app"],
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let provider = null, signer = null, userAddress = null;
+let allTxs   = []; // processed tx objects
+let filter   = "all";
+
+// ── DOM helpers ────────────────────────────────────────────────────────────
+const el    = id => document.getElementById(id);
+const txt   = (id, v) => { const n = el(id); if (n) n.textContent = v; };
+const show  = id => { const n = el(id); if (n) n.classList.remove("hidden"); };
+const hide  = id => { const n = el(id); if (n) n.classList.add("hidden"); };
+
+// ── Wallet ─────────────────────────────────────────────────────────────────
+async function connectWallet() {
+  if (!window.ethereum) { alert("MetaMask not found."); return; }
+  try {
+    setLoading("Connecting…");
+    provider = new BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    try {
+      await provider.send("wallet_switchEthereumChain", [{ chainId: ARC_TESTNET.chainId }]);
+    } catch(e) {
+      const c = e.code ?? e.error?.code ?? e.info?.error?.code;
+      if (c === 4902 || (e.message||"").includes("4902")) {
+        await provider.send("wallet_addEthereumChain", [ARC_TESTNET]);
+      }
+    }
+    signer      = await provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    const short = `${userAddress.slice(0,8)}…${userAddress.slice(-6)}`;
+    const cb = el("connect-btn");
+    if (cb) { cb.textContent = short; cb.classList.add("connected"); }
+    const wd = el("wallet-display");
+    if (wd) { wd.textContent = short; wd.style.display = "block"; }
+
+    await loadHistory();
+  } catch(err) {
+    setEmpty(`Connection failed: ${err.message}`);
+  }
+}
+
+// ── Load history ───────────────────────────────────────────────────────────
+async function loadHistory() {
+  if (!provider || !userAddress) return;
+  setLoading("Fetching transactions…");
+
+  const padded = "0x000000000000000000000000" + userAddress.slice(2).toLowerCase();
+
+  async function getLogs(filter) {
+    try { return await provider.getLogs(filter); } catch { return []; }
+  }
+
+  try {
+    const latest   = await provider.getBlockNumber();
+    const fromBlock = Math.max(0, latest - 100000);
+
+    setLoading("Loading your USDC & EURC history…");
+
+    const [usdcOut, usdcIn, eurcOut, eurcIn] = await Promise.all([
+      getLogs({ fromBlock, address: USDC, topics: [TRANSFER, padded, null] }),
+      getLogs({ fromBlock, address: USDC, topics: [TRANSFER, null, padded] }),
+      getLogs({ fromBlock, address: EURC, topics: [TRANSFER, padded, null] }),
+      getLogs({ fromBlock, address: EURC, topics: [TRANSFER, null, padded] }),
+    ]);
+
+    // Tag all logs
+    const tagged = [
+      ...usdcOut.map(l => ({ log:l, sym:"USDC", dir:"out" })),
+      ...usdcIn.map(l  => ({ log:l, sym:"USDC", dir:"in"  })),
+      ...eurcOut.map(l => ({ log:l, sym:"EURC", dir:"out" })),
+      ...eurcIn.map(l  => ({ log:l, sym:"EURC", dir:"in"  })),
+    ];
+
+    // Group by txHash
+    const groups = new Map();
+    for (const t of tagged) {
+      const h = t.log.transactionHash;
+      if (!groups.has(h)) groups.set(h, []);
+      groups.get(h).push(t);
+    }
+
+    // Process groups into clean tx objects
+    const processed = [];
+    const seen = new Set();
+
+    // Sort all tagged by block desc
+    tagged.sort((a,b) => b.log.blockNumber - a.log.blockNumber);
+
+    for (const t of tagged) {
+      const hash = t.log.transactionHash;
+      if (seen.has(hash)) continue;
+      seen.add(hash);
+
+      const group  = groups.get(hash);
+      const hasOut = group.some(g => g.dir === "out");
+      const hasIn  = group.some(g => g.dir === "in");
+      const isSwap = hasOut && hasIn && group.some(g=>g.sym==="USDC") && group.some(g=>g.sym==="EURC");
+
+      let type, icon, iconClass, amtDisplay, amtClass, sym;
+
+      if (isSwap) {
+        const outItem = group.find(g => g.dir==="out");
+        const inItem  = group.find(g => g.dir==="in");
+        const outAmt  = safeAmt(outItem.log.data);
+        const inAmt   = safeAmt(inItem.log.data);
+        type       = "Swap";
+        icon       = "⇄";
+        iconClass  = "icon-swap";
+        amtDisplay = `${outAmt} → ${inAmt}`;
+        amtClass   = "amt-swap";
+        sym        = `${outItem.sym} → ${inItem.sym}`;
+      } else {
+        const amt = safeAmt(t.log.data);
+        sym = t.sym;
+        if (t.dir === "out") {
+          type = "Sent"; icon = "↑"; iconClass = "icon-out";
+          amtDisplay = `−${amt}`; amtClass = "amt-out";
+        } else {
+          type = "Received"; icon = "↓"; iconClass = "icon-in";
+          amtDisplay = `+${amt}`; amtClass = "amt-in";
+        }
+      }
+
+      processed.push({
+        hash, block: t.log.blockNumber,
+        type, icon, iconClass, amtDisplay, amtClass, sym,
+        isSwap,
+        dir: t.dir,
+        rawAmt: safeAmtRaw(t.log.data),
+      });
+    }
+
+    allTxs = processed;
+    updateStats();
+    renderTable();
+
+  } catch(err) {
+    setEmpty(`Could not load history. ${err.message}`);
+  }
+}
+
+function safeAmt(data) {
+  try { return (Number(BigInt(data)) / 1e6).toFixed(4); } catch { return "?"; }
+}
+function safeAmtRaw(data) {
+  try { return Number(BigInt(data)) / 1e6; } catch { return 0; }
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+function updateStats() {
+  const txs      = allTxs.length;
+  const received = allTxs.filter(t => t.dir==="in"  && !t.isSwap).reduce((s,t) => s+t.rawAmt, 0);
+  const sent     = allTxs.filter(t => t.dir==="out" && !t.isSwap).reduce((s,t) => s+t.rawAmt, 0);
+  const swaps    = allTxs.filter(t => t.isSwap).length;
+
+  txt("stat-txs",      txs > 0 ? txs : "0");
+  txt("stat-received", received > 0 ? `+${received.toFixed(2)}` : "0.00");
+  txt("stat-sent",     sent     > 0 ? `−${sent.toFixed(2)}`    : "0.00");
+  txt("stat-swaps",    swaps > 0 ? swaps : "0");
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderTable() {
+  const filtered = allTxs.filter(t => {
+    if (filter === "all")  return true;
+    if (filter === "swap") return t.isSwap;
+    if (filter === "in")   return t.dir === "in"  && !t.isSwap;
+    if (filter === "out")  return t.dir === "out" && !t.isSwap;
+    return true;
+  });
+
+  const body = el("history-body");
+  const box  = el("state-box");
+  const tbl  = el("history-table");
+
+  if (filtered.length === 0) {
+    hide("history-table");
+    if (box) {
+      box.classList.remove("hidden");
+      box.innerHTML = `
+        <div class="state-icon">📭</div>
+        <div class="state-title">No transactions found</div>
+        <div class="state-sub">No ${filter === "all" ? "" : filter + " "}transactions found for this wallet on Arc Testnet.<br>Make a swap or bridge to get started.</div>
+      `;
+    }
+    return;
+  }
+
+  if (box)  box.classList.add("hidden");
+  if (tbl)  tbl.classList.remove("hidden");
+
+  body.innerHTML = filtered.map(t => {
+    const short = `${t.hash.slice(0,6)}…${t.hash.slice(-4)}`;
+    const url   = `https://testnet.arcscan.app/tx/${t.hash}`;
+    return `
+      <tr class="tx-row">
+        <td>
+          <div class="tx-type-cell">
+            <div class="tx-icon ${t.iconClass}">${t.icon}</div>
+            <div>
+              <div class="tx-type-name">${t.type}</div>
+              <div class="tx-type-sub">${t.sym}</div>
+            </div>
+          </div>
+        </td>
+        <td><div class="tx-block">${t.block.toLocaleString()}</div></td>
+        <td class="hide-sm"><div style="font-size:12px;color:var(--muted);">${t.sym.includes("→") ? "USDC/EURC" : t.sym}</div></td>
+        <td>
+          <div class="tx-amount ${t.amtClass}">${t.amtDisplay}</div>
+        </td>
+        <td>
+          <a class="tx-hash-link" href="${url}" target="_blank" rel="noopener">${short} ↗</a>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+// ── Filter ────────────────────────────────────────────────────────────────
+window.setFilter = function(f, btn) {
+  filter = f;
+  document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  renderTable();
+};
+
+// ── Refresh ────────────────────────────────────────────────────────────────
+window.refresh = function() {
+  if (userAddress) loadHistory();
+  else connectWallet();
+};
+
+// ── Export CSV ────────────────────────────────────────────────────────────
+window.exportCSV = function() {
+  if (allTxs.length === 0) { alert("No transactions to export. Connect wallet first."); return; }
+
+  const rows = [
+    ["Type", "Token", "Amount", "Block", "Transaction Hash", "ArcScan URL"],
+    ...allTxs.map(t => [
+      t.type,
+      t.sym,
+      t.amtDisplay.replace(/[+−]/g, ""),
+      t.block,
+      t.hash,
+      `https://testnet.arcscan.app/tx/${t.hash}`,
+    ])
+  ];
+
+  const csv  = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type:"text/csv" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `arcfx-history-${userAddress?.slice(0,8) || "wallet"}-${new Date().toISOString().split("T")[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// ── UI states ─────────────────────────────────────────────────────────────
+function setLoading(msg) {
+  hide("history-table");
+  const box = el("state-box");
+  if (box) {
+    box.classList.remove("hidden");
+    box.innerHTML = `<div class="state-box"><span class="loading-spin"></span>${msg}</div>`;
+  }
+}
+
+function setEmpty(msg) {
+  hide("history-table");
+  const box = el("state-box");
+  if (box) {
+    box.classList.remove("hidden");
+    box.innerHTML = `
+      <div class="state-icon">⚠️</div>
+      <div class="state-title">Could not load history</div>
+      <div class="state-sub">${msg}</div>
+      <button class="btn-connect-center" onclick="refresh()">Try again</button>
+    `;
+  }
+}
+
+// ── Wire up nav button ────────────────────────────────────────────────────
+el("connect-btn")?.addEventListener("click", connectWallet);
+window.connectWallet = connectWallet;
+
+window.ethereum?.on("accountsChanged", accounts => {
+  if (!accounts.length) window.location.reload();
+  else { userAddress = accounts[0]; loadHistory(); }
+});
+window.ethereum?.on("chainChanged", () => window.location.reload());
+</script>
+
+</body>
+</html>

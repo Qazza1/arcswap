@@ -8,6 +8,8 @@
     { "src": "/pay",        "dest": "/pay.html" },
     { "src": "/pay/",       "dest": "/pay.html" },
     { "src": "/invoice",    "dest": "/invoice.html" },
-    { "src": "/invoice/",   "dest": "/invoice.html" }
+    { "src": "/invoice/",   "dest": "/invoice.html" },
+    { "src": "/history",    "dest": "/history.html" },
+    { "src": "/history/",   "dest": "/history.html" }
   ]
 }
