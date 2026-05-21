@@ -281,7 +281,73 @@
     /* ── Footer note ── */
     .page-footer { margin-top: 40px; text-align: center; font-size: 12px; color: var(--muted); line-height: 1.8; }
     .page-footer a { color: var(--blue); }
+
+    /* ── CSV Uploader ──────────────────────────────────── */
+    .upload-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+    .upload-tab { background: transparent; border: 1px solid var(--border); border-radius: var(--rsm); padding: 6px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--muted); font-family: "Space Grotesk", sans-serif; transition: all .15s; }
+    .upload-tab:hover { border-color: var(--bmed); color: var(--text); }
+    .upload-tab.active { background: var(--blue-dim); border-color: rgba(61,126,255,.4); color: var(--blue); }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--r-lg);
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--blue);
+      background: var(--blue-dim);
+    }
+    .drop-zone-icon { font-size: 36px; margin-bottom: 12px; }
+    .drop-zone-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .drop-zone-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
+    .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+    .upload-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .btn-browse { background: var(--blue); color: #fff; border: none; border-radius: var(--rsm); padding: 9px 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: opacity .15s; }
+    .btn-browse:hover { opacity: .88; }
+    .btn-template { background: transparent; border: 1px solid var(--border-med); color: var(--muted); border-radius: var(--rsm); padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; }
+    .btn-template:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* Column mapping */
+    .col-map { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--rsm); padding: 14px 16px; margin: 12px 0; }
+    .col-map-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 10px; }
+    .col-map-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+    .col-map-row:last-child { margin-bottom: 0; }
+    .col-map-label { color: var(--muted); width: 80px; flex-shrink: 0; }
+    .col-map-select { background: var(--bg-card); border: 1px solid var(--border-med); border-radius: var(--rsm); color: var(--text); font-size: 12.5px; font-family: "Space Grotesk", sans-serif; padding: 6px 10px; outline: none; flex: 1; -webkit-appearance: none; }
+    .col-map-select:focus { border-color: var(--blue); }
+
+    /* Preview table */
+    .preview-wrap { margin-top: 12px; max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--rsm); }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .preview-table thead th { background: var(--bg-raised); color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; padding: 8px 12px; text-align: left; font-family: "JetBrains Mono", monospace; position: sticky; top: 0; }
+    .preview-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .preview-table tr:last-child td { border-bottom: none; }
+    .preview-table tr.row-ok:hover { background: var(--bg-raised); }
+    .preview-table tr.row-err { background: rgba(255,77,106,.05); }
+    .row-num { color: var(--muted); font-family: "JetBrains Mono", monospace; }
+    .row-addr { font-family: "JetBrains Mono", monospace; color: var(--text); }
+    .row-amt  { font-family: "JetBrains Mono", monospace; color: var(--text); text-align: right; }
+    .row-status-ok  { color: var(--teal); font-size: 13px; }
+    .row-status-err { color: var(--red); font-size: 11px; }
+
+    /* Import summary bar */
+    .import-bar { display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--rsm); padding: 10px 14px; margin-top: 12px; font-size: 13px; flex-wrap: wrap; gap: 8px; }
+    .import-bar-stats { display: flex; gap: 16px; }
+    .import-stat { display: flex; align-items: center; gap: 5px; color: var(--muted); }
+    .import-stat strong { color: var(--text); }
+    .import-stat.errors strong { color: var(--red); }
+    .btn-import { background: linear-gradient(135deg, #3d7eff, #00d4aa); color: #fff; border: none; border-radius: var(--rsm); padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: opacity .15s; white-space: nowrap; }
+    .btn-import:hover { opacity: .88; }
+    .btn-clear-file { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: var(--rsm); padding: 8px 14px; font-size: 12px; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; }
+    .btn-clear-file:hover { border-color: var(--red); color: var(--red); }
   </style>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 </head>
 <body>
 
@@ -398,45 +464,98 @@
         <div class="card-section">
           <div class="section-label">Recipients</div>
 
-          <div class="input-mode-tabs">
-            <button class="mode-tab active" id="tab-manual" onclick="setMode('manual')">Manual</button>
-            <button class="mode-tab" id="tab-csv" onclick="setMode('csv')">Paste CSV</button>
+          <div class="upload-tabs">
+            <button class="upload-tab active" id="tab-manual" onclick="setMode('manual')">Manual</button>
+            <button class="upload-tab" id="tab-csv" onclick="setMode('csv')">Paste CSV</button>
+            <button class="upload-tab" id="tab-upload" onclick="setMode('upload')">Upload file</button>
           </div>
 
           <!-- Manual mode -->
           <div id="manual-mode">
             <div class="add-row">
-              <input
-                id="input-address"
-                class="add-address"
-                type="text"
-                placeholder="0x... wallet address"
-                autocomplete="off"
-              />
-              <input
-                id="input-amount"
-                class="add-amount"
-                type="number"
-                min="0"
-                step="any"
-                placeholder="Amount"
-                autocomplete="off"
-              />
-              <button class="btn-add" onclick="addRecipient()" title="Add recipient">+</button>
+              <input id="input-address" class="add-address" type="text"
+                placeholder="0x... wallet address" autocomplete="off" />
+              <input id="input-amount" class="add-amount" type="number"
+                min="0" step="any" placeholder="Amount" autocomplete="off" />
+              <button class="btn-add" onclick="addRecipient()" title="Add">+</button>
             </div>
           </div>
 
-          <!-- CSV mode -->
+          <!-- CSV paste mode -->
           <div id="csv-mode" style="display:none;">
-            <textarea
-              id="csv-input"
-              class="csv-area"
-              placeholder="0x1234...abcd, 100&#10;0x5678...efgh, 50&#10;0x9abc...ijkl, 75"
-            ></textarea>
-            <div class="csv-hint">One recipient per line: <code style="color:var(--blue)">address, amount</code> — comma or tab separated.</div>
-            <button onclick="parseCSV()" style="margin-top:10px;background:var(--blue-dim);border:1px solid rgba(61,126,255,.3);color:var(--blue);border-radius:var(--r-sm);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">
+            <textarea id="csv-input" class="csv-area"
+              placeholder="0x1234...abcd, 100&#10;0x5678...efgh, 50&#10;0x9abc...ijkl, 75"></textarea>
+            <div class="csv-hint">One per line: <code style="color:var(--blue)">address, amount</code> — comma, tab or space separated.</div>
+            <button onclick="parseCSV()" style="margin-top:10px;background:var(--blue-dim);border:1px solid rgba(61,126,255,.3);color:var(--blue);border-radius:var(--rsm);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">
               Parse CSV →
             </button>
+          </div>
+
+          <!-- File upload mode -->
+          <div id="upload-mode" style="display:none;">
+
+            <!-- Drop zone (shown when no file loaded) -->
+            <div id="drop-zone" class="drop-zone"
+              ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+              <input type="file" id="file-input" accept=".csv,.xlsx,.xls,.tsv,.txt"
+                onchange="handleFileSelect(event)" />
+              <div class="drop-zone-icon">📂</div>
+              <div class="drop-zone-title">Drop your file here</div>
+              <div class="drop-zone-sub">
+                Supports CSV, Excel (.xlsx), TSV<br>
+                Any column order — we auto-detect address and amount
+              </div>
+              <div class="upload-actions">
+                <button class="btn-browse" onclick="document.getElementById('file-input').click();event.stopPropagation();">Browse files</button>
+                <button class="btn-template" onclick="downloadTemplate();event.stopPropagation();">⬇ Download template</button>
+              </div>
+            </div>
+
+            <!-- File loaded UI -->
+            <div id="file-loaded" style="display:none;">
+
+              <!-- Column mapping (shown if auto-detect fails) -->
+              <div id="col-map-wrap" class="col-map" style="display:none;">
+                <div class="col-map-title">Map columns — tell us which column is which</div>
+                <div class="col-map-row">
+                  <span class="col-map-label">Address</span>
+                  <select id="col-address" class="col-map-select" onchange="reApplyMapping()"></select>
+                </div>
+                <div class="col-map-row">
+                  <span class="col-map-label">Amount</span>
+                  <select id="col-amount" class="col-map-select" onchange="reApplyMapping()"></select>
+                </div>
+              </div>
+
+              <!-- Preview table -->
+              <div class="preview-wrap">
+                <table class="preview-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Wallet address</th>
+                      <th style="text-align:right">Amount</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="preview-body"></tbody>
+                </table>
+              </div>
+
+              <!-- Import bar -->
+              <div class="import-bar">
+                <div class="import-bar-stats">
+                  <div class="import-stat">Rows: <strong id="stat-total">0</strong></div>
+                  <div class="import-stat">Valid: <strong id="stat-valid" style="color:var(--teal)">0</strong></div>
+                  <div class="import-stat errors">Errors: <strong id="stat-errors">0</strong></div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn-clear-file" onclick="clearFile()">✕ Clear</button>
+                  <button class="btn-import" id="btn-import-file" onclick="importValidRows()">Import valid rows →</button>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <!-- Recipients list -->
@@ -527,7 +646,7 @@
     // ─── Config ──────────────────────────────────────────────────────────────
     // 🔴 Replace this with your deployed contract address after running:
     //    npm run deploy:multisender
-    const MULTISENDER_ADDRESS = "0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398";
+    const MULTISENDER_ADDRESS = "0x0000000000000000000000000000000000000000";
 
     const TOKENS = {
       USDC: { address: "0x3600000000000000000000000000000000000000", decimals: 6, symbol: "USDC" },
@@ -909,6 +1028,264 @@
     });
 
     window.ethereum?.on("chainChanged", () => window.location.reload());
+  </script>
+
+
+  <!-- ── CSV / File upload logic ──────────────────────── -->
+  <script>
+    // ── State ──────────────────────────────────────────────────────────────
+    let parsedRows   = [];   // { addr, amount, valid, error }
+    let rawHeaders   = [];   // column headers from file
+    let rawData      = [];   // raw 2D array from file
+
+    // ── Mode switcher (extend existing setMode) ───────────────────────────
+    const _origSetMode = window.setMode;
+    window.setMode = function(mode) {
+      document.querySelectorAll(".upload-tab").forEach(b => b.classList.remove("active"));
+      const tab = document.getElementById("tab-"+mode);
+      if (tab) tab.classList.add("active");
+
+      document.getElementById("manual-mode").style.display = mode==="manual" ? "block" : "none";
+      document.getElementById("csv-mode").style.display    = mode==="csv"    ? "block" : "none";
+      document.getElementById("upload-mode").style.display = mode==="upload" ? "block" : "none";
+    };
+
+    // ── Drag and drop ──────────────────────────────────────────────────────
+    window.handleDragOver = function(e) {
+      e.preventDefault();
+      document.getElementById("drop-zone").classList.add("drag-over");
+    };
+    window.handleDragLeave = function(e) {
+      document.getElementById("drop-zone").classList.remove("drag-over");
+    };
+    window.handleDrop = function(e) {
+      e.preventDefault();
+      document.getElementById("drop-zone").classList.remove("drag-over");
+      const file = e.dataTransfer.files[0];
+      if (file) processFile(file);
+    };
+    window.handleFileSelect = function(e) {
+      const file = e.target.files[0];
+      if (file) processFile(file);
+    };
+
+    // ── Process file ───────────────────────────────────────────────────────
+    function processFile(file) {
+      const name = file.name.toLowerCase();
+      if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+        readExcel(file);
+      } else {
+        readCSV(file);
+      }
+    }
+
+    function readCSV(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        const result = Papa.parse(text, {
+          skipEmptyLines: true,
+          dynamicTyping: false,
+          trimHeaders: true,
+        });
+        if (result.data && result.data.length > 0) {
+          handleParsedData(result.data, file.name);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function readExcel(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data  = new Uint8Array(e.target.result);
+        const wb    = XLSX.read(data, { type:"array" });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows  = XLSX.utils.sheet_to_json(sheet, { header:1, defval:"" });
+        if (rows && rows.length > 0) {
+          handleParsedData(rows.map(r => r.map(String)), file.name);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // ── Auto-detect columns ────────────────────────────────────────────────
+    function handleParsedData(data, filename) {
+      if (!data || data.length === 0) return;
+
+      rawData = data;
+
+      // Check if first row looks like headers
+      const firstRow = data[0].map(c => String(c).trim().toLowerCase());
+      const hasHeaders = firstRow.some(c =>
+        c.includes("address") || c.includes("wallet") ||
+        c.includes("amount") || c.includes("amt") ||
+        c.includes("recipient")
+      );
+
+      let dataRows, headers;
+      if (hasHeaders) {
+        headers  = data[0].map(c => String(c).trim());
+        dataRows = data.slice(1);
+      } else {
+        headers  = data[0].map((_, i) => `Column ${i+1}`);
+        dataRows = data;
+      }
+      rawHeaders = headers;
+
+      // Auto-detect address and amount columns
+      let addrCol = -1, amtCol = -1;
+      headers.forEach((h, i) => {
+        const hl = h.toLowerCase();
+        if (addrCol === -1 && (hl.includes("address") || hl.includes("wallet") || hl.includes("to")))
+          addrCol = i;
+        if (amtCol === -1 && (hl.includes("amount") || hl.includes("amt") || hl.includes("value") || hl.includes("usdc") || hl.includes("eurc")))
+          amtCol = i;
+      });
+
+      // If not found by name, try by content shape
+      if (addrCol === -1 || amtCol === -1) {
+        for (let col = 0; col < headers.length; col++) {
+          const sample = dataRows.slice(0,5).map(r => String(r[col]||"").trim());
+          if (addrCol === -1 && sample.some(v => /^0x[0-9a-fA-F]{40}$/.test(v)))
+            addrCol = col;
+          if (amtCol === -1 && sample.some(v => !isNaN(parseFloat(v)) && parseFloat(v) > 0))
+            amtCol = col;
+        }
+      }
+
+      // Populate column mapping selects
+      const addrSel = document.getElementById("col-address");
+      const amtSel  = document.getElementById("col-amount");
+      addrSel.innerHTML = headers.map((h, i) => `<option value="${i}" ${i===addrCol?"selected":""}>${h}</option>`).join("");
+      amtSel.innerHTML  = headers.map((h, i) => `<option value="${i}" ${i===amtCol?"selected":""}>${h}</option>`).join("");
+
+      // Show column map if auto-detect was uncertain
+      const mapWrap = document.getElementById("col-map-wrap");
+      mapWrap.style.display = (addrCol === -1 || amtCol === -1) ? "block" : "none";
+
+      // Parse rows with detected columns
+      applyMapping(dataRows, addrCol !== -1 ? addrCol : 0, amtCol !== -1 ? amtCol : 1);
+
+      // Show file loaded UI
+      document.getElementById("drop-zone").style.display  = "none";
+      document.getElementById("file-loaded").style.display = "block";
+    }
+
+    window.reApplyMapping = function() {
+      const addrCol = parseInt(document.getElementById("col-address").value);
+      const amtCol  = parseInt(document.getElementById("col-amount").value);
+      const hasHeaders = rawData[0].map(c => String(c).trim().toLowerCase()).some(c =>
+        c.includes("address")||c.includes("wallet")||c.includes("amount")||c.includes("amt")
+      );
+      const dataRows = hasHeaders ? rawData.slice(1) : rawData;
+      applyMapping(dataRows, addrCol, amtCol);
+    };
+
+    function applyMapping(dataRows, addrCol, amtCol) {
+      parsedRows = dataRows
+        .map((row, i) => {
+          const addr = String(row[addrCol] || "").trim();
+          const amtRaw = String(row[amtCol] || "").trim().replace(/[,$€£ ]/g, "");
+          const amt  = parseFloat(amtRaw);
+
+          let valid = true, error = "";
+          if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) { valid=false; error="Invalid address"; }
+          else if (isNaN(amt) || amt <= 0)         { valid=false; error="Invalid amount"; }
+
+          return { idx: i+1, addr, amt: valid ? amt : 0, amtRaw, valid, error };
+        });
+
+      renderPreview();
+    }
+
+    function renderPreview() {
+      const body   = document.getElementById("preview-body");
+      const total  = parsedRows.length;
+      const valid  = parsedRows.filter(r => r.valid).length;
+      const errors = total - valid;
+
+      document.getElementById("stat-total").textContent  = total;
+      document.getElementById("stat-valid").textContent  = valid;
+      document.getElementById("stat-errors").textContent = errors;
+
+      const btn = document.getElementById("btn-import-file");
+      if (btn) btn.textContent = `Import ${valid} valid row${valid!==1?"s":""} →`;
+      if (btn) btn.disabled = valid === 0;
+
+      body.innerHTML = parsedRows.map(r => `
+        <tr class="${r.valid ? "row-ok" : "row-err"}">
+          <td class="row-num">${r.idx}</td>
+          <td class="row-addr">${r.addr ? r.addr.slice(0,10)+"…"+r.addr.slice(-6) : "—"}</td>
+          <td class="row-amt">${r.valid ? r.amt.toFixed(4) : r.amtRaw || "—"}</td>
+          <td>${r.valid
+            ? '<span class="row-status-ok">✓</span>'
+            : `<span class="row-status-err">${r.error}</span>`
+          }</td>
+        </tr>
+      `).join("");
+    }
+
+    // ── Import valid rows into recipients list ─────────────────────────────
+    window.importValidRows = function() {
+      const valid = parsedRows.filter(r => r.valid);
+      if (valid.length === 0) return;
+
+      // Check tier limit
+      const limit = (typeof selectedTier !== "undefined" && selectedTier === "pro") ? 500 : 5;
+      const remaining = limit - (typeof recipients !== "undefined" ? recipients.length : 0);
+
+      if (remaining <= 0) {
+        alert(`Tier limit reached. Upgrade to Pro to send to more recipients.`);
+        return;
+      }
+
+      const toAdd = valid.slice(0, remaining);
+      const skipped = valid.length - toAdd.length;
+
+      toAdd.forEach(r => {
+        if (typeof recipients !== "undefined") {
+          recipients.push({ address: r.addr, amount: String(r.amt) });
+        }
+      });
+
+      if (typeof renderTable === "function") renderTable();
+      if (typeof updateSummary === "function") updateSummary();
+      if (typeof showStatus === "function") {
+        const msg = skipped > 0
+          ? `Imported ${toAdd.length} recipients. ${skipped} skipped (tier limit).`
+          : `Imported ${toAdd.length} recipients from file.`;
+        showStatus(msg, "success");
+      }
+
+      // Switch to manual mode to show the table
+      window.setMode("manual");
+    };
+
+    // ── Clear file ─────────────────────────────────────────────────────────
+    window.clearFile = function() {
+      parsedRows = []; rawHeaders = []; rawData = [];
+      document.getElementById("drop-zone").style.display   = "block";
+      document.getElementById("file-loaded").style.display = "none";
+      document.getElementById("file-input").value          = "";
+      document.getElementById("col-map-wrap").style.display = "none";
+    };
+
+    // ── Template download ──────────────────────────────────────────────────
+    window.downloadTemplate = function() {
+      const csv = [
+        "wallet_address,amount",
+        "0x4F81E3939232815e3C98B124A17BaC75304C82D8,100",
+        "0x1234567890123456789012345678901234567890,50.5",
+        "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd,250",
+      ].join("\n");
+      const blob = new Blob([csv], { type:"text/csv" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href = url; a.download = "arcfx-multisend-template.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    };
   </script>
 
 </body>
