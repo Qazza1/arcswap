@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcFX Invoice — Create crypto invoices on Arc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:     #060810; --card:   #0b0f1a; --raised: #101420;
+      --border: #1a2035; --bmed:   #252d45; --text:   #e8edf8;
+      --muted:  #4a5578; --subtle: #2a3350;
+      --blue:   #3d7eff; --bdim:   rgba(61,126,255,0.1);
+      --teal:   #00d4aa; --tdim:   rgba(0,212,170,0.08);
+      --red:    #ff4d6a; --r: 10px; --rsm: 6px; --rlg: 14px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: "Space Grotesk", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Nav */
+    nav { height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; background: rgba(6,8,16,.96); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; color: var(--text); }
+    .nav-logo img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--bmed); }
+
+    /* Page layout */
+    .page { max-width: 1100px; margin: 0 auto; padding: 48px 28px 80px; }
+    .page-header { margin-bottom: 40px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 7px; background: var(--card); border: 1px solid var(--bmed); color: var(--muted); font-size: 11.5px; font-weight: 500; padding: 4px 12px; border-radius: 100px; margin-bottom: 16px; }
+    h1 { font-size: clamp(28px, 4vw, 42px); font-weight: 700; letter-spacing: -1px; margin-bottom: 10px; }
+    .gradient { background: linear-gradient(135deg, #3d7eff, #00d4aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .sub { font-size: 14.5px; color: var(--muted); line-height: 1.7; }
+
+    /* Two-column layout */
+    .grid { display: grid; grid-template-columns: 1fr 380px; gap: 28px; align-items: start; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+    /* Cards */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--rlg); overflow: hidden; }
+    .card-head { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .card-head h3 { font-size: 14px; font-weight: 700; }
+    .card-head-icon { width: 28px; height: 28px; border-radius: var(--rsm); background: var(--bdim); border: 1px solid rgba(61,126,255,.2); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+    .card-body { padding: 20px 22px; }
+
+    /* Form fields */
+    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 13px; }
+    .field label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .field input, .field select, .field textarea {
+      background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm);
+      color: var(--text); font-size: 13.5px; font-family: "Space Grotesk", sans-serif;
+      padding: 10px 12px; outline: none; transition: border-color .15s; width: 100%;
+      -webkit-appearance: none;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); }
+    .field input::placeholder, .field textarea::placeholder { color: var(--subtle); }
+    .field select option { background: #0b0f1a; color: var(--text); }
+    .field textarea { resize: none; min-height: 70px; font-size: 13px; line-height: 1.6; }
+    .mono { font-family: "JetBrains Mono", monospace !important; font-size: 12px !important; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field-row-3 { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 8px; }
+
+    /* Token selector */
+    .token-btns { display: flex; gap: 6px; }
+    .token-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm); padding: 9px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; color: var(--muted); font-family: "Space Grotesk", sans-serif; }
+    .token-btn:hover { border-color: var(--bmed); color: var(--text); }
+    .token-btn.active { background: var(--bdim); border-color: rgba(61,126,255,.4); color: var(--blue); }
+    .tlogo { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+    .usdc { background: #2775ca; color: #fff; }
+    .eurc { background: #1a3ca8; color: #fff; }
+
+    /* Line items */
+    .items-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; margin-bottom: 10px; }
+    .items-table th { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); padding: 0 8px 6px; text-align: left; }
+    .items-table th:last-child { text-align: right; width: 40px; }
+    .item-row td { padding: 4px; }
+    .item-row input { background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm); color: var(--text); font-size: 12.5px; font-family: "Space Grotesk", sans-serif; padding: 8px 10px; outline: none; width: 100%; transition: border-color .15s; }
+    .item-row input:focus { border-color: var(--blue); }
+    .item-row input::placeholder { color: var(--subtle); }
+    .item-row input.right { text-align: right; font-family: "JetBrains Mono", monospace; }
+    .item-row-total { font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--text); text-align: right; padding: 0 4px; white-space: nowrap; line-height: 36px; }
+    .btn-remove-item { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 4px; transition: color .15s; line-height: 36px; }
+    .btn-remove-item:hover { color: var(--red); }
+    .btn-add-item { display: flex; align-items: center; gap: 6px; background: transparent; border: 1px dashed var(--border); border-radius: var(--rsm); color: var(--muted); font-size: 12.5px; font-weight: 500; padding: 8px 14px; cursor: pointer; transition: all .15s; font-family: "Space Grotesk", sans-serif; width: 100%; justify-content: center; }
+    .btn-add-item:hover { border-color: var(--blue); color: var(--blue); background: var(--bdim); }
+
+    /* Totals */
+    .totals { background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm); padding: 14px 16px; margin-top: 14px; }
+    .total-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 6px; }
+    .total-row:last-child { margin-bottom: 0; padding-top: 8px; border-top: 1px solid var(--border); font-size: 16px; font-weight: 700; }
+    .total-row .val { font-family: "JetBrains Mono", monospace; }
+    .total-row:last-child .val { color: var(--blue); }
+
+    /* Buttons */
+    .btn-primary { display: block; width: 100%; background: linear-gradient(135deg, #3d7eff, #00d4aa); color: #fff; border: none; border-radius: var(--r); padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: opacity .15s; }
+    .btn-primary:hover { opacity: .88; }
+    .btn-outline { display: block; width: 100%; background: transparent; border: 1px solid var(--bmed); color: var(--text); border-radius: var(--r); padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; margin-top: 10px; }
+    .btn-outline:hover { border-color: var(--blue); background: var(--bdim); }
+    .btn-copy { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; background: var(--bdim); border: 1px solid rgba(61,126,255,.3); color: var(--blue); border-radius: var(--r); padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; margin-top: 10px; }
+    .btn-copy:hover { background: rgba(61,126,255,.18); }
+    .btn-copy.copied { background: var(--tdim); border-color: rgba(0,212,170,.3); color: var(--teal); }
+
+    /* Preview panel */
+    .preview-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--rlg); position: sticky; top: 80px; }
+    .preview-invoice { background: #fff; margin: 16px; border-radius: 8px; overflow: hidden; font-family: "Space Grotesk", sans-serif; }
+    .inv-header { background: #060810; padding: 20px 22px 16px; }
+    .inv-header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .inv-logo-row { display: flex; align-items: center; gap: 8px; }
+    .inv-logo-box { width: 28px; height: 28px; background: #3d7eff; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; }
+    .inv-brand { font-size: 14px; font-weight: 700; color: #e8edf8; }
+    .inv-label { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+    .inv-number { font-family: "JetBrains Mono", monospace; font-size: 10px; color: #4a5578; margin-top: 3px; }
+    .inv-meta { display: flex; gap: 24px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #1a2035; }
+    .inv-meta-item { }
+    .inv-meta-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: #4a5578; margin-bottom: 3px; }
+    .inv-meta-val { font-family: "JetBrains Mono", monospace; font-size: 11px; color: #e8edf8; }
+    .inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 22px; }
+    .inv-party-label { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #4a5578; margin-bottom: 6px; }
+    .inv-party-name { font-size: 12px; font-weight: 700; color: #060810; margin-bottom: 2px; }
+    .inv-party-detail { font-size: 10px; color: #6b7a99; line-height: 1.6; }
+    .inv-items { padding: 0 22px 14px; }
+    .inv-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+    .inv-table th { background: #f4f6fb; color: #6b7a99; font-size: 8.5px; text-transform: uppercase; letter-spacing: .1em; padding: 7px 10px; text-align: left; font-weight: 600; }
+    .inv-table th:last-child { text-align: right; }
+    .inv-table td { padding: 8px 10px; color: #1a202c; border-bottom: 1px solid #edf0f7; }
+    .inv-table td:last-child { text-align: right; font-family: "JetBrains Mono", monospace; font-weight: 500; }
+    .inv-totals { padding: 0 22px 16px; }
+    .inv-total-row { display: flex; justify-content: space-between; font-size: 10.5px; color: #6b7a99; margin-bottom: 4px; }
+    .inv-total-row.big { font-size: 14px; font-weight: 700; color: #060810; border-top: 2px solid #060810; padding-top: 8px; margin-top: 4px; }
+    .inv-total-row .inv-total-val { font-family: "JetBrains Mono", monospace; }
+    .inv-total-row.big .inv-total-val { color: #3d7eff; }
+    .inv-pay { margin: 0 22px 16px; background: #f0f6ff; border: 1px solid #c7d9ff; border-radius: 8px; padding: 12px 14px; }
+    .inv-pay-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #3d7eff; margin-bottom: 6px; }
+    .inv-pay-link { font-family: "JetBrains Mono", monospace; font-size: 9px; color: #3d7eff; word-break: break-all; line-height: 1.6; }
+    .inv-note { margin: 0 22px; background: #f9fafb; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; }
+    .inv-note-label { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #6b7a99; margin-bottom: 4px; }
+    .inv-note-text { font-size: 10px; color: #4a5568; line-height: 1.6; }
+    .inv-footer { background: #f4f6fb; padding: 10px 22px; display: flex; justify-content: space-between; align-items: center; }
+    .inv-footer-text { font-size: 9px; color: #6b7a99; }
+    .inv-footer-brand { font-size: 9px; color: #3d7eff; font-weight: 600; }
+
+    /* Pay link display */
+    .pay-link-box { background: var(--raised); border: 1px solid var(--bmed); border-radius: var(--rsm); padding: 12px 14px; margin-top: 14px; }
+    .pay-link-label { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+    .pay-link-url { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--blue); word-break: break-all; line-height: 1.7; }
+
+    /* Status */
+    .status { border-radius: var(--rsm); padding: 10px 12px; font-size: 12.5px; line-height: 1.6; margin-top: 10px; }
+    .status.success { background: var(--tdim); border: 1px solid rgba(0,212,170,.25); color: var(--teal); }
+    .status.error   { background: rgba(255,77,106,.07); border: 1px solid rgba(255,77,106,.25); color: var(--red); }
+
+    .section-sep { height: 1px; background: var(--border); margin: 20px 0; }
+
+    .widget-footer { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+    .widget-footer a { color: var(--muted); }
+    .widget-footer a:hover { color: var(--blue); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <img src="/logo.png" alt="ArcFX" />
+    ArcFX
+  </div>
+  <a href="/" style="font-size:13px;color:var(--muted);">← Back</a>
+</nav>
+
+<div class="page">
+
+  <div class="page-header">
+    <div class="eyebrow">📄 Business tools · Arc Testnet</div>
+    <h1>Create a <span class="gradient">crypto invoice.</span></h1>
+    <p class="sub">Professional PDF invoices with a Pay Now link. Clients pay in USDC or EURC on Arc — one click.</p>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT: Form -->
+    <div>
+
+      <!-- Your info -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-head">
+          <div class="card-head-icon">👤</div>
+          <h3>Your details</h3>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field">
+              <label>Your name / company</label>
+              <input id="from-name" type="text" placeholder="Jaroslav Golis / ArcFX" autocomplete="off" oninput="updatePreview()" />
+            </div>
+            <div class="field">
+              <label>Your email (optional)</label>
+              <input id="from-email" type="email" placeholder="you@email.com" oninput="updatePreview()" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Your wallet address (payments go here)</label>
+            <input id="from-wallet" class="mono" type="text" placeholder="0x4F81E393..." autocomplete="off" oninput="updatePreview()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Client info -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-head">
+          <div class="card-head-icon">🏢</div>
+          <h3>Client details</h3>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field">
+              <label>Client name / company</label>
+              <input id="to-name" type="text" placeholder="Client Name Ltd" oninput="updatePreview()" />
+            </div>
+            <div class="field">
+              <label>Client email (optional)</label>
+              <input id="to-email" type="email" placeholder="client@company.com" oninput="updatePreview()" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoice details -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-head">
+          <div class="card-head-icon">🧾</div>
+          <h3>Invoice details</h3>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field">
+              <label>Invoice number</label>
+              <input id="inv-number" type="text" value="INV-001" oninput="updatePreview()" />
+            </div>
+            <div class="field">
+              <label>Token</label>
+              <div class="token-btns">
+                <button class="token-btn active" id="tok-usdc" onclick="selectToken('USDC')">
+                  <div class="tlogo usdc">$</div> USDC
+                </button>
+                <button class="token-btn" id="tok-eurc" onclick="selectToken('EURC')">
+                  <div class="tlogo eurc">€</div> EURC
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Issue date</label>
+              <input id="inv-date" type="date" oninput="updatePreview()" />
+            </div>
+            <div class="field">
+              <label>Due date</label>
+              <input id="inv-due" type="date" oninput="updatePreview()" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Line items -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-head">
+          <div class="card-head-icon">📋</div>
+          <h3>Line items</h3>
+        </div>
+        <div class="card-body">
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th style="width:45%">Description</th>
+                <th style="width:10%">Qty</th>
+                <th style="width:20%">Unit price</th>
+                <th style="width:18%">Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="items-body"></tbody>
+          </table>
+          <button class="btn-add-item" onclick="addItem()">+ Add line item</button>
+
+          <div class="totals">
+            <div class="total-row">
+              <span>Subtotal</span>
+              <span class="val" id="preview-subtotal">0.00</span>
+            </div>
+            <div class="total-row" style="font-size:16px;font-weight:700;padding-top:8px;border-top:1px solid var(--border);margin-top:2px;">
+              <span>Total due</span>
+              <span class="val" id="preview-total" style="color:var(--blue)">0.00 USDC</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-icon">📝</div>
+          <h3>Notes</h3>
+        </div>
+        <div class="card-body">
+          <div class="field">
+            <label>Payment terms / notes (optional)</label>
+            <textarea id="inv-note" placeholder="Payment due within 14 days. Please pay via the ArcFX Pay link below." oninput="updatePreview()"></textarea>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Preview + Actions -->
+    <div>
+      <div class="preview-card">
+        <div class="card-head">
+          <div class="card-head-icon">👁</div>
+          <h3>Live preview</h3>
+        </div>
+
+        <!-- Inline preview -->
+        <div class="preview-invoice" id="live-preview">
+          <div class="inv-header">
+            <div class="inv-header-top">
+              <div class="inv-logo-row">
+                <div class="inv-logo-box">A</div>
+                <span class="inv-brand">ArcFX</span>
+              </div>
+              <div style="text-align:right;">
+                <div class="inv-label">INVOICE</div>
+                <div class="inv-number" id="prev-number">INV-001</div>
+              </div>
+            </div>
+            <div class="inv-meta">
+              <div class="inv-meta-item">
+                <div class="inv-meta-label">Issued</div>
+                <div class="inv-meta-val" id="prev-date">—</div>
+              </div>
+              <div class="inv-meta-item">
+                <div class="inv-meta-label">Due</div>
+                <div class="inv-meta-val" id="prev-due">—</div>
+              </div>
+              <div class="inv-meta-item">
+                <div class="inv-meta-label">Token</div>
+                <div class="inv-meta-val" id="prev-token">USDC</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="inv-parties">
+            <div>
+              <div class="inv-party-label">From</div>
+              <div class="inv-party-name" id="prev-from-name">Your name</div>
+              <div class="inv-party-detail" id="prev-from-detail">—</div>
+            </div>
+            <div>
+              <div class="inv-party-label">Bill to</div>
+              <div class="inv-party-name" id="prev-to-name">Client name</div>
+              <div class="inv-party-detail" id="prev-to-detail">—</div>
+            </div>
+          </div>
+
+          <div class="inv-items">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th style="width:50%">Description</th>
+                  <th>Qty</th>
+                  <th>Unit price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="prev-items">
+                <tr><td colspan="4" style="text-align:center;color:#6b7a99;padding:14px;font-size:11px;">Add line items →</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="inv-totals">
+            <div class="inv-total-row">
+              <span>Subtotal</span>
+              <span class="inv-total-val" id="prev-sub2">0.00</span>
+            </div>
+            <div class="inv-total-row big">
+              <span>Total due</span>
+              <span class="inv-total-val" id="prev-total2">0.00 USDC</span>
+            </div>
+          </div>
+
+          <div class="inv-pay">
+            <div class="inv-pay-label">Pay with USDC/EURC on Arc</div>
+            <div class="inv-pay-link" id="prev-pay-link">Fill in your wallet address to generate payment link</div>
+          </div>
+
+          <div class="inv-note" id="prev-note-wrap" style="display:none;">
+            <div class="inv-note-label">Notes</div>
+            <div class="inv-note-text" id="prev-note-text"></div>
+          </div>
+
+          <div class="inv-footer">
+            <span class="inv-footer-text">Powered by ArcFX · arcfx.app</span>
+            <span class="inv-footer-brand">Arc Testnet</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="padding:0 16px 20px;">
+          <button class="btn-primary" onclick="downloadPDF()">⬇ Download PDF invoice</button>
+          <button class="btn-outline" onclick="openPayLink()">↗ Open Pay link in browser</button>
+          <button class="btn-copy" id="copy-pay-btn" onclick="copyPayLink()">📋 Copy Pay link</button>
+
+          <div class="pay-link-box" id="pay-link-display" style="display:none;">
+            <div class="pay-link-label">Payment link</div>
+            <div class="pay-link-url" id="pay-link-url-text">—</div>
+          </div>
+
+          <div id="action-status"></div>
+
+          <div class="widget-footer">
+            <a href="/pay">Pay links →</a>
+            <a href="/multisend">Multisend →</a>
+            <a href="/">ArcFX</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+let selectedToken = "USDC";
+let items = [{ desc: "", qty: 1, price: 0 }];
+
+// ── Init ──────────────────────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  const today = new Date();
+  const due   = new Date(today);
+  due.setDate(due.getDate() + 14);
+  document.getElementById("inv-date").value = fmt(today);
+  document.getElementById("inv-due").value  = fmt(due);
+  renderItems();
+  updatePreview();
+});
+
+function fmt(d) {
+  return d.toISOString().split("T")[0];
+}
+
+function fmtDisplay(str) {
+  if (!str) return "—";
+  try {
+    const d = new Date(str + "T00:00:00");
+    return d.toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
+  } catch { return str; }
+}
+
+// ── Token ──────────────────────────────────────────────────────────────────
+window.selectToken = function(sym) {
+  selectedToken = sym;
+  document.getElementById("tok-usdc").classList.toggle("active", sym==="USDC");
+  document.getElementById("tok-eurc").classList.toggle("active", sym==="EURC");
+  updatePreview();
+};
+
+// ── Items ──────────────────────────────────────────────────────────────────
+window.addItem = function() {
+  items.push({ desc:"", qty:1, price:0 });
+  renderItems();
+  updatePreview();
+};
+
+window.removeItem = function(i) {
+  if (items.length <= 1) return;
+  items.splice(i, 1);
+  renderItems();
+  updatePreview();
+};
+
+window.updateItem = function(i, field, val) {
+  if (field === "qty" || field === "price") {
+    items[i][field] = parseFloat(val) || 0;
+  } else {
+    items[i][field] = val;
+  }
+  updatePreview();
+};
+
+function renderItems() {
+  const body = document.getElementById("items-body");
+  body.innerHTML = items.map((item, i) => `
+    <tr class="item-row">
+      <td><input type="text" value="${item.desc}" placeholder="Description" oninput="updateItem(${i},'desc',this.value)" /></td>
+      <td><input type="number" class="right" value="${item.qty}" min="0" step="any" oninput="updateItem(${i},'qty',this.value)" /></td>
+      <td><input type="number" class="right" value="${item.price || ''}" min="0" step="any" placeholder="0.00" oninput="updateItem(${i},'price',this.value)" /></td>
+      <td class="item-row-total">${((item.qty||0) * (item.price||0)).toFixed(2)}</td>
+      <td><button class="btn-remove-item" onclick="removeItem(${i})" title="Remove">×</button></td>
+    </tr>
+  `).join("");
+}
+
+// ── Totals ─────────────────────────────────────────────────────────────────
+function getTotal() {
+  return items.reduce((sum, it) => sum + (it.qty||0)*(it.price||0), 0);
+}
+
+// ── Preview ────────────────────────────────────────────────────────────────
+function updatePreview() {
+  const fromName   = document.getElementById("from-name")?.value  || "";
+  const fromEmail  = document.getElementById("from-email")?.value || "";
+  const fromWallet = document.getElementById("from-wallet")?.value.trim() || "";
+  const toName     = document.getElementById("to-name")?.value    || "";
+  const toEmail    = document.getElementById("to-email")?.value   || "";
+  const invNum     = document.getElementById("inv-number")?.value || "INV-001";
+  const invDate    = document.getElementById("inv-date")?.value   || "";
+  const invDue     = document.getElementById("inv-due")?.value    || "";
+  const note       = document.getElementById("inv-note")?.value   || "";
+  const total      = getTotal();
+  const sym        = selectedToken;
+
+  // Update form row totals
+  renderItems();
+
+  // Header
+  document.getElementById("prev-number").textContent = invNum;
+  document.getElementById("prev-date").textContent   = fmtDisplay(invDate);
+  document.getElementById("prev-due").textContent    = fmtDisplay(invDue);
+  document.getElementById("prev-token").textContent  = sym;
+
+  // Parties
+  document.getElementById("prev-from-name").textContent   = fromName   || "Your name";
+  document.getElementById("prev-from-detail").textContent = fromEmail  || "—";
+  document.getElementById("prev-to-name").textContent     = toName     || "Client name";
+  document.getElementById("prev-to-detail").textContent   = toEmail    || "—";
+
+  // Items table
+  const prevItems = document.getElementById("prev-items");
+  if (items.some(it => it.desc || it.price > 0)) {
+    prevItems.innerHTML = items.map(it => `
+      <tr>
+        <td>${it.desc || "—"}</td>
+        <td>${it.qty}</td>
+        <td>${(it.price||0).toFixed(2)}</td>
+        <td>${((it.qty||0)*(it.price||0)).toFixed(2)} ${sym}</td>
+      </tr>
+    `).join("");
+  } else {
+    prevItems.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#6b7a99;padding:14px;font-size:11px;">Add line items →</td></tr>`;
+  }
+
+  // Totals
+  const t = total.toFixed(2);
+  document.getElementById("preview-subtotal").textContent = t;
+  document.getElementById("preview-total").textContent    = `${t} ${sym}`;
+  document.getElementById("prev-sub2").textContent        = t;
+  document.getElementById("prev-total2").textContent      = `${t} ${sym}`;
+
+  // Pay link
+  const payLink = buildPayLink(fromWallet, total, sym, invNum);
+  document.getElementById("prev-pay-link").textContent = fromWallet
+    ? payLink : "Fill in your wallet address to generate payment link";
+
+  // Pay link display box
+  const linkBox = document.getElementById("pay-link-display");
+  const linkUrl = document.getElementById("pay-link-url-text");
+  if (fromWallet && total > 0) {
+    linkBox.style.display = "block";
+    linkUrl.textContent   = payLink;
+  } else {
+    linkBox.style.display = "none";
+  }
+
+  // Note
+  const noteWrap = document.getElementById("prev-note-wrap");
+  const noteText = document.getElementById("prev-note-text");
+  if (note.trim()) {
+    noteWrap.style.display = "block";
+    noteText.textContent   = note;
+  } else {
+    noteWrap.style.display = "none";
+  }
+}
+
+function buildPayLink(wallet, amount, sym, invoiceNum) {
+  if (!wallet) return "";
+  const base = window.location.origin + "/pay";
+  const p    = new URLSearchParams();
+  p.set("to", wallet);
+  if (amount > 0) p.set("amount", amount.toFixed(2));
+  p.set("token", sym);
+  if (invoiceNum) p.set("note", invoiceNum);
+  return `${base}?${p.toString()}`;
+}
+
+// ── Actions ────────────────────────────────────────────────────────────────
+window.copyPayLink = function() {
+  const fromWallet = document.getElementById("from-wallet")?.value.trim() || "";
+  const total      = getTotal();
+  const invNum     = document.getElementById("inv-number")?.value || "INV-001";
+  if (!fromWallet) { showStatus("Enter your wallet address first.", "error"); return; }
+  const link = buildPayLink(fromWallet, total, selectedToken, invNum);
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = document.getElementById("copy-pay-btn");
+    if (btn) { btn.textContent = "✓ Copied!"; btn.classList.add("copied"); setTimeout(() => { btn.innerHTML = "📋 Copy Pay link"; btn.classList.remove("copied"); }, 2000); }
+  });
+};
+
+window.openPayLink = function() {
+  const fromWallet = document.getElementById("from-wallet")?.value.trim() || "";
+  const total      = getTotal();
+  const invNum     = document.getElementById("inv-number")?.value || "INV-001";
+  if (!fromWallet) { showStatus("Enter your wallet address first.", "error"); return; }
+  window.open(buildPayLink(fromWallet, total, selectedToken, invNum), "_blank");
+};
+
+// ── PDF Generation ─────────────────────────────────────────────────────────
+window.downloadPDF = function() {
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) { showStatus("PDF library not loaded yet. Try again.", "error"); return; }
+
+  const fromName   = document.getElementById("from-name")?.value   || "Your Name";
+  const fromEmail  = document.getElementById("from-email")?.value  || "";
+  const fromWallet = document.getElementById("from-wallet")?.value.trim() || "";
+  const toName     = document.getElementById("to-name")?.value     || "Client";
+  const toEmail    = document.getElementById("to-email")?.value    || "";
+  const invNum     = document.getElementById("inv-number")?.value  || "INV-001";
+  const invDate    = document.getElementById("inv-date")?.value    || "";
+  const invDue     = document.getElementById("inv-due")?.value     || "";
+  const note       = document.getElementById("inv-note")?.value    || "";
+  const total      = getTotal();
+  const sym        = selectedToken;
+  const payLink    = buildPayLink(fromWallet, total, sym, invNum);
+
+  const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+  const W   = 210; // A4 width
+
+  // ── Dark header ────────────────────────────────────────
+  doc.setFillColor(6, 8, 16);
+  doc.rect(0, 0, W, 52, "F");
+
+  // ArcFX logo box
+  doc.setFillColor(61, 126, 255);
+  doc.roundedRect(14, 10, 14, 14, 2, 2, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(255, 255, 255);
+  doc.text("A", 21, 19.5, { align:"center" });
+
+  // ArcFX brand name
+  doc.setFontSize(11);
+  doc.setTextColor(232, 237, 248);
+  doc.text("ArcFX", 32, 19.5);
+
+  // INVOICE label
+  doc.setFontSize(22);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("INVOICE", W-14, 19.5, { align:"right" });
+
+  // Invoice number
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(74, 85, 120);
+  doc.text(invNum, W-14, 26, { align:"right" });
+
+  // Divider line
+  doc.setDrawColor(26, 32, 53);
+  doc.line(14, 31, W-14, 31);
+
+  // Meta row
+  doc.setFontSize(7);
+  doc.setTextColor(74, 85, 120);
+  doc.setFont("helvetica", "bold");
+  doc.text("ISSUED", 14, 38);
+  doc.text("DUE DATE", 70, 38);
+  doc.text("TOKEN", 140, 38);
+
+  doc.setFont("courier", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(232, 237, 248);
+  doc.text(fmtDisplay(invDate), 14, 44);
+  doc.text(fmtDisplay(invDue),  70, 44);
+  doc.text(sym,                 140, 44);
+
+  // ── Parties ────────────────────────────────────────────
+  let y = 62;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(74, 85, 120);
+  doc.text("FROM", 14, y);
+  doc.text("BILL TO", W/2+5, y);
+
+  y += 6;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(6, 8, 16);
+  doc.text(fromName, 14, y);
+  doc.text(toName,   W/2+5, y);
+
+  y += 5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(74, 85, 120);
+  if (fromEmail) { doc.text(fromEmail, 14, y); }
+  if (toEmail)   { doc.text(toEmail,   W/2+5, y); }
+
+  // ── Line items table ───────────────────────────────────
+  y += 12;
+
+  doc.autoTable({
+    startY: y,
+    head: [["Description", "Qty", "Unit Price", `Total (${sym})`]],
+    body: items.filter(it => it.desc || it.price > 0).map(it => [
+      it.desc || "—",
+      String(it.qty),
+      (it.price||0).toFixed(2),
+      ((it.qty||0)*(it.price||0)).toFixed(2),
+    ]),
+    headStyles: {
+      fillColor:[244,246,251],
+      textColor:[107,122,153],
+      fontSize:7.5,
+      fontStyle:"bold",
+      halign:"left",
+    },
+    columnStyles: {
+      0: { cellWidth:"auto" },
+      1: { halign:"right", cellWidth:18, font:"courier" },
+      2: { halign:"right", cellWidth:28, font:"courier" },
+      3: { halign:"right", cellWidth:32, font:"courier" },
+    },
+    bodyStyles: { fontSize:9.5, textColor:[26,32,46] },
+    alternateRowStyles: { fillColor:[249,250,252] },
+    margin: { left:14, right:14 },
+    styles: { overflow:"linebreak" },
+  });
+
+  y = doc.lastAutoTable.finalY + 6;
+
+  // ── Totals ─────────────────────────────────────────────
+  const totW = 70;
+  const totX = W - 14 - totW;
+
+  // Divider
+  doc.setDrawColor(6, 8, 16);
+  doc.setLineWidth(0.5);
+  doc.line(totX, y, W-14, y);
+
+  y += 5;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(6, 8, 16);
+  doc.text("Total due", totX, y);
+
+  doc.setFont("courier", "bold");
+  doc.setTextColor(61, 126, 255);
+  doc.text(`${total.toFixed(2)} ${sym}`, W-14, y, { align:"right" });
+
+  // ── Pay link box ───────────────────────────────────────
+  y += 10;
+  doc.setFillColor(240, 246, 255);
+  doc.setDrawColor(199, 217, 255);
+  doc.roundedRect(14, y, W-28, 22, 2, 2, "FD");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(61, 126, 255);
+  doc.text("PAY WITH USDC/EURC ON ARC", 20, y+7);
+
+  doc.setFont("courier", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(61, 126, 255);
+  const linkLines = doc.splitTextToSize(payLink || "Add your wallet address to generate a payment link", W-40);
+  doc.text(linkLines, 20, y+13);
+
+  // ── Note ──────────────────────────────────────────────
+  if (note.trim()) {
+    y += 30;
+    doc.setFillColor(249, 250, 251);
+    doc.setDrawColor(229, 231, 235);
+    const noteLines = doc.splitTextToSize(note, W-40);
+    const noteH     = noteLines.length * 5 + 12;
+    doc.roundedRect(14, y, W-28, noteH, 2, 2, "FD");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(107, 122, 153);
+    doc.text("NOTES", 20, y+7);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(74, 85, 104);
+    doc.text(noteLines, 20, y+13);
+  }
+
+  // ── Footer ────────────────────────────────────────────
+  doc.setFillColor(244, 246, 251);
+  doc.rect(0, 282, W, 15, "F");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(107, 122, 153);
+  doc.text("Powered by ArcFX · arcfx.app", 14, 291);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(61, 126, 255);
+  doc.text("Arc Testnet", W-14, 291, { align:"right" });
+
+  // Save
+  doc.save(`${invNum}-ArcFX-Invoice.pdf`);
+  showStatus("✅ PDF downloaded!", "success");
+};
+
+function showStatus(msg, type) {
+  const el = document.getElementById("action-status");
+  if (el) el.innerHTML = msg ? `<div class="status ${type}">${msg}</div>` : "";
+  setTimeout(() => { if (el) el.innerHTML = ""; }, 3000);
+}
+</script>
+
+</body>
+</html>

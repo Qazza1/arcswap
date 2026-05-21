@@ -1,14 +1,13 @@
 {
   "rewrites": [
-    {
-      "source": "/circle-proxy/:path*",
-      "destination": "https://api.circle.com/:path*"
-    }
+    { "source": "/circle-proxy/:path*", "destination": "https://api.circle.com/:path*" }
   ],
   "routes": [
-    { "src": "/multisend", "dest": "/multisend.html" },
+    { "src": "/multisend",  "dest": "/multisend.html" },
     { "src": "/multisend/", "dest": "/multisend.html" },
-    { "src": "/pay", "dest": "/pay.html" },
-    { "src": "/pay/", "dest": "/pay.html" }
+    { "src": "/pay",        "dest": "/pay.html" },
+    { "src": "/pay/",       "dest": "/pay.html" },
+    { "src": "/invoice",    "dest": "/invoice.html" },
+    { "src": "/invoice/",   "dest": "/invoice.html" }
   ]
 }

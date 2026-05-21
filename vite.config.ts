@@ -16,6 +16,7 @@ export default defineConfig({
         main:      resolve(__dirname, "index.html"),
         multisend: resolve(__dirname, "multisend.html"),
         pay:       resolve(__dirname, "pay.html"),
+        invoice:   resolve(__dirname, "invoice.html"),
       },
     },
   },
