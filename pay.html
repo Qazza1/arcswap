@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="page-title">ArcFX Pay — Stablecoin payments on Arc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #060810;
+      --card:     #0b0f1a;
+      --raised:   #101420;
+      --border:   #1a2035;
+      --bmed:     #252d45;
+      --text:     #e8edf8;
+      --muted:    #4a5578;
+      --subtle:   #2a3350;
+      --blue:     #3d7eff;
+      --bdim:     rgba(61,126,255,0.1);
+      --teal:     #00d4aa;
+      --tdim:     rgba(0,212,170,0.08);
+      --orange:   #ff6b35;
+      --red:      #ff4d6a;
+      --r:        10px;
+      --rsm:      6px;
+      --rlg:      14px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: "Space Grotesk", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Nav */
+    nav { height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; background: rgba(6,8,16,.96); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; color: var(--text); }
+    .nav-logo img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--bmed); }
+    .btn-ghost { background: transparent; border: 1px solid var(--bmed); color: var(--text); font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--rsm); cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: border-color .15s, background .15s; }
+    .btn-ghost:hover { border-color: var(--blue); background: var(--bdim); }
+    .btn-ghost.connected { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
+
+    /* Page */
+    .page { max-width: 520px; margin: 0 auto; padding: 52px 24px 80px; }
+
+    /* Shared card */
+    .main-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--rlg); overflow: hidden; }
+    .card-head { padding: 22px 24px 0; }
+    .card-body { padding: 20px 24px 24px; }
+    .card-sep { height: 1px; background: var(--border); margin: 0 0 20px; }
+
+    .eyebrow { display: inline-flex; align-items: center; gap: 7px; background: var(--raised); border: 1px solid var(--bmed); color: var(--muted); font-size: 11.5px; font-weight: 500; padding: 4px 12px; border-radius: 100px; margin-bottom: 18px; }
+    .eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    h1 { font-size: clamp(26px, 5vw, 38px); font-weight: 700; letter-spacing: -1px; line-height: 1.1; margin-bottom: 10px; }
+    .gradient { background: linear-gradient(135deg, #3d7eff, #00d4aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .sub { font-size: 14.5px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; }
+
+    /* Form fields */
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .field label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .field input, .field select, .field textarea {
+      background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm);
+      color: var(--text); font-size: 14px; font-family: "Space Grotesk", sans-serif;
+      padding: 11px 13px; outline: none; transition: border-color .15s; width: 100%;
+      -webkit-appearance: none;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); }
+    .field input::placeholder, .field textarea::placeholder { color: var(--subtle); }
+    .field select option { background: #0b0f1a; color: var(--text); }
+    .field textarea { resize: none; min-height: 72px; font-size: 13.5px; line-height: 1.6; }
+    .mono-input { font-family: "JetBrains Mono", monospace !important; font-size: 12.5px !important; }
+    .field-hint { font-size: 11px; color: var(--muted); }
+
+    /* Amount row */
+    .amount-row { display: flex; gap: 10px; }
+    .amount-row .field:first-child { flex: 1; }
+    .amount-row .field:last-child { width: 110px; }
+
+    /* Token selector */
+    .token-btns { display: flex; gap: 6px; }
+    .token-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm); padding: 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all .15s; color: var(--muted); font-family: "Space Grotesk", sans-serif; }
+    .token-btn:hover { border-color: var(--bmed); color: var(--text); }
+    .token-btn.active { background: var(--bdim); border-color: rgba(61,126,255,.4); color: var(--blue); }
+    .token-logo { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+    .usdc { background: #2775ca; color: #fff; }
+    .eurc { background: #1a3ca8; color: #fff; }
+
+    /* Buttons */
+    .btn-primary { display: block; width: 100%; background: linear-gradient(135deg, #3d7eff, #00d4aa); color: #fff; border: none; border-radius: var(--r); padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: opacity .15s; }
+    .btn-primary:hover { opacity: .88; }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+
+    .btn-outline { display: block; width: 100%; background: transparent; border: 1px solid var(--bmed); color: var(--text); border-radius: var(--r); padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; }
+    .btn-outline:hover { border-color: var(--blue); background: var(--bdim); }
+
+    /* Generated link box */
+    .link-box { background: var(--raised); border: 1px solid var(--bmed); border-radius: var(--rsm); padding: 14px; margin-bottom: 14px; }
+    .link-label { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+    .link-url { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--blue); word-break: break-all; line-height: 1.7; margin-bottom: 12px; }
+    .copy-btn { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; background: var(--bdim); border: 1px solid rgba(61,126,255,.3); color: var(--blue); border-radius: var(--rsm); padding: 9px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; }
+    .copy-btn:hover { background: rgba(61,126,255,.18); }
+    .copy-btn.copied { background: var(--tdim); border-color: rgba(0,212,170,.3); color: var(--teal); }
+
+    /* QR code */
+    .qr-wrap { display: flex; justify-content: center; margin: 14px 0; }
+    #qr-canvas { background: #fff; padding: 12px; border-radius: var(--rsm); }
+
+    /* Status */
+    .status { border-radius: var(--rsm); padding: 12px 14px; font-size: 13px; line-height: 1.6; margin-top: 12px; }
+    .status.info    { background: var(--bdim); border: 1px solid rgba(61,126,255,.25); color: #7eb3ff; }
+    .status.success { background: var(--tdim); border: 1px solid rgba(0,212,170,.25); color: var(--teal); }
+    .status.error   { background: rgba(255,77,106,.07); border: 1px solid rgba(255,77,106,.25); color: var(--red); }
+    .status-title   { font-weight: 700; margin-bottom: 5px; }
+
+    /* Payment mode */
+    .pay-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--raised); border: 2px solid var(--bmed); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-family: "JetBrains Mono", monospace; font-size: 16px; color: var(--muted); }
+    .pay-to { text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .pay-address { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 14px; color: var(--text); font-weight: 500; margin-bottom: 24px; }
+
+    .pay-amount-display { text-align: center; margin-bottom: 20px; }
+    .pay-amount-val { font-family: "JetBrains Mono", monospace; font-size: 52px; font-weight: 500; color: var(--text); letter-spacing: -2px; line-height: 1; margin-bottom: 6px; }
+    .pay-amount-token { display: inline-flex; align-items: center; gap: 7px; background: var(--raised); border: 1px solid var(--bmed); border-radius: 100px; padding: 5px 14px; font-size: 14px; font-weight: 600; color: var(--text); }
+
+    .pay-note { background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm); padding: 12px 14px; margin-bottom: 20px; font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+    .pay-note strong { color: var(--text); display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+
+    .pay-any-amount { margin-bottom: 14px; }
+
+    /* Success card */
+    .success-card { background: var(--tdim); border: 1px solid rgba(0,212,170,.2); border-radius: var(--rlg); padding: 32px 24px; text-align: center; }
+    .success-icon  { font-size: 44px; margin-bottom: 14px; }
+    .success-title { font-size: 22px; font-weight: 700; color: var(--teal); margin-bottom: 8px; }
+    .success-sub   { font-size: 13.5px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+    .explorer-btn  { display: inline-block; color: var(--blue); font-size: 13px; font-family: "JetBrains Mono", monospace; border: 1px solid rgba(61,126,255,.25); border-radius: var(--rsm); padding: 7px 16px; transition: background .15s; }
+    .explorer-btn:hover { background: var(--bdim); text-decoration: none; }
+
+    /* Widget footer */
+    .widget-footer { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+    .widget-footer a { color: var(--muted); }
+    .widget-footer a:hover { color: var(--blue); text-decoration: none; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <img src="/logo.png" alt="ArcFX" />
+    ArcFX
+  </div>
+  <a href="/" style="font-size:13px;color:var(--muted);">← Back</a>
+  <button id="connect-btn" class="btn-ghost">Connect wallet</button>
+</nav>
+
+<div class="page" id="page-root"></div>
+
+<script type="module">
+import { BrowserProvider, Contract, parseUnits, formatUnits, isAddress } from "https://esm.sh/ethers@6";
+
+// ── Config ─────────────────────────────────────────────────────────────────
+const TOKENS = {
+  USDC: { address: "0x3600000000000000000000000000000000000000", decimals: 6 },
+  EURC: { address: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", decimals: 6 },
+};
+
+const ARC_TESTNET = {
+  chainId: "0x4CEF52",
+  chainName: "Arc Network Testnet",
+  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+  rpcUrls: ["https://rpc.testnet.arc.network"],
+  blockExplorerUrls: ["https://testnet.arcscan.app"],
+};
+
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function transfer(address to, uint256 amount) returns (bool)",
+];
+
+// ── State ──────────────────────────────────────────────────────────────────
+let provider = null, signer = null, userAddress = null;
+let selectedToken = "USDC";
+let isPaying = false;
+
+// ── URL params ─────────────────────────────────────────────────────────────
+const params   = new URLSearchParams(window.location.search);
+const toAddr   = params.get("to")     || "";
+const fixedAmt = params.get("amount") || "";
+const tokenPrm = (params.get("token") || "USDC").toUpperCase();
+const note     = params.get("note")   || "";
+const isPayMode = isAddress(toAddr);
+
+if (isPayMode) {
+  document.getElementById("page-title").textContent = `Pay ${toAddr.slice(0,6)}… on ArcFX`;
+  selectedToken = TOKENS[tokenPrm] ? tokenPrm : "USDC";
+  renderPayMode();
+} else {
+  renderGenMode();
+}
+
+// ═══════════════════════════════════════════════════════
+//  GENERATOR MODE
+// ═══════════════════════════════════════════════════════
+function renderGenMode() {
+  document.getElementById("page-root").innerHTML = `
+    <div class="eyebrow" style="margin-bottom:18px;">
+      <div class="eyebrow-dot" style="background:var(--blue)"></div>
+      Create a payment link
+    </div>
+    <h1>Get paid in<br><span class="gradient">stablecoins.</span></h1>
+    <p class="sub">Generate a shareable link — anyone can pay you in USDC or EURC on Arc in one click.</p>
+
+    <div class="main-card">
+      <div class="card-body">
+
+        <div class="field">
+          <label>Your wallet address</label>
+          <input id="gen-address" class="mono-input" type="text" placeholder="0x... (connect wallet or paste manually)" autocomplete="off" />
+          <span class="field-hint">The address that will receive the payment.</span>
+        </div>
+
+        <div class="amount-row">
+          <div class="field">
+            <label>Amount <span style="color:var(--subtle)">(optional)</span></label>
+            <input id="gen-amount" type="number" min="0" step="any" placeholder="Leave blank for any amount" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label>Token</label>
+            <div class="token-btns">
+              <button class="token-btn active" id="gen-usdc" onclick="genSelectToken('USDC')">
+                <div class="token-logo usdc">$</div> USDC
+              </button>
+              <button class="token-btn" id="gen-eurc" onclick="genSelectToken('EURC')">
+                <div class="token-logo eurc">€</div> EURC
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Note <span style="color:var(--subtle)">(optional)</span></label>
+          <textarea id="gen-note" placeholder="Invoice #1, freelance payment, etc."></textarea>
+        </div>
+
+        <button class="btn-primary" onclick="generateLink()">Generate payment link →</button>
+
+        <div id="gen-result" class="hidden" style="margin-top:20px;">
+          <div class="card-sep"></div>
+          <div class="link-box">
+            <div class="link-label">Your payment link</div>
+            <div class="link-url" id="gen-url"></div>
+            <button class="copy-btn" id="copy-btn" onclick="copyLink()">
+              📋 Copy link
+            </button>
+          </div>
+          <div class="qr-wrap"><div id="qr-canvas"></div></div>
+          <div style="font-size:11.5px;color:var(--muted);text-align:center;margin-top:6px;">
+            Share this link — anyone can pay you on Arc
+          </div>
+        </div>
+
+        <div class="widget-footer" style="margin-top:20px;">
+          <a href="/multisend">Multisend →</a>
+          <a href="https://testnet.arcscan.app" target="_blank" rel="noopener">ArcScan ↗</a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Auto-fill address if wallet connected
+  if (userAddress) {
+    const inp = document.getElementById("gen-address");
+    if (inp) inp.value = userAddress;
+  }
+}
+
+window.genSelectToken = function(sym) {
+  selectedToken = sym;
+  document.getElementById("gen-usdc")?.classList.toggle("active", sym==="USDC");
+  document.getElementById("gen-eurc")?.classList.toggle("active", sym==="EURC");
+};
+
+window.generateLink = function() {
+  const addr   = document.getElementById("gen-address")?.value.trim() || "";
+  const amount = document.getElementById("gen-amount")?.value.trim()  || "";
+  const note   = document.getElementById("gen-note")?.value.trim()    || "";
+
+  if (!isAddress(addr)) {
+    alert("Enter a valid wallet address first.");
+    return;
+  }
+
+  const base = window.location.origin + "/pay";
+  const p    = new URLSearchParams();
+  p.set("to", addr);
+  if (amount) p.set("amount", amount);
+  p.set("token", selectedToken);
+  if (note) p.set("note", note);
+
+  const url = `${base}?${p.toString()}`;
+
+  const urlEl   = document.getElementById("gen-url");
+  const result  = document.getElementById("gen-result");
+  const qrEl    = document.getElementById("qr-canvas");
+
+  if (urlEl)  urlEl.textContent = url;
+  if (result) result.classList.remove("hidden");
+
+  // Generate QR code
+  if (qrEl) {
+    qrEl.innerHTML = "";
+    new QRCode(qrEl, { text: url, width: 180, height: 180, colorDark:"#060810", colorLight:"#ffffff" });
+  }
+};
+
+window.copyLink = function() {
+  const url = document.getElementById("gen-url")?.textContent || "";
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById("copy-btn");
+    if (!btn) return;
+    btn.textContent = "✓ Copied!";
+    btn.classList.add("copied");
+    setTimeout(() => { btn.innerHTML = "📋 Copy link"; btn.classList.remove("copied"); }, 2000);
+  });
+};
+
+// ═══════════════════════════════════════════════════════
+//  PAYMENT MODE
+// ═══════════════════════════════════════════════════════
+function renderPayMode() {
+  const shortTo  = `${toAddr.slice(0,8)}…${toAddr.slice(-6)}`;
+  const hasFixed = fixedAmt && parseFloat(fixedAmt) > 0;
+  const sym      = selectedToken;
+
+  document.getElementById("page-root").innerHTML = `
+    <div id="pay-success" class="hidden">
+      <div class="success-card">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Payment sent!</div>
+        <div class="success-sub" id="success-sub">—</div>
+        <a id="success-link" href="#" target="_blank" rel="noopener" class="explorer-btn">View on ArcScan ↗</a>
+      </div>
+    </div>
+
+    <div id="pay-card" class="main-card">
+      <div class="card-body" style="padding-top:28px;">
+
+        <!-- Recipient -->
+        <div class="pay-avatar">${toAddr.slice(2,6)}</div>
+        <div class="pay-to">Sending to</div>
+        <div class="pay-address">${shortTo}</div>
+
+        <!-- Amount display -->
+        <div class="pay-amount-display">
+          <div class="pay-amount-val" id="pay-amount-display">${hasFixed ? parseFloat(fixedAmt).toFixed(2) : "—"}</div>
+          <br>
+          <div class="pay-amount-token">
+            <div class="token-logo ${sym.toLowerCase()}">${sym==="USDC"?"$":"€"}</div>
+            ${sym}
+          </div>
+        </div>
+
+        ${!hasFixed ? `
+        <div class="pay-any-amount">
+          <div class="field">
+            <label>Amount</label>
+            <input id="pay-custom-amount" type="number" min="0" step="any" placeholder="0.00" autocomplete="off"
+              oninput="document.getElementById('pay-amount-display').textContent = this.value || '—'" />
+          </div>
+        </div>` : ""}
+
+        ${note ? `
+        <div class="pay-note">
+          <strong>Note</strong>
+          ${note}
+        </div>` : ""}
+
+        <div id="pay-status"></div>
+
+        <!-- Connect state -->
+        <div id="pay-connect">
+          <button class="btn-primary" onclick="connectAndPay()">Connect wallet to pay</button>
+          <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--muted);">
+            Arc Testnet · ${sym} · Non-custodial
+          </div>
+        </div>
+
+        <!-- Pay state (shown after connect) -->
+        <div id="pay-action" class="hidden">
+          <div style="background:var(--raised);border:1px solid var(--border);border-radius:var(--rsm);padding:11px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;">
+            Balance: <strong id="pay-balance" style="color:var(--text);">—</strong> ${sym}
+          </div>
+          <button class="btn-primary" id="pay-btn" onclick="sendPayment()">
+            Send ${hasFixed ? parseFloat(fixedAmt).toFixed(2)+" " : ""}${sym} →
+          </button>
+        </div>
+
+        <div class="widget-footer" style="margin-top:16px;">
+          <a href="/">ArcFX</a>
+          <a href="https://testnet.arcscan.app/address/${toAddr}" target="_blank" rel="noopener">View recipient ↗</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function connectAndPay() {
+  if (!window.ethereum) { showPayStatus("MetaMask not found.", "error"); return; }
+  try {
+    const btn = document.getElementById("pay-connect")?.querySelector("button");
+    if (btn) btn.textContent = "Connecting…";
+
+    provider = new BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+
+    try {
+      await provider.send("wallet_switchEthereumChain", [{ chainId: ARC_TESTNET.chainId }]);
+    } catch(e) {
+      const code = e.code ?? e.error?.code ?? e.info?.error?.code;
+      if (code === 4902 || (e.message||"").includes("4902")) {
+        await provider.send("wallet_addEthereumChain", [ARC_TESTNET]);
+      }
+    }
+
+    signer      = await provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    const short = `${userAddress.slice(0,6)}…${userAddress.slice(-4)}`;
+    const cb    = document.getElementById("connect-btn");
+    if (cb) { cb.textContent = short; cb.classList.add("connected"); }
+
+    // Show balance
+    const tok = TOKENS[selectedToken];
+    const tc  = new Contract(tok.address, ERC20_ABI, provider);
+    const bal = await tc.balanceOf(userAddress);
+    const balFmt = parseFloat(formatUnits(bal, tok.decimals)).toFixed(4);
+    const balEl = document.getElementById("pay-balance");
+    if (balEl) balEl.textContent = balFmt;
+
+    // Switch UI
+    document.getElementById("pay-connect")?.classList.add("hidden");
+    document.getElementById("pay-action")?.classList.remove("hidden");
+
+  } catch(err) {
+    showPayStatus("Connection failed: "+err.message, "error");
+    const btn = document.getElementById("pay-connect")?.querySelector("button");
+    if (btn) btn.textContent = "Connect wallet to pay";
+  }
+}
+
+async function sendPayment() {
+  if (isPaying || !signer) return;
+
+  // Determine amount
+  let amount = fixedAmt;
+  if (!amount || parseFloat(amount) <= 0) {
+    const custom = document.getElementById("pay-custom-amount")?.value.trim();
+    amount = custom || "";
+  }
+  if (!amount || parseFloat(amount) <= 0) {
+    showPayStatus("Enter an amount.", "error"); return;
+  }
+
+  isPaying = true;
+  const btn = document.getElementById("pay-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+  showPayStatus("Confirm in MetaMask…", "info");
+
+  try {
+    const tok     = TOKENS[selectedToken];
+    const amtWei  = parseUnits(parseFloat(amount).toFixed(tok.decimals), tok.decimals);
+    const tc      = new Contract(tok.address, ERC20_ABI, signer);
+    const tx      = await tc.transfer(toAddr, amtWei);
+    showPayStatus("Waiting for confirmation…", "info");
+    const receipt = await tx.wait();
+
+    // Success
+    document.getElementById("pay-card")?.classList.add("hidden");
+    const sc = document.getElementById("pay-success");
+    if (sc) sc.classList.remove("hidden");
+
+    const sub  = document.getElementById("success-sub");
+    const link = document.getElementById("success-link");
+    if (sub)  sub.textContent = `${parseFloat(amount).toFixed(4)} ${selectedToken} sent successfully on Arc Testnet.`;
+    if (link) link.href = `https://testnet.arcscan.app/tx/${receipt.hash}`;
+
+  } catch(err) {
+    isPaying = false;
+    if (btn) { btn.disabled = false; btn.textContent = `Send ${selectedToken} →`; }
+    showPayStatus(err.code===4001||err.message?.includes("rejected") ? "Transaction rejected." : `Failed: ${err.message}`, "error");
+  }
+}
+
+function showPayStatus(msg, type) {
+  const el = document.getElementById("pay-status");
+  if (el) el.innerHTML = msg ? `<div class="status ${type}">${msg}</div>` : "";
+}
+
+// ── Wallet connect (nav button) ────────────────────────────────────────────
+document.getElementById("connect-btn")?.addEventListener("click", async () => {
+  if (isPayMode) { connectAndPay(); return; }
+  if (!window.ethereum) return;
+  try {
+    provider = new BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    try {
+      await provider.send("wallet_switchEthereumChain", [{ chainId: ARC_TESTNET.chainId }]);
+    } catch(e) {
+      const code = e.code ?? e.error?.code ?? e.info?.error?.code;
+      if (code===4902||(e.message||"").includes("4902")) {
+        await provider.send("wallet_addEthereumChain", [ARC_TESTNET]);
+      }
+    }
+    signer      = await provider.getSigner();
+    userAddress = await signer.getAddress();
+    const short = `${userAddress.slice(0,6)}…${userAddress.slice(-4)}`;
+    const cb    = document.getElementById("connect-btn");
+    if (cb) { cb.textContent = short; cb.classList.add("connected"); }
+
+    // Auto-fill generator address
+    const inp = document.getElementById("gen-address");
+    if (inp) inp.value = userAddress;
+  } catch(e) { /* ignore */ }
+});
+
+window.ethereum?.on("chainChanged", () => window.location.reload());
+window.ethereum?.on("accountsChanged", (a) => { if (!a.length) window.location.reload(); });
+
+// expose for pay mode
+window.connectAndPay = connectAndPay;
+window.sendPayment   = sendPayment;
+</script>
+
+</body>
+</html>

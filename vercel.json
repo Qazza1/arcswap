@@ -6,13 +6,9 @@
     }
   ],
   "routes": [
-    {
-      "src": "/multisend",
-      "dest": "/multisend.html"
-    },
-    {
-      "src": "/multisend/",
-      "dest": "/multisend.html"
-    }
+    { "src": "/multisend", "dest": "/multisend.html" },
+    { "src": "/multisend/", "dest": "/multisend.html" },
+    { "src": "/pay", "dest": "/pay.html" },
+    { "src": "/pay/", "dest": "/pay.html" }
   ]
 }

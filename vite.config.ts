@@ -15,6 +15,7 @@ export default defineConfig({
       input: {
         main:      resolve(__dirname, "index.html"),
         multisend: resolve(__dirname, "multisend.html"),
+        pay:       resolve(__dirname, "pay.html"),
       },
     },
   },
