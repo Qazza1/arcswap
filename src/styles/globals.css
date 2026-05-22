@@ -1,0 +1,305 @@
+/* ── Tailwind directives ─────────────────────────────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Google Fonts ────────────────────────────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+/* ── Force dark mode on root ─────────────────────────────── */
+:root {
+  color-scheme: dark;
+}
+
+html {
+  /* Add 'dark' class so Tailwind dark: variants activate */
+  /* We set this once here and never remove it */
+}
+
+/* ── Base resets ─────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    @apply box-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-surface text-ink antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Remove default focus outline — we add our own */
+  *:focus {
+    outline: none;
+  }
+
+  /* Custom focus ring — visible but flat */
+  *:focus-visible {
+    @apply ring-2 ring-brand ring-offset-2 ring-offset-surface;
+  }
+
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight text-ink;
+  }
+
+  h1 { @apply text-4xl; }
+  h2 { @apply text-3xl; }
+  h3 { @apply text-2xl; }
+  h4 { @apply text-xl;  }
+  h5 { @apply text-lg;  }
+  h6 { @apply text-base; }
+
+  /* Links */
+  a {
+    @apply text-brand transition-colors duration-150;
+  }
+  a:hover {
+    @apply text-brand-hover;
+  }
+
+  /* Monospace elements */
+  code, kbd, samp, pre {
+    font-family: "JetBrains Mono", monospace;
+    @apply text-sm;
+  }
+
+  /* Scrollbar — dark, minimal */
+  ::-webkit-scrollbar       { @apply w-1.5 h-1.5; }
+  ::-webkit-scrollbar-track { @apply bg-surface; }
+  ::-webkit-scrollbar-thumb { @apply bg-surface-border-strong rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-ink-muted; }
+
+  /* Input base */
+  input, textarea, select {
+    @apply bg-surface-raised border border-surface-border text-ink
+           rounded placeholder-ink-subtle
+           transition-colors duration-150;
+  }
+  input:focus, textarea:focus, select:focus {
+    @apply border-brand ring-1 ring-brand;
+  }
+
+  /* Remove number input arrows */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+}
+
+/* ── Component classes ───────────────────────────────────── */
+@layer components {
+
+  /* ── Buttons ─────────────────────────────────────────────── */
+
+  /* Primary — solid brand blue, flat */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+           font-medium text-sm rounded
+           transition-colors duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed
+           focus-visible:ring-2 focus-visible:ring-brand;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand text-white px-4 py-2.5
+           hover:bg-brand-hover active:bg-blue-800;
+  }
+
+  .btn-secondary {
+    @apply btn bg-surface-overlay text-ink px-4 py-2.5
+           border border-surface-border
+           hover:bg-surface-border hover:border-surface-border-strong;
+  }
+
+  .btn-ghost {
+    @apply btn text-ink-muted px-4 py-2.5
+           hover:bg-surface-raised hover:text-ink;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger text-white px-4 py-2.5
+           hover:bg-red-700;
+  }
+
+  .btn-sm  { @apply text-xs px-3 py-1.5; }
+  .btn-lg  { @apply text-base px-6 py-3; }
+  .btn-xl  { @apply text-lg px-8 py-4; }
+
+  /* ── Cards ───────────────────────────────────────────────── */
+  .card {
+    @apply bg-surface-raised border border-surface-border rounded-lg;
+  }
+
+  .card-header {
+    @apply px-5 py-4 border-b border-surface-border
+           flex items-center justify-between;
+  }
+
+  .card-body  { @apply px-5 py-4; }
+  .card-footer {
+    @apply px-5 py-4 border-t border-surface-border
+           flex items-center justify-between;
+  }
+
+  /* ── Inputs ──────────────────────────────────────────────── */
+  .input {
+    @apply w-full bg-surface-raised border border-surface-border
+           text-ink text-sm rounded px-3 py-2.5
+           placeholder-ink-subtle
+           focus:border-brand focus:ring-1 focus:ring-brand
+           transition-colors duration-150;
+  }
+
+  .input-mono {
+    @apply input font-mono text-sm;
+  }
+
+  .label {
+    @apply block text-xs font-medium text-ink-muted
+           uppercase tracking-wider mb-1.5;
+  }
+
+  /* ── Badges / status pills ───────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1.5
+           text-2xs font-semibold px-2 py-0.5
+           rounded-full uppercase tracking-wider;
+  }
+
+  .badge-live {
+    @apply badge
+           bg-success-dim text-success
+           border border-success/20;
+  }
+
+  .badge-new {
+    @apply badge
+           bg-brand-dim text-brand
+           border border-brand/20;
+  }
+
+  .badge-neutral {
+    @apply badge
+           bg-surface-overlay text-ink-muted
+           border border-surface-border;
+  }
+
+  /* Live dot animation */
+  .status-dot {
+    @apply w-1.5 h-1.5 rounded-full bg-success;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  /* ── Section labels ──────────────────────────────────────── */
+  .section-label {
+    @apply text-2xs font-semibold text-brand
+           uppercase tracking-widest mb-3;
+  }
+
+  .section-title {
+    @apply text-3xl font-semibold text-ink tracking-tight mb-3;
+  }
+
+  .section-sub {
+    @apply text-base text-ink-muted font-normal leading-relaxed;
+  }
+
+  /* ── Stat cell ───────────────────────────────────────────── */
+  .stat-cell {
+    @apply bg-surface-raised border border-surface-border
+           rounded-lg p-5;
+  }
+
+  .stat-val {
+    @apply font-mono text-2xl font-medium text-ink
+           tracking-tight mb-1;
+  }
+
+  .stat-lbl {
+    @apply text-xs text-ink-muted;
+  }
+
+  /* ── Table ───────────────────────────────────────────────── */
+  .table-wrap {
+    @apply bg-surface-raised border border-surface-border
+           rounded-lg overflow-hidden;
+  }
+
+  .table {
+    @apply w-full text-sm text-ink;
+  }
+
+  .table thead th {
+    @apply bg-surface-overlay text-ink-muted font-mono text-2xs
+           uppercase tracking-widest px-4 py-3
+           text-left border-b border-surface-border;
+  }
+
+  .table tbody td {
+    @apply px-4 py-3.5 border-b border-surface-border
+           last:border-0;
+  }
+
+  .table tbody tr {
+    @apply transition-colors duration-100;
+  }
+
+  .table tbody tr:hover {
+    @apply bg-surface-overlay;
+  }
+
+  /* ── Nav ─────────────────────────────────────────────────── */
+  .nav {
+    @apply sticky top-0 z-50 h-16
+           flex items-center justify-between
+           px-6 bg-surface/95 backdrop-blur
+           border-b border-surface-border;
+  }
+
+  /* ── Status messages ─────────────────────────────────────── */
+  .status-info    { @apply bg-brand-dim border border-brand/25 text-blue-300 rounded p-3 text-sm; }
+  .status-success { @apply bg-success-dim border border-success/25 text-emerald-400 rounded p-3 text-sm; }
+  .status-warning { @apply bg-warning-dim border border-warning/25 text-amber-400 rounded p-3 text-sm; }
+  .status-error   { @apply bg-danger-dim border border-danger/25 text-red-400 rounded p-3 text-sm; }
+
+  /* ── Divider ─────────────────────────────────────────────── */
+  .divider {
+    @apply border-t border-surface-border my-6;
+  }
+}
+
+/* ── Utilities ───────────────────────────────────────────── */
+@layer utilities {
+  .font-mono { font-family: "JetBrains Mono", monospace; }
+
+  .text-brand-gradient {
+    background: linear-gradient(135deg, #2563eb, #059669);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-grid {
+    background-image: radial-gradient(circle, #1e2a3a 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+}
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin 1s linear infinite;
+}

@@ -11,17 +11,21 @@
     "deploy:multisender:local": "hardhat run scripts/deploy-multisender.cjs --network hardhat --config hardhat.config.cjs"
   },
   "dependencies": {
-    "@circle-fin/app-kit": "^1.0.0",
     "@circle-fin/adapter-viem-v2": "^1.0.0",
+    "@circle-fin/app-kit": "^1.0.0",
     "ethers": "^6.0.0",
+    "preline": "^4.2.0",
     "viem": "^2.0.0"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "autoprefixer": "^10.5.0",
+    "dotenv": "^16.0.0",
     "hardhat": "^2.22.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19",
     "typescript": "^5.4.0",
     "vite": "^5.0.0",
-    "vite-plugin-node-polyfills": "^0.22.0",
-    "dotenv": "^16.0.0"
+    "vite-plugin-node-polyfills": "^0.22.0"
   }
 }

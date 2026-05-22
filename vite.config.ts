@@ -9,6 +9,9 @@ export default defineConfig({
       globals: { Buffer: true, global: true, process: true },
     }),
   ],
+  css: {
+    // PostCSS picks up tailwind via postcss.config.js automatically
+  },
   build: {
     target: "esnext",
     rollupOptions: {

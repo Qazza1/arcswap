@@ -3,6 +3,7 @@
  * Stablecoin FX swap widget on Arc Testnet. Swaps USDC <-> EURC.
  */
 
+import "./styles/globals.css";
 import { AppKit } from "@circle-fin/app-kit";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 import { BrowserProvider, Contract, formatUnits } from "ethers";
@@ -588,3 +589,4 @@ declare global {
     };
   }
 }
+import "preline";
