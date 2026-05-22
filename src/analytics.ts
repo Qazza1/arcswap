@@ -1,263 +1,237 @@
 /**
- * analytics.ts
- * Fetches live protocol data from Arc Testnet and populates analytics.html.
- * Uses ethers.js JsonRpcProvider — read-only, no wallet required.
+ * analytics.ts — Live Arc Testnet data for ArcFX Analytics dashboard.
+ * Read-only: uses JsonRpcProvider, no wallet required.
  */
 
-import { JsonRpcProvider, Contract, formatUnits, Log } from "ethers";
+import { JsonRpcProvider, Contract, formatUnits, id as keccak256id } from "ethers";
 
-// ── Config ────────────────────────────────────────────────────────────────────
+// ── Config ────────────────────────────────────────────────────────────────
 
 const ARC_RPC = "https://rpc.testnet.arc.network";
 
-const ADDRESSES = {
-  USDC:     "0x3600000000000000000000000000000000000000",
-  EURC:     "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
-  PAYMENTS: "0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3",
+const ADDR = {
+  USDC:        "0x3600000000000000000000000000000000000000",
+  EURC:        "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+  PAYMENTS:    "0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3",
+  MULTISENDER: "0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398",
 };
 
-// ── ABIs (minimal — only what we need) ────────────────────────────────────────
+// Event topics
+const PAYMENT_TOPIC  = keccak256id("PaymentExecuted(bytes32,address,address,address,uint256,uint256,uint256)");
+const TRANSFER_TOPIC = keccak256id("Transfer(address,address,uint256)");
 
-const ERC20_ABI = [
-  "function totalSupply() view returns (uint256)",
-  "function decimals() view returns (uint8)",
-];
-
-const PAYMENTS_ABI = [
-  // PaymentExecuted(bytes32 indexed paymentId, address indexed payer,
-  //   address indexed recipient, address token, uint256 gross, uint256 fee, uint256 net)
-  "event PaymentExecuted(bytes32 indexed paymentId, address indexed payer, address indexed recipient, address token, uint256 gross, uint256 fee, uint256 net)",
-];
-
-// ── Provider (read-only, no wallet needed) ────────────────────────────────────
+const ERC20_ABI = ["function totalSupply() view returns (uint256)"];
 
 const provider = new JsonRpcProvider(ARC_RPC);
 
-// ── DOM helpers ───────────────────────────────────────────────────────────────
+// ── DOM helpers ───────────────────────────────────────────────────────────
 
-function setText(id: string, val: string): void {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
+const el  = (id: string) => document.getElementById(id);
+const txt = (id: string, val: string) => { const n = el(id); if (n) n.textContent = val; };
+
+function fmtSupply(raw: bigint, dec = 6): string {
+  const n = Number(formatUnits(raw, dec));
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
+  return n.toFixed(2);
 }
 
-function setHTML(id: string, val: string): void {
-  const el = document.getElementById(id);
-  if (el) el.innerHTML = val;
-}
-
-function fmtNumber(n: number, decimals = 2): string {
+function fmtUSD(n: number): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000)     return `$${(n / 1_000).toFixed(2)}K`;
-  return `$${n.toFixed(decimals)}`;
+  return `$${n.toFixed(2)}`;
 }
 
-function fmtUsdc(raw: bigint, dec = 6): string {
-  const n = Number(formatUnits(raw, dec));
-  return fmtNumber(n, 2);
-}
+function short(addr: string): string   { return `${addr.slice(0,8)}…${addr.slice(-6)}`; }
+function shortHash(h: string): string  { return `${h.slice(0,8)}…${h.slice(-4)}`; }
 
-function shortAddr(addr: string): string {
-  return `${addr.slice(0, 8)}…${addr.slice(-6)}`;
-}
+// ── Network stats ─────────────────────────────────────────────────────────
 
-function shortHash(hash: string): string {
-  return `${hash.slice(0, 8)}…${hash.slice(-4)}`;
-}
-
-// ── Fetch: Network stats ──────────────────────────────────────────────────────
-
-async function fetchNetworkStats(): Promise<void> {
-  // Current block
+async function fetchNetwork(): Promise<void> {
   const latest = await provider.getBlockNumber();
-  setText("stat-block", latest.toLocaleString());
-  setText("stat-block-sub", `Arc Testnet`);
+  txt("stat-block", latest.toLocaleString());
+  txt("stat-block-sub", "Arc Testnet");
 
-  // Avg block time — compare last 10 blocks
   try {
-    const [blockNow, blockOld] = await Promise.all([
+    const [bNow, bOld] = await Promise.all([
       provider.getBlock(latest),
       provider.getBlock(Math.max(1, latest - 10)),
     ]);
-    if (blockNow && blockOld && blockNow.timestamp && blockOld.timestamp) {
-      const elapsed = blockNow.timestamp - blockOld.timestamp;
-      const avg     = elapsed / 10;
-      setText("stat-blocktime", `${avg.toFixed(1)}s`);
+    if (bNow?.timestamp && bOld?.timestamp) {
+      const avg = (bNow.timestamp - bOld.timestamp) / 10;
+      txt("stat-blocktime", `${avg.toFixed(1)}s`);
     }
-  } catch {
-    setText("stat-blocktime", "~1.0s");
-  }
+  } catch { txt("stat-blocktime", "~1.0s"); }
 
-  // USDC total supply
-  try {
-    const usdc    = new Contract(ADDRESSES.USDC, ERC20_ABI, provider);
-    const supply  = await usdc.totalSupply();
-    setText("stat-usdc-supply", fmtUsdc(supply, 6));
-  } catch {
-    setText("stat-usdc-supply", "—");
-  }
-
-  // EURC total supply
-  try {
-    const eurc   = new Contract(ADDRESSES.EURC, ERC20_ABI, provider);
-    const supply = await eurc.totalSupply();
-    setText("stat-eurc-supply", fmtUsdc(supply, 6));
-  } catch {
-    setText("stat-eurc-supply", "—");
+  for (const [key, addr] of [["stat-usdc-supply", ADDR.USDC], ["stat-eurc-supply", ADDR.EURC]] as const) {
+    try {
+      const c = new Contract(addr, ERC20_ABI, provider);
+      txt(key, fmtSupply(await c.totalSupply(), 6));
+    } catch { txt(key, "—"); }
   }
 }
 
-// ── Fetch: Protocol stats + live feed ────────────────────────────────────────
+// ── Protocol data ─────────────────────────────────────────────────────────
 
-async function fetchProtocolData(): Promise<void> {
+interface TxEntry {
+  type:     "Pay" | "Multisend" | "Swap" | "Bridge";
+  token:    string;
+  amount:   bigint;
+  from:     string;
+  blockNum: number;
+  txHash:   string;
+}
+
+async function fetchProtocol(): Promise<void> {
   const latest    = await provider.getBlockNumber();
-  const fromBlock = Math.max(0, latest - 100_000); // last ~100k blocks
+  const fromBlock = Math.max(0, latest - 100_000);
+  const entries:  TxEntry[] = [];
 
-  // Fetch PaymentExecuted logs
-  let logs: Log[] = [];
+  // ── 1. PaymentExecuted events from ArcFXPayments ──────────────────────
   try {
-    const iface = new Contract(ADDRESSES.PAYMENTS, PAYMENTS_ABI, provider);
-    const filter = {
-      address:   ADDRESSES.PAYMENTS,
-      fromBlock,
-      toBlock:   latest,
-      topics: [
-        // keccak256("PaymentExecuted(bytes32,address,address,address,uint256,uint256,uint256)")
-        "0x" + await computeEventTopic(),
-      ],
-    };
-    logs = await provider.getLogs(filter);
-  } catch (err) {
-    console.warn("getLogs failed:", err);
-  }
-
-  // Parse logs
-  interface ParsedTx {
-    payer:     string;
-    recipient: string;
-    token:     string;
-    gross:     bigint;
-    fee:       bigint;
-    net:       bigint;
-    blockNum:  number;
-    txHash:    string;
-  }
-
-  const payments: ParsedTx[] = [];
-
-  for (const log of logs) {
-    try {
-      // PaymentExecuted log layout:
-      // topics[0] = event sig
-      // topics[1] = paymentId (indexed bytes32)
-      // topics[2] = payer (indexed address)
-      // topics[3] = recipient (indexed address)
-      // data      = abi.encode(token, gross, fee, net)
-      const payer     = "0x" + log.topics[2].slice(26);
-      const recipient = "0x" + log.topics[3].slice(26);
-
-      // Decode non-indexed data: address (32 bytes) + uint256 (32 bytes) x3
-      const data    = log.data.slice(2); // remove 0x
-      const token   = "0x" + data.slice(24, 64);          // first 32 bytes, last 20 = address
-      const gross   = BigInt("0x" + data.slice(64, 128));  // bytes 32-64
-      const fee     = BigInt("0x" + data.slice(128, 192)); // bytes 64-96
-      const net     = BigInt("0x" + data.slice(192, 256)); // bytes 96-128
-
-      payments.push({
-        payer, recipient, token, gross, fee, net,
-        blockNum: log.blockNumber,
-        txHash:   log.transactionHash,
-      });
-    } catch (e) {
-      console.warn("Failed to parse log:", e);
+    const logs = await provider.getLogs({
+      address: ADDR.PAYMENTS, topics: [PAYMENT_TOPIC], fromBlock, toBlock: latest,
+    });
+    for (const log of logs) {
+      try {
+        const payer = "0x" + log.topics[2].slice(26);
+        const d     = log.data.slice(2);
+        const token = "0x" + d.slice(24, 64);
+        const gross = BigInt("0x" + d.slice(64, 128));
+        entries.push({ type:"Pay", token, amount:gross, from:payer, blockNum:log.blockNumber, txHash:log.transactionHash });
+      } catch { /* skip malformed */ }
     }
+  } catch(e) { console.warn("PaymentExecuted getLogs failed:", e); }
+
+  // ── 2. USDC/EURC transfers TO Multisender (= multisend transactions) ──
+  const multisenderPadded = "0x000000000000000000000000" + ADDR.MULTISENDER.slice(2).toLowerCase();
+  for (const tokenAddr of [ADDR.USDC, ADDR.EURC]) {
+    try {
+      const logs = await provider.getLogs({
+        address: tokenAddr, topics: [TRANSFER_TOPIC, null, multisenderPadded], fromBlock, toBlock: latest,
+      });
+      for (const log of logs) {
+        try {
+          const from   = "0x" + log.topics[1].slice(26);
+          const amount = BigInt(log.data);
+          entries.push({ type:"Multisend", token:tokenAddr, amount, from, blockNum:log.blockNumber, txHash:log.transactionHash });
+        } catch { /* skip */ }
+      }
+    } catch(e) { console.warn("Multisend getLogs failed:", e); }
   }
 
-  // ── Protocol stats ────────────────────────────────────────────────────────
-  const totalVolume  = payments.reduce((s, p) => s + p.gross, 0n);
-  const totalRevenue = payments.reduce((s, p) => s + p.fee, 0n);
-  const uniqueWallets = new Set(payments.map(p => p.payer.toLowerCase())).size;
-  const avgTrade      = payments.length > 0
-    ? Number(formatUnits(totalVolume / BigInt(payments.length), 6))
-    : 0;
+  // ── 3. USDC/EURC swap activity — detect by Circle App Kit router transfers
+  // Swaps show as Transfer events where from = user, to = USDC/EURC contract or swap router
+  // We track all USDC/EURC transfers NOT involving known contracts as "Swap/Other"
+  const knownContracts = new Set([
+    ADDR.PAYMENTS.toLowerCase(),
+    ADDR.MULTISENDER.toLowerCase(),
+    ADDR.USDC.toLowerCase(),
+    ADDR.EURC.toLowerCase(),
+  ]);
 
-  setText("stat-volume",    payments.length ? fmtUsdc(totalVolume, 6)  : "$0.00");
-  setText("stat-revenue",   payments.length ? fmtUsdc(totalRevenue, 6) : "$0.00");
-  setText("stat-wallets",   uniqueWallets.toString());
-  setText("stat-avg-trade", payments.length ? `$${avgTrade.toFixed(2)}` : "$0.00");
+  for (const tokenAddr of [ADDR.USDC, ADDR.EURC]) {
+    try {
+      const logs = await provider.getLogs({
+        address: tokenAddr, topics: [TRANSFER_TOPIC], fromBlock, toBlock: latest,
+      });
+      for (const log of logs) {
+        try {
+          // Skip if already captured (multisend, payment)
+          const alreadyCaptured = entries.some(e => e.txHash === log.transactionHash);
+          if (alreadyCaptured) continue;
 
-  // ── Live feed ─────────────────────────────────────────────────────────────
-  const feedBody = document.getElementById("feed-body");
+          const from = "0x" + log.topics[1].slice(26);
+          const to   = "0x" + log.topics[2].slice(26);
+
+          // Skip contract-to-contract transfers and zero address
+          if (from === "0x0000000000000000000000000000000000000000") continue;
+          if (knownContracts.has(from.toLowerCase()) && knownContracts.has(to.toLowerCase())) continue;
+
+          const amount = BigInt(log.data);
+          if (amount === 0n) continue;
+
+          entries.push({
+            type: "Swap",
+            token: tokenAddr,
+            amount,
+            from,
+            blockNum: log.blockNumber,
+            txHash:   log.transactionHash,
+          });
+        } catch { /* skip */ }
+      }
+    } catch(e) { console.warn("Transfer getLogs failed:", e); }
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────
+  const totalVol  = entries.reduce((s, e) => s + e.amount, 0n);
+  const totalFee  = entries.filter(e => e.type === "Pay").reduce((s, e) => {
+    // Fee is 0.15% of gross
+    return s + (e.amount * 15n / 10_000n);
+  }, 0n);
+  const wallets   = new Set(entries.map(e => e.from.toLowerCase())).size;
+  const count     = entries.length;
+  const avgTrade  = count > 0 ? Number(formatUnits(totalVol / BigInt(count), 6)) : 0;
+
+  txt("stat-volume",    count ? fmtUSD(Number(formatUnits(totalVol, 6))) : "$0.00");
+  txt("stat-revenue",   totalFee > 0n ? fmtUSD(Number(formatUnits(totalFee, 6))) : "$0.00");
+  txt("stat-wallets",   wallets.toString() || "0");
+  txt("stat-avg-trade", count ? fmtUSD(avgTrade) : "$0.00");
+
+  // ── Live feed ─────────────────────────────────────────────────────────
+  const feedBody = el("feed-body");
   if (!feedBody) return;
 
-  if (payments.length === 0) {
-    feedBody.innerHTML = `<tr><td colspan="5" class="feed-empty">No transactions yet · Be the first to use ArcFX Pay</td></tr>`;
+  if (!count) {
+    feedBody.innerHTML = `<tr><td colspan="5" class="feed-empty">No transactions found on Arc Testnet yet</td></tr>`;
     return;
   }
 
-  // Sort newest first, take top 20
-  const sorted = [...payments].sort((a, b) => b.blockNum - a.blockNum).slice(0, 20);
+  // Deduplicate by txHash, sort newest first
+  const seen    = new Set<string>();
+  const unique  = entries.filter(e => { if (seen.has(e.txHash)) return false; seen.add(e.txHash); return true; });
+  const sorted  = unique.sort((a, b) => b.blockNum - a.blockNum).slice(0, 20);
+
+  const badgeClass: Record<string, string> = {
+    Pay:       "badge-pay",
+    Multisend: "badge-multisend",
+    Swap:      "badge-swap",
+    Bridge:    "badge-pay",
+  };
 
   feedBody.innerHTML = sorted.map(tx => {
-    const isUSDC  = tx.token.toLowerCase() === ADDRESSES.USDC.toLowerCase();
-    const sym     = isUSDC ? "USDC" : "EURC";
-    const amount  = Number(formatUnits(tx.gross, 6)).toFixed(4);
-    const url     = `https://testnet.arcscan.app/tx/${tx.txHash}`;
-
+    const isUSDC = tx.token.toLowerCase() === ADDR.USDC.toLowerCase();
+    const sym    = isUSDC ? "USDC" : "EURC";
+    const amount = Number(formatUnits(tx.amount, 6)).toFixed(4);
+    const url    = `https://testnet.arcscan.app/tx/${tx.txHash}`;
     return `
       <tr>
-        <td><span class="type-badge badge-pay">Pay</span></td>
+        <td><span class="type-badge ${badgeClass[tx.type] || 'badge-pay'}">${tx.type}</span></td>
         <td><span class="feed-amount">${amount} ${sym}</span></td>
-        <td><span class="feed-addr">${shortAddr(tx.payer)}</span></td>
+        <td><span class="feed-addr">${short(tx.from)}</span></td>
         <td class="hide-sm"><span class="feed-block">${tx.blockNum.toLocaleString()}</span></td>
-        <td>
-          <a href="${url}" target="_blank" rel="noopener" class="arcscan-link">
-            ${shortHash(tx.txHash)} ↗
-          </a>
-        </td>
-      </tr>
-    `;
+        <td><a href="${url}" target="_blank" rel="noopener" class="arcscan-link">${shortHash(tx.txHash)} ↗</a></td>
+      </tr>`;
   }).join("");
 }
 
-// ── Compute event topic hash ───────────────────────────────────────────────────
-
-async function computeEventTopic(): Promise<string> {
-  // keccak256("PaymentExecuted(bytes32,address,address,address,uint256,uint256,uint256)")
-  const sig    = "PaymentExecuted(bytes32,address,address,address,uint256,uint256,uint256)";
-  const encoder = new TextEncoder();
-  const data    = encoder.encode(sig);
-  const hash    = await crypto.subtle.digest("SHA-256", data);
-  // Use ethers instead — more reliable
-  const { id }  = await import("ethers");
-  return id(sig).slice(2); // remove 0x, already hex
-}
-
-// ── Last updated ──────────────────────────────────────────────────────────────
-
-function updateTimestamp(): void {
-  const now = new Date();
-  setText("last-updated", now.toLocaleTimeString());
-}
-
-// ── Refresh all ───────────────────────────────────────────────────────────────
+// ── Refresh ───────────────────────────────────────────────────────────────
 
 async function refreshAll(): Promise<void> {
-  const btn = document.getElementById("refresh-btn");
+  const btn = el("refresh-btn");
   if (btn) btn.classList.add("loading");
 
-  const errBanner = document.getElementById("fetch-error");
-
   try {
-    await Promise.all([
-      fetchNetworkStats(),
-      fetchProtocolData(),
-    ]);
-    updateTimestamp();
+    await Promise.all([fetchNetwork(), fetchProtocol()]);
+    txt("last-updated", new Date().toLocaleTimeString());
+    const errBanner = el("fetch-error");
     if (errBanner) errBanner.style.display = "none";
   } catch (err: any) {
-    console.error("Analytics fetch error:", err);
+    console.error(err);
+    const errBanner = el("fetch-error");
     if (errBanner) {
-      errBanner.textContent = `RPC error: ${err.message || "Could not connect to Arc Testnet"}`;
+      errBanner.textContent = `RPC error: ${err.message || "Could not reach Arc Testnet"}`;
       errBanner.style.display = "block";
     }
   } finally {
@@ -265,13 +239,8 @@ async function refreshAll(): Promise<void> {
   }
 }
 
-// Expose for nav button
 (window as any).refreshAll = refreshAll;
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-
-// Initial load
+// Init
 refreshAll();
-
-// Auto-refresh every 15 seconds
 setInterval(refreshAll, 15_000);
