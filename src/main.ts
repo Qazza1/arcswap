@@ -255,6 +255,23 @@ function setBridgeStep(id: string, state: "active"|"done"|"reset"): void {
   if (!s) return;
   s.classList.remove("active","done");
   if (state !== "reset") s.classList.add(state);
+
+  // Also update inline styles directly (for new bridge HTML that uses inline styles)
+  const dot  = s.querySelector(".bridge-step-dot") as HTMLElement | null;
+  const span = s.querySelector("span") as HTMLElement | null;
+  if (state === "done") {
+    if (dot)  { dot.style.background = "#10b981"; dot.style.boxShadow = "0 0 5px rgba(16,185,129,0.6)"; }
+    if (span) span.style.color = "#10b981";
+    s.style.color = "#10b981";
+  } else if (state === "active") {
+    if (dot)  { dot.style.background = "#2563eb"; dot.style.boxShadow = "0 0 5px rgba(37,99,235,0.6)"; }
+    if (span) span.style.color = "#f1f5f9";
+    s.style.color = "#f1f5f9";
+  } else {
+    if (dot)  { dot.style.background = "#1e293b"; dot.style.boxShadow = "none"; }
+    if (span) span.style.color = "#475569";
+    s.style.color = "#475569";
+  }
 }
 
 function showBridgeStatus(msg: string, type: "success"|"error"|"info"|""): void {
