@@ -219,7 +219,9 @@ async function executeSwap(): Promise<void> {
     showStatus(err.code === 4001 ? "Transaction rejected." : `Swap failed: ${err.message ?? "Unknown error"}`, "error");
   } finally {
     isSwapping = false;
-    if (btn) { btn.removeAttribute("disabled"); btn.textContent = "Swap"; }
+    const execBtn = el("execute-swap-btn");
+    if (btn)     { btn.removeAttribute("disabled"); btn.textContent = "Swap"; }
+    if (execBtn) { execBtn.removeAttribute("disabled"); execBtn.textContent = "Swap " + tokenIn + " \u2192 " + tokenOut; }
   }
 }
 
