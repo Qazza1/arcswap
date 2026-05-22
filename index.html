@@ -1221,16 +1221,7 @@
   </script>
 
 
-  <script>
-    // Alias execute-swap-btn → swap-btn for TypeScript compatibility
-    document.addEventListener("DOMContentLoaded", function() {
-      const execBtn = document.getElementById("execute-swap-btn");
-      const swapBtn = document.getElementById("swap-btn");
-      if (execBtn && swapBtn) {
-        execBtn.addEventListener("click", function() { swapBtn.click(); });
-      }
-    });
-  </script>
+  <!-- execute-swap-btn wired directly in main.ts -->
 
 </body>
 </html>

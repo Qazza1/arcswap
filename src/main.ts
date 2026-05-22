@@ -3,7 +3,6 @@
  * Stablecoin FX swap widget on Arc Testnet. Swaps USDC <-> EURC.
  */
 
-import "./styles/globals.css";
 import { AppKit } from "@circle-fin/app-kit";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 import { BrowserProvider, Contract, formatUnits } from "ethers";
@@ -17,8 +16,8 @@ const ARC_TESTNET = {
 };
 
 const TOKENS = {
-  USDC: { address: "0x3600000000000000000000000000000000000000", decimals: 6, flag: "🇺🇸" },
-  EURC: { address: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", decimals: 6, flag: "🇪🇺" },
+  USDC: { address: "0x3600000000000000000000000000000000000000", decimals: 6, flag: "$" },
+  EURC: { address: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", decimals: 6, flag: "€" },
 } as const;
 
 type TokenSymbol = keyof typeof TOKENS;
@@ -44,8 +43,7 @@ function removeClass(id: string, cls: string): void { el(id)?.classList.remove(c
 // Status: writes to both elements so it works before and after wallet connect
 function showStatus(msg: string, type: "success"|"error"|"info"|""): void {
   const html = msg ? `<div class="status ${type}">${msg}</div>` : "";
-  setHTML("global-status", html);
-  setHTML("swap-status", html);
+  setHTML("swap-status", html);   // global-status is hidden; swap-status is the visible target
 }
 
 async function connectWallet(): Promise<void> {
@@ -83,6 +81,9 @@ async function connectWallet(): Promise<void> {
     if (btn) { btn.textContent = short; btn.classList.add("connected"); }
     removeClass("swap-card", "hidden");
     addClass("connect-card", "hidden");
+    // Update execute-swap-btn label to show current token pair
+    const execBtn = el("execute-swap-btn");
+    if (execBtn) execBtn.textContent = `Swap ${tokenIn} → ${tokenOut}`;
     showStatus("Connected to Arc Testnet ✓", "success");
     await loadBalances();
     await loadHistory();
@@ -169,8 +170,10 @@ async function executeSwap(): Promise<void> {
   if (!amount || parseFloat(amount) <= 0) { showStatus("Enter an amount.", "error"); return; }
 
   isSwapping = true;
-  const btn = el("swap-btn");
-  if (btn) { btn.setAttribute("disabled","true"); btn.textContent = "Swapping…"; }
+  const btn     = el("swap-btn");        // hidden compat button
+  const execBtn = el("execute-swap-btn"); // visible enterprise button
+  if (btn)     { btn.setAttribute("disabled","true"); btn.textContent = "Swapping…"; }
+  if (execBtn) { execBtn.setAttribute("disabled","true"); execBtn.textContent = "Swapping…"; }
   showStatus("Confirm in MetaMask…", "info");
 
   try {
@@ -555,10 +558,14 @@ async function loadHistory(): Promise<void> {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Nav + connect card wallet buttons
   el("connect-btn")?.addEventListener("click", connectWallet);
   el("big-connect-btn")?.addEventListener("click", connectWallet);
+
+  // Swap widget controls
   el("flip-btn")?.addEventListener("click", flipTokens);
-  el("swap-btn")?.addEventListener("click", executeSwap);
+  el("swap-btn")?.addEventListener("click", executeSwap);         // hidden compat button
+  el("execute-swap-btn")?.addEventListener("click", executeSwap); // new visible button
   el("max-btn")?.addEventListener("click", setMaxAmount);
   el("amount-input")?.addEventListener("input", debounce(
     (e: Event) => estimateSwap((e.target as HTMLInputElement).value), 500
@@ -589,4 +596,3 @@ declare global {
     };
   }
 }
-import "preline";
