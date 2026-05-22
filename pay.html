@@ -177,7 +177,16 @@ const ARC_TESTNET = {
 
 const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
+  "function allowance(address,address) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
   "function transfer(address to, uint256 amount) returns (bool)",
+];
+
+// ArcFXPayments contract — Arc Testnet
+const PAYMENTS_ADDRESS = "0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3";
+const PAYMENTS_ABI = [
+  "function pay(address token, address recipient, uint256 gross, bytes32 paymentId) external",
+  "function quoteFee(uint256 gross) external pure returns (uint256 fee, uint256 net)",
 ];
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -476,7 +485,7 @@ async function sendPayment() {
 
     // Build paymentId from note or fallback
     const noteText = urlNote || "arcfx-payment";
-    const paymentId = ethers.id(noteText); // keccak256 of the note string
+    const paymentId = ethersId(noteText); // keccak256 of the note string
 
     // Step 1 — Approve ArcFXPayments to spend gross amount
     showPayStatus("Step 1/2 — Approve token spending in MetaMask…", "info");
