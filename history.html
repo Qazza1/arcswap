@@ -193,7 +193,7 @@
   </div>
 
   <div class="page-footer">
-    <span>Showing USDC & EURC transactions on Arc Testnet · Last 100,000 blocks</span>
+    <span>Showing USDC & EURC transactions on Arc Testnet · Last 20,000 blocks (~2.8hrs)</span>
     <div style="display:flex;gap:20px;">
       <a href="/invoice">Create invoice →</a>
       <a href="/pay">Pay link →</a>
@@ -268,20 +268,30 @@ async function loadHistory() {
   const padded = "0x000000000000000000000000" + userAddress.slice(2).toLowerCase();
 
   async function getLogs(filter) {
-    try { return await provider.getLogs(filter); } catch { return []; }
+    const results = [];
+    const chunk = 5000;
+    for (let from = filter.fromBlock; from <= filter.toBlock; from += chunk) {
+      const to = Math.min(from + chunk - 1, filter.toBlock);
+      try {
+        const logs = await provider.getLogs({ ...filter, fromBlock: from, toBlock: to });
+        results.push(...logs);
+      } catch { /* skip chunk */ }
+    }
+    return results;
   }
 
   try {
     const latest   = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, latest - 100000);
+    const fromBlock = Math.max(0, latest - 20000);
+    const toBlock = latest;
 
     setLoading("Loading your USDC & EURC history…");
 
     const [usdcOut, usdcIn, eurcOut, eurcIn] = await Promise.all([
-      getLogs({ fromBlock, address: USDC, topics: [TRANSFER, padded, null] }),
-      getLogs({ fromBlock, address: USDC, topics: [TRANSFER, null, padded] }),
-      getLogs({ fromBlock, address: EURC, topics: [TRANSFER, padded, null] }),
-      getLogs({ fromBlock, address: EURC, topics: [TRANSFER, null, padded] }),
+      getLogs({ fromBlock, toBlock, address: USDC, topics: [TRANSFER, padded, null] }),
+      getLogs({ fromBlock, toBlock, address: USDC, topics: [TRANSFER, null, padded] }),
+      getLogs({ fromBlock, toBlock, address: EURC, topics: [TRANSFER, padded, null] }),
+      getLogs({ fromBlock, toBlock, address: EURC, topics: [TRANSFER, null, padded] }),
     ]);
 
     // Tag all logs
