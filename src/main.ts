@@ -117,10 +117,25 @@ function updateBalanceLabels(): void {
 
 function flipTokens(): void {
   [tokenIn, tokenOut] = [tokenOut, tokenIn];
+
+  // Update header pill
   setText("token-in-symbol",  tokenIn);
   setText("token-out-symbol", tokenOut);
   setText("token-in-flag",    TOKENS[tokenIn].flag);
   setText("token-out-flag",   TOKENS[tokenOut].flag);
+
+  // Update You Pay / You Receive token pills
+  const logoColors: Record<string, string> = { USDC: "#2775ca", EURC: "#1a3ca8" };
+  const inLogo  = document.getElementById("pay-in-logo");
+  const outLogo = document.getElementById("pay-out-logo");
+  if (inLogo)  { inLogo.textContent  = TOKENS[tokenIn].flag;  inLogo.style.background  = logoColors[tokenIn]; }
+  if (outLogo) { outLogo.textContent = TOKENS[tokenOut].flag; outLogo.style.background = logoColors[tokenOut]; }
+  setText("pay-in-name",  tokenIn);
+  setText("pay-out-name", tokenOut);
+
+  // Update execute button label
+  const execBtn = document.getElementById("execute-swap-btn");
+  if (execBtn && !execBtn.hasAttribute("disabled")) execBtn.textContent = \`Swap \${tokenIn} → \${tokenOut}\`;
   updateBalanceLabels();
   const inp = el<HTMLInputElement>("amount-input");
   if (inp) inp.value = "";
