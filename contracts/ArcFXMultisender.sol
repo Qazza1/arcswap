@@ -5,7 +5,7 @@ pragma solidity ^0.8.20;
  * ArcFXMultisender — Send USDC/EURC to multiple wallets in one transaction.
  *
  * Free tier:   up to 5 recipients, no fee
- * Pro tier:    up to 500 recipients, 0.1% fee
+ * Pro tier:    up to 500 recipients, 0.15% protocol fee
  *
  * Deployed on Arc Testnet by ArcFX (arcfx.app)
  */
@@ -22,12 +22,13 @@ contract ArcFXMultisender {
     // ── State ─────────────────────────────────────────────────────────────────
 
     address public owner;
-    address public feeRecipient;
+    address public treasury;             // collects protocol fees
 
-    uint256 public constant FREE_LIMIT   = 5;     // max recipients on free tier
-    uint256 public constant MAX_LIMIT    = 500;    // max recipients on pro tier
-    uint256 public constant FEE_BPS      = 10;     // 0.1% = 10 basis points
-    uint256 public constant BPS_DENOM    = 10_000;
+    uint256 public constant FREE_LIMIT   = 5;       // max recipients on free tier
+    uint256 public constant MAX_LIMIT    = 500;     // max recipients on pro tier
+    uint256 public constant FEE_BPS      = 15;      // 0.15% = 15 basis points
+    uint256 public constant BPS_DENOM    = 10_000;  // basis point denominator
+    // Math: fee = (total * 15) / 10_000 — multiply before divide prevents precision loss
 
     // ── Events ────────────────────────────────────────────────────────────────
 
@@ -41,14 +42,14 @@ contract ArcFXMultisender {
     );
 
     event OwnershipTransferred(address indexed previous, address indexed next);
-    event FeeRecipientUpdated(address indexed previous, address indexed next);
+    event TreasuryUpdated(address indexed previous, address indexed next);
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
-    constructor(address _feeRecipient) {
-        require(_feeRecipient != address(0), "Invalid fee recipient");
-        owner        = msg.sender;
-        feeRecipient = _feeRecipient;
+    constructor(address _treasury) {
+        require(_treasury != address(0), "Invalid treasury address");
+        owner    = msg.sender;
+        treasury = _treasury;
     }
 
     // ── Modifiers ─────────────────────────────────────────────────────────────
@@ -74,7 +75,7 @@ contract ArcFXMultisender {
 
     /**
      * Pro tier: send to up to 500 recipients.
-     * A 0.1% fee is added on top of the total amount.
+     * A 0.15% protocol fee is added on top of the total amount.
      */
     function multisend(
         address         token,
@@ -136,9 +137,9 @@ contract ArcFXMultisender {
             require(sent, "Transfer to recipient failed");
         }
 
-        // Send fee to ArcFX
+        // Send protocol fee to treasury
         if (fee > 0) {
-            bool feeSent = erc20.transfer(feeRecipient, fee);
+            bool feeSent = erc20.transfer(treasury, fee);
             require(feeSent, "Fee transfer failed");
         }
 
@@ -147,10 +148,10 @@ contract ArcFXMultisender {
 
     // ── Admin ─────────────────────────────────────────────────────────────────
 
-    function setFeeRecipient(address _new) external onlyOwner {
-        require(_new != address(0), "Invalid address");
-        emit FeeRecipientUpdated(feeRecipient, _new);
-        feeRecipient = _new;
+    function setTreasury(address _new) external onlyOwner {
+        require(_new != address(0), "Invalid treasury address");
+        emit TreasuryUpdated(treasury, _new);
+        treasury = _new;
     }
 
     function transferOwnership(address _new) external onlyOwner {

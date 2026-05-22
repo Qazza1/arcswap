@@ -159,7 +159,7 @@
 <div class="page" id="page-root"></div>
 
 <script type="module">
-import { BrowserProvider, Contract, parseUnits, formatUnits, isAddress } from "https://esm.sh/ethers@6";
+import { BrowserProvider, Contract, parseUnits, formatUnits, isAddress, ethers } from "https://esm.sh/ethers@6";
 
 // ── Config ─────────────────────────────────────────────────────────────────
 const TOKENS = {
@@ -466,16 +466,28 @@ async function sendPayment() {
 
   isPaying = true;
   const btn = document.getElementById("pay-btn");
-  if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
-  showPayStatus("Confirm in MetaMask…", "info");
+  if (btn) { btn.disabled = true; btn.textContent = "Approving…"; }
 
   try {
-    const tok     = TOKENS[selectedToken];
-    const amtWei  = parseUnits(parseFloat(amount).toFixed(tok.decimals), tok.decimals);
-    const tc      = new Contract(tok.address, ERC20_ABI, signer);
-    const tx      = await tc.transfer(toAddr, amtWei);
-    showPayStatus("Waiting for confirmation…", "info");
-    const receipt = await tx.wait();
+    const tok      = TOKENS[selectedToken];
+    const gross    = parseUnits(parseFloat(amount).toFixed(tok.decimals), tok.decimals);
+    const erc20    = new Contract(tok.address, ERC20_ABI, signer);
+    const payments = new Contract(PAYMENTS_ADDRESS, PAYMENTS_ABI, signer);
+
+    // Build paymentId from note or fallback
+    const noteText = urlNote || "arcfx-payment";
+    const paymentId = ethers.id(noteText); // keccak256 of the note string
+
+    // Step 1 — Approve ArcFXPayments to spend gross amount
+    showPayStatus("Step 1/2 — Approve token spending in MetaMask…", "info");
+    const approveTx = await erc20.approve(PAYMENTS_ADDRESS, gross);
+    await approveTx.wait();
+
+    // Step 2 — Call pay() on ArcFXPayments contract
+    if (btn) btn.textContent = "Paying…";
+    showPayStatus("Step 2/2 — Confirm payment in MetaMask…", "info");
+    const payTx   = await payments.pay(tok.address, toAddr, gross, paymentId);
+    const receipt = await payTx.wait();
 
     // Success
     document.getElementById("pay-card")?.classList.add("hidden");
@@ -484,13 +496,18 @@ async function sendPayment() {
 
     const sub  = document.getElementById("success-sub");
     const link = document.getElementById("success-link");
-    if (sub)  sub.textContent = `${parseFloat(amount).toFixed(4)} ${selectedToken} sent successfully on Arc Testnet.`;
+
+    // Calculate net for display (gross - 0.15% fee)
+    const feeAmt = parseFloat(amount) * 0.0015;
+    const netAmt = parseFloat(amount) - feeAmt;
+    if (sub)  sub.textContent = `${netAmt.toFixed(4)} ${selectedToken} delivered · ${feeAmt.toFixed(4)} protocol fee`;
     if (link) link.href = `https://testnet.arcscan.app/tx/${receipt.hash}`;
 
   } catch(err) {
     isPaying = false;
     if (btn) { btn.disabled = false; btn.textContent = `Send ${selectedToken} →`; }
-    showPayStatus(err.code===4001||err.message?.includes("rejected") ? "Transaction rejected." : `Failed: ${err.message}`, "error");
+    const rejected = err.code===4001 || err.message?.includes("rejected") || err.message?.includes("denied");
+    showPayStatus(rejected ? "Transaction rejected." : `Failed: ${err.message}`, "error");
   }
 }
 
