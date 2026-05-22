@@ -489,16 +489,54 @@ window.updateItem = function(i, field, val) {
   } else {
     items[i][field] = val;
   }
-  updatePreview();
+  // Update totals display without re-rendering inputs (preserves focus + typed value)
+  const body = document.getElementById("items-body");
+  if (body) {
+    const totalCell = body.querySelector(`tr:nth-child(${i+1}) .item-row-total`);
+    if (totalCell) totalCell.textContent = ((items[i].qty||0) * (items[i].price||0)).toFixed(2);
+  }
+  // Update summary totals + preview
+  const total = getTotal();
+  const sym   = selectedToken;
+  const t     = total.toFixed(2);
+  const ps    = document.getElementById("preview-subtotal");
+  const pt    = document.getElementById("preview-total");
+  const ps2   = document.getElementById("prev-sub2");
+  const pt2   = document.getElementById("prev-total2");
+  if (ps)  ps.textContent  = t;
+  if (pt)  pt.textContent  = t + " " + sym;
+  if (ps2) ps2.textContent = t;
+  if (pt2) pt2.textContent = t + " " + sym;
+  // Update pay link
+  const fromWallet = document.getElementById("from-wallet")?.value.trim() || "";
+  const invNum     = document.getElementById("inv-number")?.value || "INV-001";
+  if (fromWallet && total > 0) {
+    const payLink = buildPayLink(fromWallet, total, sym, invNum);
+    const pl = document.getElementById("prev-pay-link");
+    if (pl) pl.textContent = payLink;
+    const lu = document.getElementById("pay-link-url-text");
+    if (lu) lu.textContent = payLink;
+    const lb = document.getElementById("pay-link-display");
+    if (lb) lb.style.display = "block";
+  }
 };
 
 function renderItems() {
   const body = document.getElementById("items-body");
+  // Don't re-render if user is actively typing in this table
+  if (body && body.contains(document.activeElement)) {
+    // Just update totals without destroying inputs
+    items.forEach((item, i) => {
+      const totalCell = body.querySelector(`tr:nth-child(${i+1}) .item-row-total`);
+      if (totalCell) totalCell.textContent = ((item.qty||0) * (item.price||0)).toFixed(2);
+    });
+    return;
+  }
   body.innerHTML = items.map((item, i) => `
     <tr class="item-row">
       <td><input type="text" value="${item.desc}" placeholder="Description" oninput="updateItem(${i},'desc',this.value)" /></td>
-      <td><input type="number" class="right" value="${item.qty}" min="0" step="any" oninput="updateItem(${i},'qty',this.value)" /></td>
-      <td><input type="number" class="right" value="${item.price || ''}" min="0" step="any" placeholder="0.00" oninput="updateItem(${i},'price',this.value)" /></td>
+      <td><input type="text" inputmode="decimal" class="right" value="${item.qty}" placeholder="1" oninput="updateItem(${i},'qty',this.value)" style="text-align:right;" /></td>
+      <td><input type="text" inputmode="decimal" class="right" value="${item.price || ''}" placeholder="0.00" oninput="updateItem(${i},'price',this.value)" style="text-align:right;" /></td>
       <td class="item-row-total">${((item.qty||0) * (item.price||0)).toFixed(2)}</td>
       <td><button class="btn-remove-item" onclick="removeItem(${i})" title="Remove">×</button></td>
     </tr>
