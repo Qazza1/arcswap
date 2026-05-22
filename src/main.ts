@@ -455,19 +455,28 @@ async function loadHistory(): Promise<void> {
 
   try {
     const latestBlock = await ethersProvider.getBlockNumber();
-    // Use 50k block range — enough for testnet history without timing out
-    const fromBlock = Math.max(0, latestBlock - 50000);
+    // Use 20k blocks (~2.8 hours at 0.5s blocks) — stays within RPC limits
+    const fromBlock = Math.max(0, latestBlock - 20000);
 
-    // Fetch each combination individually so one failure doesn't kill all
+    // Chunked getLogs — split into 5k block chunks to avoid RPC limits
     const safeGetLogs = async (filter: any) => {
-      try { return await ethersProvider!.getLogs(filter); } catch { return []; }
+      const results: any[] = [];
+      const chunkSize = 5000;
+      for (let from = filter.fromBlock; from <= filter.toBlock; from += chunkSize) {
+        const to = Math.min(from + chunkSize - 1, filter.toBlock);
+        try {
+          const logs = await ethersProvider!.getLogs({ ...filter, fromBlock: from, toBlock: to });
+          results.push(...logs);
+        } catch { /* skip failed chunk */ }
+      }
+      return results;
     };
 
     const [usdcOut, usdcIn, eurcOut, eurcIn] = await Promise.all([
-      safeGetLogs({ fromBlock, address: USDC_ADDR, topics: [TRANSFER_TOPIC, paddedAddr, null] }),
-      safeGetLogs({ fromBlock, address: USDC_ADDR, topics: [TRANSFER_TOPIC, null, paddedAddr] }),
-      safeGetLogs({ fromBlock, address: EURC_ADDR, topics: [TRANSFER_TOPIC, paddedAddr, null] }),
-      safeGetLogs({ fromBlock, address: EURC_ADDR, topics: [TRANSFER_TOPIC, null, paddedAddr] }),
+      safeGetLogs({ fromBlock, toBlock: latestBlock, address: USDC_ADDR, topics: [TRANSFER_TOPIC, paddedAddr, null] }),
+      safeGetLogs({ fromBlock, toBlock: latestBlock, address: USDC_ADDR, topics: [TRANSFER_TOPIC, null, paddedAddr] }),
+      safeGetLogs({ fromBlock, toBlock: latestBlock, address: EURC_ADDR, topics: [TRANSFER_TOPIC, paddedAddr, null] }),
+      safeGetLogs({ fromBlock, toBlock: latestBlock, address: EURC_ADDR, topics: [TRANSFER_TOPIC, null, paddedAddr] }),
     ]);
 
     // Combine and tag each log

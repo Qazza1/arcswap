@@ -24,6 +24,24 @@ const ERC20_ABI = ["function totalSupply() view returns (uint256)"];
 
 const provider = new JsonRpcProvider(ARC_RPC);
 
+// Chunked getLogs — splits large block ranges into 5k chunks to avoid RPC limits
+async function safeGetLogs(filter: {
+  address?: string; topics?: any[]; fromBlock: number; toBlock: number;
+}): Promise<any[]> {
+  const results: any[] = [];
+  const chunkSize = 5_000;
+  for (let from = filter.fromBlock; from <= filter.toBlock; from += chunkSize) {
+    const to = Math.min(from + chunkSize - 1, filter.toBlock);
+    try {
+      const logs = await safeGetLogs({ ...filter, fromBlock: from, toBlock: to });
+      results.push(...logs);
+    } catch (e) {
+      console.warn(`getLogs chunk ${from}-${to} failed:`, e);
+    }
+  }
+  return results;
+}
+
 // ── DOM helpers ───────────────────────────────────────────────────────────
 
 const el  = (id: string) => document.getElementById(id);
@@ -84,12 +102,12 @@ interface TxEntry {
 
 async function fetchProtocol(): Promise<void> {
   const latest    = await provider.getBlockNumber();
-  const fromBlock = Math.max(0, latest - 100_000);
+  const fromBlock = Math.max(0, latest - 20_000); // ~2.8hrs at 0.5s blocks
   const entries:  TxEntry[] = [];
 
   // ── 1. PaymentExecuted events from ArcFXPayments ──────────────────────
   try {
-    const logs = await provider.getLogs({
+    const logs = await safeGetLogs({
       address: ADDR.PAYMENTS, topics: [PAYMENT_TOPIC], fromBlock, toBlock: latest,
     });
     for (const log of logs) {
@@ -107,7 +125,7 @@ async function fetchProtocol(): Promise<void> {
   const multisenderPadded = "0x000000000000000000000000" + ADDR.MULTISENDER.slice(2).toLowerCase();
   for (const tokenAddr of [ADDR.USDC, ADDR.EURC]) {
     try {
-      const logs = await provider.getLogs({
+      const logs = await safeGetLogs({
         address: tokenAddr, topics: [TRANSFER_TOPIC, null, multisenderPadded], fromBlock, toBlock: latest,
       });
       for (const log of logs) {
@@ -132,7 +150,7 @@ async function fetchProtocol(): Promise<void> {
 
   for (const tokenAddr of [ADDR.USDC, ADDR.EURC]) {
     try {
-      const logs = await provider.getLogs({
+      const logs = await safeGetLogs({
         address: tokenAddr, topics: [TRANSFER_TOPIC], fromBlock, toBlock: latest,
       });
       for (const log of logs) {
