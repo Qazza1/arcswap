@@ -24,6 +24,7 @@ type TokenSymbol = keyof typeof TOKENS;
 const ERC20_ABI = ["function balanceOf(address owner) view returns (uint256)"];
 
 let ethersProvider: BrowserProvider | null = null;
+let ethersSigner: any = null;
 let userAddress: string | null = null;
 let tokenIn: TokenSymbol = "USDC";
 let tokenOut: TokenSymbol = "EURC";
@@ -371,9 +372,14 @@ async function executeBridge(): Promise<void> {
     setHTML("bridge-status",`<div class="status success"><div class="status-title">✅ Bridge complete</div><div class="status-row"><span>${amount} USDC</span><span class="arrow">→</span><strong>${amount} USDC on ${destName}</strong></div><a class="explorer-link" href="${explorerUrl}" target="_blank" rel="noopener">View on explorer ↗</a></div>`);
     if (amtInput) amtInput.value = "";
 
-    // Switch back to Arc and refresh balances
+    // Switch back to Arc and reinitialize provider
     try {
       await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:ARC_TESTNET.chainId}] });
+      // Small delay to let chainChanged fire while isBridging is still true
+      await new Promise(r => setTimeout(r, 500));
+      // Reinitialize provider on Arc so wallet stays connected
+      ethersProvider = new BrowserProvider(window.ethereum!);
+      ethersSigner   = await ethersProvider.getSigner();
       await loadBalances();
     } catch { /* non-critical */ }
 
@@ -382,7 +388,6 @@ async function executeBridge(): Promise<void> {
     if (stepsEl) stepsEl.classList.remove("visible");
     showBridgeStatus(err.code===4001||err.message?.includes("rejected") ? "Transaction rejected." : `Bridge failed: ${err.message??"Unknown error"}`,"error");
   } finally {
-    // Set isBridging false BEFORE switching back so chainChanged doesn't reload
     isBridging = false;
     if (btn) {
       btn.removeAttribute("disabled");
@@ -590,9 +595,21 @@ document.addEventListener("DOMContentLoaded", () => {
     (e: Event) => estimateSwap((e.target as HTMLInputElement).value), 500
   ));
   window.ethereum?.on("accountsChanged", (a: string[]) => { userAddress = a[0] ?? null; if (userAddress) loadBalances(); });
-  window.ethereum?.on("chainChanged", () => {
-    // Don't reload during bridge — it switches chains intentionally
-    if (!isBridging) window.location.reload();
+  window.ethereum?.on("chainChanged", async (chainId: string) => {
+    if (isBridging) return; // Bridge intentionally switches chains — ignore
+
+    // Switched back to Arc Testnet — reinitialize silently, no reload
+    if (chainId === "0x4CEF52") {
+      try {
+        ethersProvider = new BrowserProvider(window.ethereum!);
+        ethersSigner   = await ethersProvider.getSigner();
+        userAddress    = await ethersSigner.getAddress();
+        await updateBalances();
+        showStatus("Reconnected to Arc Testnet ✓", "success");
+      } catch { window.location.reload(); }
+    } else {
+      window.location.reload();
+    }
   });
 
   // Bridge events
