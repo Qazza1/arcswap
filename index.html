@@ -258,35 +258,30 @@
     .eco-submit-btn:hover { background:#2d6ee8; text-decoration:none; }
 
     /* ── Compare ── */
-    #compare { background:var(--bg); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
-    .compare-input-wrap { display:inline-flex; align-items:center; gap:12px; background:var(--bg-card); border:1px solid var(--border-med); border-radius:var(--r); padding:10px 16px; transition:border-color .15s; }
-    .compare-input-wrap:focus-within { border-color:var(--blue); }
-    .compare-input-label { font-size:12.5px; color:var(--muted); white-space:nowrap; font-weight:500; }
-    .compare-input { background:transparent; border:none; outline:none; font-family:"JetBrains Mono",monospace; font-size:20px; font-weight:500; color:var(--text); width:120px; text-align:right; }
-    .compare-currency { font-family:"JetBrains Mono",monospace; font-size:13px; color:var(--muted); }
-    .compare-table { width:100%; border-collapse:separate; border-spacing:0 7px; }
-    .compare-table thead th { font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); padding:0 18px 6px; text-align:left; }
-    .compare-table thead th:last-child { text-align:right; }
-    .compare-row { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r); transition:border-color .2s; }
-    .compare-row:hover { border-color:var(--border-med); }
-    .compare-row.best-row { background:linear-gradient(135deg,rgba(61,126,255,.06),rgba(0,212,170,.04)); border-color:rgba(61,126,255,.3); }
-    .compare-table td { padding:14px 18px; font-size:13.5px; }
-    .compare-table td:first-child { border-radius:var(--r) 0 0 var(--r); }
-    .compare-table td:last-child  { border-radius:0 var(--r) var(--r) 0; text-align:right; }
-    .provider-cell { display:flex; align-items:center; gap:11px; }
-    .provider-icon { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
-    .provider-name { font-weight:600; color:var(--text); font-size:14px; }
-    .provider-type { font-size:11px; color:var(--muted); margin-top:1px; }
-    .amount-received { font-family:"JetBrains Mono",monospace; font-size:17px; font-weight:500; color:var(--text); }
-    .best-row .amount-received { color:var(--teal); }
-    .fee-cell { font-family:"JetBrains Mono",monospace; font-size:12.5px; color:var(--muted); }
-    .fee-cell .fee-val { color:var(--text); }
-    .speed-cell { font-size:12.5px; color:var(--muted); white-space:nowrap; }
-    .savings-badge { display:inline-flex; align-items:center; gap:4px; background:var(--teal-dim); border:1px solid rgba(0,212,170,.25); color:var(--teal); font-size:12px; font-weight:700; padding:3px 9px; border-radius:100px; white-space:nowrap; font-family:"JetBrains Mono",monospace; }
-    .best-badge    { display:inline-flex; align-items:center; gap:3px; background:var(--blue); color:#fff; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:100px; }
-    .baseline-pill { display:inline-flex; align-items:center; background:var(--bg-raised); border:1px solid var(--border); color:var(--muted); font-size:11.5px; font-weight:500; padding:3px 9px; border-radius:100px; white-space:nowrap; }
-    .compare-footer { margin-top:18px; font-size:11.5px; color:var(--muted); text-align:center; line-height:1.6; }
-    @media(max-width:700px){ .hide-mobile{display:none;} .compare-input{width:90px;} }
+    /* ── Compare section ── */
+    #compare { background:#060b18; border-top:1px solid #1e293b; border-bottom:1px solid #1e293b; }
+
+    /* JS-injected row classes — must keep these */
+    .compare-row { transition:background .15s; }
+    .compare-row:hover { background:rgba(30,41,59,0.4); }
+    .compare-row.best-row td:first-child { border-left:2px solid #2563eb; }
+    .compare-table td { padding:14px 20px; font-size:13.5px; border-bottom:1px solid #1e293b; }
+    .compare-table td:last-child { text-align:right; }
+    .compare-table tr:last-child td { border-bottom:none; }
+    .provider-cell { display:flex; align-items:center; gap:12px; }
+    .provider-icon { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; border:1px solid #1e293b; }
+    .provider-name { font-weight:600; color:#f1f5f9; font-size:13.5px; }
+    .provider-type { font-size:11px; color:#475569; margin-top:2px; }
+    .amount-received { font-family:"JetBrains Mono",monospace; font-size:16px; font-weight:500; color:#f1f5f9; display:block; }
+    .amount-received-sub { font-family:"JetBrains Mono",monospace; font-size:11px; color:#475569; margin-top:2px; display:block; }
+    .best-row .amount-received { color:#10b981; }
+    .fee-cell { font-family:"JetBrains Mono",monospace; font-size:12.5px; color:#475569; }
+    .fee-cell .fee-val { color:#94a3b8; display:block; }
+    .speed-cell { font-size:12px; color:#475569; white-space:nowrap; }
+    .savings-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); color:#10b981; font-size:12px; font-weight:600; padding:3px 10px; border-radius:4px; white-space:nowrap; font-family:"JetBrains Mono",monospace; }
+    .best-badge { display:inline-flex; align-items:center; gap:3px; background:#2563eb; color:#fff; font-size:10px; font-weight:700; padding:3px 10px; border-radius:4px; letter-spacing:0.05em; text-transform:uppercase; }
+    .baseline-pill { display:inline-flex; align-items:center; background:#0f172a; border:1px solid #1e293b; color:#475569; font-size:11px; font-weight:500; padding:3px 10px; border-radius:4px; white-space:nowrap; letter-spacing:0.05em; text-transform:uppercase; }
+    @media(max-width:700px){ .hide-mobile{display:none;} }
 
     /* ── Waitlist ── */
     #waitlist { background:var(--bg-card); border-top:1px solid var(--border); position:relative; overflow:hidden; }
@@ -953,25 +948,113 @@
   </section>
 
   <!-- Compare -->
-  <section id="compare" style="background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
-    <div class="container">
-      <div style="text-align:center;margin-bottom:32px;" class="reveal">
-        <div class="section-label">Why ArcFX</div>
-        <div class="section-title">See exactly how much you save</div>
-        <p class="section-sub" style="margin:0 auto 24px;">Compare ArcFX against traditional providers. Enter any amount — all rates update instantly.</p>
-        <div class="compare-input-wrap">
-          <span class="compare-input-label">You send</span>
-          <input id="compare-amount" class="compare-input" type="number" value="1000" min="1" step="any" autocomplete="off" />
-          <span class="compare-currency">USDC</span>
+  <!-- ── Rate Comparison ── -->
+  <section id="compare">
+    <div class="container" style="max-width:1100px;margin:0 auto;padding:72px 28px;">
+
+      <!-- Section header -->
+      <div style="text-align:center;margin-bottom:48px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;
+                    color:#2563eb;text-transform:uppercase;letter-spacing:0.14em;margin-bottom:14px;">
+          Rate comparison
+        </div>
+        <h2 style="font-size:clamp(26px,3.5vw,36px);font-weight:700;color:#f1f5f9;
+                   letter-spacing:-0.8px;line-height:1.15;margin-bottom:12px;">
+          See exactly how much you save
+        </h2>
+        <p style="font-size:15px;color:#475569;max-width:440px;margin:0 auto 32px;line-height:1.7;">
+          Compare ArcFX against traditional FX providers.
+          Enter any amount — all rows update instantly.
+        </p>
+
+        <!-- You Send input -->
+        <div style="display:inline-flex;align-items:center;gap:0;
+                    background:#0f172a;border:1px solid #1e293b;border-radius:8px;
+                    overflow:hidden;transition:border-color .15s;"
+             onfocusin="this.style.borderColor='#2563eb'"
+             onfocusout="this.style.borderColor='#1e293b'">
+          <div style="padding:12px 16px;border-right:1px solid #1e293b;
+                      font-size:12px;font-weight:600;color:#475569;
+                      text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;">
+            You send
+          </div>
+          <input
+            id="compare-amount"
+            type="number"
+            value="1000"
+            min="1"
+            step="any"
+            autocomplete="off"
+            style="background:transparent;border:none;outline:none;
+                   font-family:'JetBrains Mono',monospace;font-size:22px;
+                   font-weight:500;color:#f1f5f9;width:130px;
+                   text-align:right;padding:8px 12px;"
+          />
+          <div style="padding:12px 16px;border-left:1px solid #1e293b;
+                      font-family:'JetBrains Mono',monospace;
+                      font-size:13px;font-weight:500;color:#475569;">
+            USDC
+          </div>
         </div>
       </div>
-      <div class="reveal">
-        <table class="compare-table">
-          <thead><tr><th style="width:220px">Provider</th><th>You receive</th><th class="hide-mobile">Fee</th><th class="hide-mobile">Speed</th><th>Savings</th></tr></thead>
-          <tbody id="compare-body"></tbody>
-        </table>
-        <p class="compare-footer">⚠️ Traditional provider rates are estimates. ArcFX rate is live from Arc Testnet via Circle App Kit. Not financial advice.</p>
+
+      <!-- Institutional data table -->
+      <div style="border:1px solid #1e293b;border-radius:10px;overflow:hidden;">
+
+        <!-- Table header -->
+        <div style="background:#0f172a;border-bottom:1px solid #1e293b;padding:0;">
+          <table class="compare-table" style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#0a0f1e;">
+                <th style="padding:12px 20px;text-align:left;font-family:'JetBrains Mono',monospace;
+                           font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+                           letter-spacing:0.12em;width:220px;">
+                  Provider
+                </th>
+                <th style="padding:12px 20px;text-align:left;font-family:'JetBrains Mono',monospace;
+                           font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+                           letter-spacing:0.12em;">
+                  You receive
+                </th>
+                <th class="hide-mobile"
+                    style="padding:12px 20px;text-align:left;font-family:'JetBrains Mono',monospace;
+                           font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+                           letter-spacing:0.12em;">
+                  Fee breakdown
+                </th>
+                <th class="hide-mobile"
+                    style="padding:12px 20px;text-align:left;font-family:'JetBrains Mono',monospace;
+                           font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+                           letter-spacing:0.12em;">
+                  Speed
+                </th>
+                <th style="padding:12px 20px;text-align:right;font-family:'JetBrains Mono',monospace;
+                           font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+                           letter-spacing:0.12em;">
+                  Savings
+                </th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+
+        <!-- Table body — populated by existing JS -->
+        <div style="background:#060b18;">
+          <table class="compare-table" style="width:100%;border-collapse:collapse;">
+            <tbody id="compare-body"></tbody>
+          </table>
+        </div>
+
       </div>
+
+      <!-- Disclaimer -->
+      <p style="margin-top:16px;font-size:11px;color:#334155;text-align:center;line-height:1.7;
+                font-family:'JetBrains Mono',monospace;">
+        ⚠ Provider rates are market estimates updated in real time.
+        ArcFX rate sourced from Arc Testnet via Circle App Kit.
+        Not financial advice.
+      </p>
+
     </div>
   </section>
 
