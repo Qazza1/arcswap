@@ -146,10 +146,64 @@
       <span>ArcFX</span>
     </a>
     <div class="nav-center">
-      <a href="/#app" class="nav-link">Trade</a>
-      <a href="/" class="nav-link">Tools</a>
+      <a href="/" class="nav-link">Trade</a>
+
+      <!-- Tools dropdown -->
+      <div style="position:relative;" id="tools-wrap-a">
+        <button onclick="toggleToolsA()"
+                style="display:flex;align-items:center;gap:5px;padding:6px 14px;
+                       border-radius:6px;font-size:13.5px;font-weight:500;color:#94a3b8;
+                       background:transparent;border:none;cursor:pointer;font-family:inherit;">
+          Tools
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div id="tools-dropdown-a"
+             style="display:none;position:absolute;top:calc(100% + 8px);left:50%;
+                    transform:translateX(-50%);width:220px;
+                    background:#0f172a;border:1px solid #1e293b;border-radius:10px;
+                    padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
+          <a href="/multisend" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;transition:background .15s;"
+             onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Multisender</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Batch transfers</div></div>
+          </a>
+          <a href="/pay" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;transition:background .15s;"
+             onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Pay Links</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Accept payments</div></div>
+          </a>
+          <a href="/invoice" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;transition:background .15s;"
+             onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Invoices</div><div style="font-size:11px;color:#64748b;margin-top:1px;">PDF invoices + Pay Now</div></div>
+          </a>
+          <a href="/history" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;transition:background .15s;"
+             onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">History</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Transactions + CSV</div></div>
+          </a>
+        </div>
+      </div>
+
       <a href="/analytics" class="nav-link active">Analytics</a>
     </div>
+
+    <script>
+      function toggleToolsA() {
+        const dd = document.getElementById('tools-dropdown-a');
+        dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+      }
+      document.addEventListener('click', function(e) {
+        const wrap = document.getElementById('tools-wrap-a');
+        if (wrap && !wrap.contains(e.target)) {
+          const dd = document.getElementById('tools-dropdown-a');
+          if (dd) dd.style.display = 'none';
+        }
+      });
+    </script>
     <div class="nav-right">
       <div style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;border:1px solid #1e293b;background:#0f172a;">
         <span style="width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.7);animation:pulse-dot 2s ease-in-out infinite;display:inline-block;"></span>
