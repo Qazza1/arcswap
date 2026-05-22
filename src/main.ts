@@ -632,6 +632,27 @@ document.addEventListener("DOMContentLoaded", () => {
   (window as any).updateBridgeReceiveAmt = updateBridgeReceiveAmt;
   (window as any).flipBridgeDirection = flipBridgeDirection;
   (window as any).loadHistory = loadHistory;
+
+  // Auto-reconnect if wallet was previously connected (silent — no popup)
+  if (window.ethereum) {
+    window.ethereum.request({ method: "eth_accounts" }).then(async (accounts: string[]) => {
+      if (accounts && accounts.length > 0) {
+        // Wallet already authorized — reconnect silently
+        try {
+          ethersProvider = new BrowserProvider(window.ethereum!);
+          userAddress    = accounts[0];
+          const short    = `${userAddress.slice(0,6)}…${userAddress.slice(-4)}`;
+          const btn      = el("connect-btn");
+          if (btn) { btn.textContent = short; btn.classList.add("connected"); }
+          const execBtn  = el("execute-swap-btn");
+          if (execBtn)   execBtn.textContent = `Swap ${tokenIn} → ${tokenOut}`;
+          el("connect-card")?.classList.add("hidden");
+          el("swap-card")?.classList.remove("hidden");
+          await loadBalances();
+        } catch { /* silent fail — user will connect manually */ }
+      }
+    }).catch(() => {});
+  }
 });
 
 declare global {
