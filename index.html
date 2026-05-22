@@ -162,14 +162,13 @@
     #bridge-btn { display:block; width:100%; background:var(--blue); color:#fff; border:none; border-radius:var(--r); padding:14px; font-size:15px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; transition:background .15s; }
     #bridge-btn:hover { background:#2d6ee8; }
     #bridge-btn:disabled { opacity:.4; cursor:not-allowed; }
-    .bridge-steps { margin-top:13px; display:none; flex-direction:column; gap:7px; }
-    .bridge-steps.visible { display:flex; }
-    .bridge-step { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); }
-    .bridge-step-dot { width:7px; height:7px; border-radius:50%; background:var(--border); flex-shrink:0; transition:background .3s; }
-    .bridge-step.done .bridge-step-dot { background:var(--teal); }
-    .bridge-step.active .bridge-step-dot { background:var(--blue); animation:blink 1s infinite; }
-    .bridge-step.done { color:var(--teal); }
-    .bridge-step.active { color:var(--text); }
+    /* bridge-steps — JS adds/removes visible class */
+    #bridge-steps.visible { display:flex !important; }
+    /* bridge-step states — JS adds done/active classes */
+    .bridge-step.done  { color:#10b981; }
+    .bridge-step.active { color:#f1f5f9; }
+    .bridge-step.done  .bridge-step-dot { background:#10b981 !important; }
+    .bridge-step.active .bridge-step-dot { background:#2563eb !important; animation:blink 1s infinite; }
     #bridge-flip-btn { background:var(--bg-raised); border:1px solid var(--border-med); border-radius:var(--r-sm); width:34px; height:34px; color:var(--muted); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:border-color .15s,color .15s,transform .2s; flex-shrink:0; }
     #bridge-flip-btn:hover { border-color:var(--teal); color:var(--teal); transform:rotate(180deg); }
 
@@ -736,54 +735,198 @@
           </div>
         </div>
 
-        <!-- Bridge -->
-        <div id="panel-bridge" class="app-panel" style="display:none;">
+        <!-- Bridge — Enterprise redesign -->
+        <div id="panel-bridge" style="display:none;background:#0f172a;border:1px solid #1e293b;border-radius:0 0 10px 10px;padding:20px;">
+
+          <!-- Status -->
           <div id="bridge-global-status"></div>
-          <div class="bridge-header">
-            <span class="bridge-title">Bridge USDC</span>
-            <span class="bridge-badge">● CCTP Powered</span>
+
+          <!-- Header -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div>
+              <div style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.2px;">Bridge</div>
+              <div style="font-size:11px;color:#475569;margin-top:2px;font-family:'JetBrains Mono',monospace;">Circle CCTP v2 · Native USDC</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:4px;
+                        background:#0a0f1e;border:1px solid #1e293b;">
+              <span style="width:6px;height:6px;border-radius:50%;background:#10b981;
+                           box-shadow:0 0 5px rgba(16,185,129,0.6);display:inline-block;"></span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;
+                           font-weight:600;color:#334155;text-transform:uppercase;
+                           letter-spacing:0.08em;">CCTP Live</span>
+            </div>
           </div>
-          <div class="chain-row">
-            <div class="chain-pill">
-              <div class="chain-pill-label">From</div>
-              <div class="chain-pill-name">
-                <div class="chain-dot" style="background:#627eea"></div>
-                <span id="bridge-from-label">Ethereum Sepolia</span>
+
+          <!-- Network selectors -->
+          <div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:8px;align-items:center;margin-bottom:16px;">
+
+            <!-- From network -->
+            <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:12px 14px;">
+              <div style="font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+                          letter-spacing:0.1em;margin-bottom:8px;">From network</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:8px;height:8px;border-radius:50%;background:#627eea;flex-shrink:0;"></div>
+                <span id="bridge-from-label"
+                      style="font-size:13px;font-weight:600;color:#f1f5f9;">
+                  Ethereum Sepolia
+                </span>
+              </div>
+              <div style="font-size:10px;color:#334155;margin-top:4px;font-family:'JetBrains Mono',monospace;">
+                EIP-155 · Chain 11155111
               </div>
             </div>
-            <button id="bridge-flip-btn" onclick="flipBridgeDirection()">⇅</button>
-            <div class="chain-pill">
-              <div class="chain-pill-label">To</div>
-              <div class="chain-pill-name">
-                <div class="chain-dot" id="bridge-to-dot" style="background:#3d7eff;box-shadow:0 0 6px #3d7eff"></div>
-                <span id="bridge-to-label">Arc Testnet</span>
+
+            <!-- Flip button -->
+            <div style="display:flex;justify-content:center;">
+              <button id="bridge-flip-btn"
+                      onclick="flipBridgeDirection()"
+                      style="width:34px;height:34px;border-radius:6px;background:#0f172a;
+                             border:1px solid #1e293b;color:#475569;font-size:14px;
+                             cursor:pointer;display:flex;align-items:center;justify-content:center;
+                             transition:border-color .15s,color .15s;"
+                      onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'"
+                      onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'">
+                ⇄
+              </button>
+            </div>
+
+            <!-- To network -->
+            <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:12px 14px;">
+              <div style="font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+                          letter-spacing:0.1em;margin-bottom:8px;">To network</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div id="bridge-to-dot"
+                     style="width:8px;height:8px;border-radius:50%;background:#2563eb;flex-shrink:0;"></div>
+                <span id="bridge-to-label"
+                      style="font-size:13px;font-weight:600;color:#f1f5f9;">
+                  Arc Testnet
+                </span>
+              </div>
+              <div style="font-size:10px;color:#334155;margin-top:4px;font-family:'JetBrains Mono',monospace;">
+                EVM · Chain 5042002
               </div>
             </div>
           </div>
-          <div class="bridge-amount-wrap">
-            <div class="bridge-amount-label">Amount</div>
-            <div class="bridge-amount-row">
-              <input id="bridge-amount-input" class="bridge-amount-input" type="number" min="0" step="any" placeholder="0.00" autocomplete="off" />
-              <div class="bridge-token-badge"><span>💲</span><span>USDC</span></div>
+
+          <!-- Amount input -->
+          <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;
+                      padding:14px 16px;margin-bottom:12px;transition:border-color .15s;"
+               onfocusin="this.style.borderColor='#2563eb'"
+               onfocusout="this.style.borderColor='#1e293b'">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span style="font-size:10px;font-weight:600;color:#334155;
+                           text-transform:uppercase;letter-spacing:0.1em;">Amount to bridge</span>
+              <span id="bridge-receive-label"
+                    style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#334155;">
+                You receive on Arc
+              </span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="display:flex;align-items:center;gap:7px;background:#0f172a;
+                          border:1px solid #1e293b;border-radius:6px;padding:7px 12px;flex-shrink:0;">
+                <div style="width:22px;height:22px;border-radius:50%;background:#2775ca;
+                            display:flex;align-items:center;justify-content:center;
+                            font-size:11px;font-weight:700;color:#fff;">$</div>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
+                             font-weight:500;color:#e2e8f0;">USDC</span>
+              </div>
+              <input
+                id="bridge-amount-input"
+                type="number" min="0" step="any"
+                placeholder="0.00"
+                autocomplete="off"
+                style="flex:1;background:transparent;border:none;outline:none;
+                       font-family:'JetBrains Mono',monospace;font-size:28px;
+                       font-weight:500;color:#f1f5f9;text-align:right;
+                       min-width:0;letter-spacing:-0.5px;"
+              />
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
+                           font-weight:500;color:#10b981;" id="bridge-receive-amt">—</span>
             </div>
           </div>
-          <div class="bridge-info">
-            <div class="bridge-info-row"><span>Protocol</span><span class="bridge-info-val">Circle CCTP v2</span></div>
-            <div class="bridge-info-row"><span id="bridge-receive-label">You receive on Arc</span><span class="bridge-info-val" id="bridge-receive-amt">—</span></div>
-            <div class="bridge-info-row"><span>Fee</span><span class="bridge-info-val">~$0.00 (testnet)</span></div>
-            <div class="bridge-info-row"><span>Est. time</span><span class="bridge-info-val">~30 seconds</span></div>
+
+          <!-- Info grid -->
+          <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;
+                      padding:12px 14px;margin-bottom:16px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <div style="font-size:10px;font-weight:600;color:#334155;
+                            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Protocol</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
+                            font-weight:500;color:#94a3b8;">Circle CCTP v2</div>
+              </div>
+              <div>
+                <div style="font-size:10px;font-weight:600;color:#334155;
+                            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Bridge fee</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
+                            font-weight:500;color:#10b981;">~$0.00 testnet</div>
+              </div>
+              <div>
+                <div style="font-size:10px;font-weight:600;color:#334155;
+                            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Token</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
+                            font-weight:500;color:#94a3b8;">Native USDC</div>
+              </div>
+              <div>
+                <div style="font-size:10px;font-weight:600;color:#334155;
+                            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Est. time</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
+                            font-weight:500;color:#94a3b8;">~30 seconds</div>
+              </div>
+            </div>
           </div>
-          <button id="bridge-btn">Bridge to Arc →</button>
-          <div class="bridge-steps" id="bridge-steps">
-            <div class="bridge-step" id="bstep-approve"><div class="bridge-step-dot"></div><span id="bstep-approve-label">Approve USDC spending</span></div>
-            <div class="bridge-step" id="bstep-burn"><div class="bridge-step-dot"></div><span id="bstep-burn-label">Burn USDC on Sepolia</span></div>
-            <div class="bridge-step" id="bstep-attest"><div class="bridge-step-dot"></div><span>Circle attestation</span></div>
-            <div class="bridge-step" id="bstep-mint"><div class="bridge-step-dot"></div><span id="bstep-mint-label">Mint USDC on Arc</span></div>
+
+          <!-- Progress steps (hidden until bridging) -->
+          <div id="bridge-steps" style="display:none;flex-direction:column;gap:8px;
+                                        margin-bottom:14px;padding:12px 14px;
+                                        background:#060b18;border:1px solid #1e293b;border-radius:8px;">
+            <div id="bstep-approve" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+              <span id="bstep-approve-label">Approve USDC spending</span>
+            </div>
+            <div id="bstep-burn" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+              <span id="bstep-burn-label">Burn USDC on Sepolia</span>
+            </div>
+            <div id="bstep-attest" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+              <span>Circle attestation</span>
+            </div>
+            <div id="bstep-mint" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+              <span id="bstep-mint-label">Mint USDC on Arc</span>
+            </div>
           </div>
-          <div id="bridge-status"></div>
-          <div class="widget-footer" style="margin-top:13px;">
-            <a href="https://faucet.circle.com" target="_blank" rel="noopener">Get testnet USDC →</a>
-            <a href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noopener">Get Sepolia ETH →</a>
+
+          <!-- Status messages -->
+          <div id="bridge-status" style="margin-bottom:12px;"></div>
+
+          <!-- Action button -->
+          <button id="bridge-btn"
+                  style="display:block;width:100%;padding:14px;background:#2563eb;
+                         color:#fff;border:none;border-radius:8px;font-size:15px;
+                         font-weight:600;cursor:pointer;font-family:inherit;
+                         letter-spacing:-0.1px;transition:background .15s;"
+                  onmouseover="this.style.background='#1d4ed8'"
+                  onmouseout="this.style.background='#2563eb'">
+            Bridge to Arc →
+          </button>
+
+          <!-- Footer -->
+          <div style="display:flex;justify-content:space-between;margin-top:14px;
+                      padding-top:13px;border-top:1px solid #1e293b;font-size:11px;">
+            <a href="https://faucet.circle.com" target="_blank" rel="noopener"
+               style="color:#334155;text-decoration:none;transition:color .15s;"
+               onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#334155'">
+              Get testnet USDC →
+            </a>
+            <a href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noopener"
+               style="color:#334155;text-decoration:none;transition:color .15s;"
+               onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#334155'">
+              Get Sepolia ETH →
+            </a>
           </div>
         </div>
 
