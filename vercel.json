@@ -10,6 +10,8 @@
     { "src": "/invoice",    "dest": "/invoice.html" },
     { "src": "/invoice/",   "dest": "/invoice.html" },
     { "src": "/history",    "dest": "/history.html" },
-    { "src": "/history/",   "dest": "/history.html" }
+    { "src": "/history/",   "dest": "/history.html" },
+    { "src": "/analytics",  "dest": "/analytics.html" },
+    { "src": "/analytics/", "dest": "/analytics.html" }
   ]
 }

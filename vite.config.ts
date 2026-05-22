@@ -21,6 +21,7 @@ export default defineConfig({
         pay:       resolve(__dirname, "pay.html"),
         invoice:   resolve(__dirname, "invoice.html"),
         history:   resolve(__dirname, "history.html"),
+        analytics: resolve(__dirname, "analytics.html"),
       },
     },
   },
