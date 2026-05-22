@@ -184,16 +184,13 @@ async function fetchProtocol(): Promise<void> {
 
   // ── Stats ─────────────────────────────────────────────────────────────
   const totalVol  = entries.reduce((s, e) => s + e.amount, 0n);
-  const totalFee  = entries.filter(e => e.type === "Pay").reduce((s, e) => {
-    // Fee is 0.15% of gross
-    return s + (e.amount * 15n / 10_000n);
-  }, 0n);
+  const txCount = entries.length;
   const wallets   = new Set(entries.map(e => e.from.toLowerCase())).size;
   const count     = entries.length;
   const avgTrade  = count > 0 ? Number(formatUnits(totalVol / BigInt(count), 6)) : 0;
 
   txt("stat-volume",    count ? fmtUSD(Number(formatUnits(totalVol, 6))) : "$0.00");
-  txt("stat-revenue",   totalFee > 0n ? fmtUSD(Number(formatUnits(totalFee, 6))) : "$0.00");
+  txt("stat-revenue",   txCount.toString());
   txt("stat-wallets",   wallets.toString() || "0");
   txt("stat-avg-trade", count ? fmtUSD(avgTrade) : "$0.00");
 
