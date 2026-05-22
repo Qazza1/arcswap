@@ -134,34 +134,9 @@ async function fetchProtocol(): Promise<void> {
     } catch(e) { console.warn("Multisend transfers:", e); }
   }
 
-  // ── 3. EURC transfers (swaps produce EURC — USDC→EURC or EURC→USDC) ───
-  // Filter: any EURC transfer not involving our contracts = swap activity
-  const ourContracts = new Set([
-    ADDR.PAYMENTS.toLowerCase(), ADDR.MULTISENDER.toLowerCase(),
-    ADDR.USDC.toLowerCase(), ADDR.EURC.toLowerCase(),
-    "0x0000000000000000000000000000000000000000",
-  ]);
-
-  try {
-    const logs = await safeGetLogs({
-      address: ADDR.EURC, topics: [TRANSFER_TOPIC],
-      fromBlock, toBlock: latest,
-    });
-    for (const log of logs) {
-      try {
-        const alreadySeen = entries.some(e => e.txHash === log.transactionHash);
-        if (alreadySeen) continue;
-        const from   = "0x" + log.topics[1].slice(26);
-        const to     = "0x" + log.topics[2].slice(26);
-        if (ourContracts.has(from.toLowerCase())) continue;
-        if (from === "0x0000000000000000000000000000000000000000") continue;
-        const amount = Number(formatUnits(BigInt(log.data), 6));
-        if (amount <= 0) continue;
-        entries.push({ type:"Swap", token:ADDR.EURC, amount, from,
-          blockNum:log.blockNumber, txHash:log.transactionHash });
-      } catch { /* skip */ }
-    }
-  } catch(e) { console.warn("EURC transfers:", e); }
+  // Note: Swaps go through Circle App Kit directly — no ArcFX contract event.
+  // We only count what we can attribute to ArcFX contracts (Pay + Multisend).
+  // This keeps numbers accurate and stable rather than showing random network activity.
 
   // ── Stats ─────────────────────────────────────────────────────────────
   const totalVol = entries.reduce((s, e) => s + e.amount, 0);
