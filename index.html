@@ -3,910 +3,432 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ArcFX — Stablecoin FX on Arc</title>
+  <title>ArcFX — The business layer on Arc</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg:        #060810;
-      --bg-card:   #0b0f1a;
-      --bg-raised: #101420;
-      --border:    #1a2035;
+      --bg:       #060810;
+      --bg-card:  #0b0f1a;
+      --bg-raised:#101420;
+      --border:   #1a2035;
       --border-med:#252d45;
-      --text:      #e8edf8;
-      --muted:     #4a5578;
-      --subtle:    #2a3350;
-      --blue:      #3d7eff;
-      --blue-dim:  rgba(61,126,255,0.1);
-      --blue-glow: rgba(61,126,255,0.2);
-      --green:     #00d4aa;
-      --green-dim: rgba(0,212,170,0.08);
-      --orange:    #ff6b35;
-      --red:       #ff4d6a;
-      --r:         10px;
-      --r-sm:      6px;
-      --r-lg:      14px;
+      --text:     #e8edf8;
+      --muted:    #4a5578;
+      --subtle:   #2a3350;
+      --blue:     #3d7eff;
+      --blue-dim: rgba(61,126,255,0.1);
+      --teal:     #00d4aa;
+      --teal-dim: rgba(0,212,170,0.08);
+      --orange:   #ff6b35;
+      --red:      #ff4d6a;
+      --r:        10px;
+      --r-sm:     6px;
+      --r-lg:     14px;
     }
-
     html { scroll-behavior: smooth; }
-
-    body {
-      font-family: "Space Grotesk", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
-
-    a { color: var(--blue); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .hidden { display: none !important; }
-
-    /* ── Ticker ────────────────────────────────────────── */
-    .ticker-wrap {
-      background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
-      height: 34px;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-    }
-    .ticker-track {
-      display: flex;
-      animation: ticker 32s linear infinite;
-      white-space: nowrap;
-    }
-    .ticker-track:hover { animation-play-state: paused; }
-    @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
-    .ticker-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 28px;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 11px;
-      color: var(--muted);
-      border-right: 1px solid var(--border);
-    }
-    .ticker-item strong { color: var(--text); font-weight: 500; }
-    .ticker-live {
-      width: 5px; height: 5px; border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 6px var(--green);
-      animation: pulse 2s ease-in-out infinite;
-      display: inline-block;
-    }
+    body { font-family:"Space Grotesk",sans-serif; background:var(--bg); color:var(--text); line-height:1.6; overflow-x:hidden; }
+    a { color:var(--blue); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .hidden { display:none !important; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    @keyframes blink  { 0%,100%{opacity:1} 50%{opacity:.2} }
+    @keyframes spin   { to{transform:rotate(360deg)} }
 
-    /* ── Nav ───────────────────────────────────────────── */
-    nav {
-      position: sticky; top: 0; z-index: 200;
-      height: 62px;
-      display: flex; align-items: center;
-      justify-content: space-between;
-      padding: 0 28px;
-      background: rgba(6,8,16,0.92);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
-    }
+    /* ── Stats bar ── */
+    .stats-bar { background:#08090f; border-bottom:1px solid var(--border); height:36px; display:flex; align-items:center; }
+    .stats-bar-inner { display:flex; align-items:center; justify-content:center; gap:0; width:100%; padding:0 24px; }
+    .stats-bar-item  { display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
+    .stats-bar-dot   { width:5px; height:5px; border-radius:50%; background:var(--teal); box-shadow:0 0 5px var(--teal); animation:pulse 2s ease-in-out infinite; }
+    .stats-bar-label { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted); }
+    .stats-bar-val   { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500; color:var(--text); }
+    .stats-bar-sep   { width:1px; height:14px; background:var(--border); margin:0 20px; flex-shrink:0; }
 
-    .nav-logo {
-      display: flex; align-items: center; gap: 11px;
-      font-family: "Space Grotesk", sans-serif;
-      font-size: 18px; font-weight: 700;
-      letter-spacing: -0.4px;
-      color: var(--text);
-    }
-    .nav-logo img {
-      width: 38px; height: 38px;
-      border-radius: 50%; object-fit: cover;
-      border: 1.5px solid var(--border-med);
-    }
+    /* ── Nav ── */
+    nav { position:sticky; top:0; z-index:200; height:62px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(6,8,16,.95); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); }
+    .nav-logo { display:flex; align-items:center; gap:11px; font-size:18px; font-weight:700; letter-spacing:-.4px; color:var(--text); }
+    .nav-logo img { width:38px; height:38px; border-radius:50%; object-fit:cover; border:1.5px solid var(--border-med); }
+    .nav-center { display:flex; align-items:center; gap:2px; }
+    .nav-link { color:var(--muted); font-size:14px; font-weight:500; padding:6px 14px; border-radius:var(--r-sm); transition:color .15s,background .15s; background:none; border:none; cursor:pointer; font-family:"Space Grotesk",sans-serif; text-decoration:none; display:inline-block; }
+    .nav-link:hover { color:var(--text); background:var(--bg-raised); text-decoration:none; }
+    .nav-right { display:flex; align-items:center; gap:10px; }
+    .btn-primary { background:var(--blue); color:#fff; border:none; padding:9px 20px; border-radius:var(--r-sm); font-size:13px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; transition:background .15s; display:inline-block; text-decoration:none; }
+    .btn-primary:hover { background:#2d6ee8; text-decoration:none; color:#fff; }
+    .btn-ghost { background:transparent; border:1px solid var(--border-med); color:var(--text); font-size:13px; font-weight:500; padding:8px 16px; border-radius:var(--r-sm); cursor:pointer; font-family:"Space Grotesk",sans-serif; transition:border-color .15s,background .15s; }
+    .btn-ghost:hover { border-color:var(--blue); background:var(--blue-dim); }
+    .btn-ghost.connected { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--muted); }
 
-    .nav-center {
-      display: flex; align-items: center; gap: 2px;
-    }
-    .nav-link {
-      color: var(--muted); font-size: 14px; font-weight: 500;
-      padding: 6px 14px; border-radius: var(--r-sm);
-      transition: color .15s, background .15s;
-    }
-    .nav-link:hover { color: var(--text); background: var(--bg-raised); text-decoration: none; }
+    /* ── Nav dropdown ── */
+    .nav-dropdown-wrap { position:relative; }
+    .nav-dropdown-btn  { background:none; border:none; cursor:pointer; display:flex; align-items:center; gap:5px; font-family:"Space Grotesk",sans-serif; }
+    .nav-caret { font-size:10px; opacity:.6; transition:transform .2s; }
+    .nav-dropdown-wrap:hover .nav-caret { transform:rotate(180deg); }
+    .nav-dropdown { display:none; position:absolute; top:calc(100% + 12px); left:50%; transform:translateX(-50%); background:var(--bg-card); border:1px solid var(--border-med); border-radius:var(--r-lg); width:440px; box-shadow:0 20px 60px rgba(0,0,0,.5); z-index:500; overflow:hidden; }
+    .nav-dropdown-wrap:hover .nav-dropdown { display:block; }
+    .nav-dropdown-grid { display:grid; grid-template-columns:1fr 1fr; gap:2px; padding:8px; }
+    .nav-dd-item { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:var(--r); transition:background .15s; text-decoration:none; color:inherit; }
+    .nav-dd-item:hover { background:var(--bg-raised); text-decoration:none; }
+    .nav-dd-icon { width:36px; height:36px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .nav-dd-icon svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
+    .nav-dd-name { font-size:13.5px; font-weight:600; color:var(--text); margin-bottom:2px; }
+    .nav-dd-sub  { font-size:11px; color:var(--muted); }
+    .nav-dd-footer { border-top:1px solid var(--border); padding:10px 18px; display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:var(--muted); }
+    .nav-dd-footer a { color:var(--blue); font-size:11.5px; }
 
-    .nav-right { display: flex; align-items: center; gap: 10px; }
+    /* ── Hero ── */
+    #hero { padding:64px 28px 0; position:relative; overflow:hidden; }
+    #hero::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,var(--border) 1px,transparent 1px); background-size:30px 30px; opacity:.4; pointer-events:none; z-index:0; }
+    #hero::after  { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 80% 70% at 50% 100%,transparent 20%,var(--bg) 90%); pointer-events:none; z-index:0; }
+    .hero-inner { max-width:1200px; margin:0 auto; position:relative; z-index:1; display:grid; grid-template-columns:1fr 460px; gap:64px; align-items:flex-start; }
+    @media(max-width:1080px){ .hero-inner{grid-template-columns:1fr;gap:48px;} .app-sticky{position:static!important;} }
+    .hero-eyebrow { display:inline-flex; align-items:center; gap:8px; background:var(--bg-card); border:1px solid var(--border-med); color:var(--muted); font-size:12px; font-weight:500; padding:5px 12px; border-radius:100px; margin-bottom:28px; }
+    .eyebrow-dot { width:5px; height:5px; border-radius:50%; background:var(--teal); box-shadow:0 0 5px var(--teal); animation:pulse 2s infinite; }
+    h1 { font-size:clamp(42px,6vw,70px); font-weight:700; letter-spacing:-2px; line-height:1.05; margin-bottom:20px; }
+    .gradient-text { background:linear-gradient(135deg,#3d7eff,#00d4aa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .hero-sub { font-size:17px; color:var(--muted); margin-bottom:36px; font-weight:400; line-height:1.75; max-width:460px; }
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:32px; }
+    @media(max-width:600px){ .stats-grid{grid-template-columns:repeat(2,1fr);} }
+    .stat-cell { background:var(--bg-card); padding:16px 18px; transition:background .2s; }
+    .stat-cell:hover { background:var(--bg-raised); }
+    .stat-val { font-family:"JetBrains Mono",monospace; font-size:22px; font-weight:500; color:var(--text); letter-spacing:-.5px; margin-bottom:3px; }
+    .stat-lbl { font-size:11.5px; color:var(--muted); }
+    .hero-powered { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--muted); }
+    .hero-powered span { color:var(--text); font-weight:600; }
+    .hero-powered-dot { color:var(--border); }
 
-    .btn-ghost {
-      background: transparent;
-      border: 1px solid var(--border-med);
-      color: var(--text); font-size: 13px; font-weight: 500;
-      padding: 8px 16px; border-radius: var(--r-sm);
-      cursor: pointer; font-family: "Space Grotesk", sans-serif;
-      transition: border-color .15s, background .15s;
-    }
-    .btn-ghost:hover { border-color: var(--blue); background: var(--blue-dim); }
-    .btn-ghost.connected { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
+    /* ── App widget ── */
+    .app-sticky { position:sticky; top:76px; }
+    .app-tabs { display:flex; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-lg) var(--r-lg) 0 0; border-bottom:none; overflow:hidden; }
+    .app-tab { flex:1; padding:14px 12px; font-size:13.5px; font-weight:600; font-family:"Space Grotesk",sans-serif; border:none; cursor:pointer; transition:all .15s; background:var(--bg-card); color:var(--muted); border-bottom:2px solid transparent; }
+    .app-tab.active { background:var(--bg); color:var(--text); border-bottom:2px solid var(--blue); }
+    .app-tab.active.bridge-tab { border-bottom-color:var(--teal); }
+    .app-panel { background:var(--bg); border:1px solid var(--border); border-top:none; border-radius:0 0 var(--r-lg) var(--r-lg); padding:22px; }
+    .connect-card-inner { text-align:center; padding:16px 0 8px; }
+    .connect-card-inner img { width:52px; height:52px; border-radius:50%; object-fit:cover; margin-bottom:14px; }
+    .connect-card-inner h3 { font-size:17px; font-weight:700; margin-bottom:8px; letter-spacing:-.3px; }
+    .connect-card-inner p { color:var(--muted); font-size:13.5px; margin-bottom:22px; font-weight:400; }
+    .btn-connect-full { display:block; width:100%; background:var(--blue); color:#fff; border:none; border-radius:var(--r); padding:14px; font-size:14.5px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; transition:background .15s; }
+    .btn-connect-full:hover { background:#2d6ee8; }
+    .widget-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+    .widget-title { font-size:14px; font-weight:700; letter-spacing:-.2px; }
+    .widget-badge { font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--teal); background:var(--teal-dim); border:1px solid rgba(0,212,170,.2); padding:3px 8px; border-radius:100px; }
+    .token-block { background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r); padding:13px 15px; transition:border-color .2s; }
+    .token-block:focus-within { border-color:var(--border-med); }
+    .token-block-label { font-size:10.5px; color:var(--muted); font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin-bottom:10px; }
+    .token-row { display:flex; align-items:center; gap:10px; }
+    .token-pill { display:flex; align-items:center; gap:7px; background:var(--bg-card); border:1px solid var(--border-med); border-radius:100px; padding:6px 12px 6px 7px; white-space:nowrap; }
+    .token-logo { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; font-weight:700; }
+    .logo-usdc { background:#2775ca; color:#fff; }
+    .logo-eurc { background:#1a3ca8; color:#fff; }
+    .token-name { font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:500; color:var(--text); }
+    .amount-input { flex:1; background:transparent; border:none; outline:none; font-family:"JetBrains Mono",monospace; font-size:26px; font-weight:500; color:var(--text); text-align:right; min-width:0; letter-spacing:-.5px; }
+    .amount-input::placeholder { color:var(--subtle); }
+    .balance-row { display:flex; justify-content:space-between; align-items:center; margin-top:7px; }
+    .balance-label { font-size:11px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
+    #max-btn { font-size:10.5px; font-weight:700; color:var(--blue); background:transparent; border:none; cursor:pointer; padding:0; font-family:"Space Grotesk",sans-serif; letter-spacing:.05em; }
+    .flip-wrap { display:flex; justify-content:center; margin:9px 0; }
+    #flip-btn { width:32px; height:32px; background:var(--bg-raised); border:1px solid var(--border-med); border-radius:var(--r-sm); color:var(--muted); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:border-color .15s,color .15s,transform .2s; }
+    #flip-btn:hover { border-color:var(--blue); color:var(--blue); transform:rotate(180deg); }
+    .output-block { background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r); padding:13px 15px; }
+    .output-row { display:flex; align-items:center; gap:10px; }
+    .estimate-amount { flex:1; text-align:right; font-family:"JetBrains Mono",monospace; font-size:26px; font-weight:500; color:var(--muted); letter-spacing:-.5px; }
+    #estimate-row { display:flex; justify-content:space-between; margin-top:7px; font-size:11px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
+    #swap-btn { display:block; width:100%; margin-top:13px; background:var(--blue); color:#fff; border:none; border-radius:var(--r); padding:14px; font-size:15px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; transition:background .15s; }
+    #swap-btn:hover { background:#2d6ee8; }
+    #swap-btn:disabled { opacity:.4; cursor:not-allowed; }
+    #global-status,#swap-status,#bridge-status { margin-top:11px; }
+    .status { border-radius:var(--r-sm); padding:11px 13px; font-size:13px; line-height:1.6; }
+    .status.info    { background:var(--blue-dim); border:1px solid rgba(61,126,255,.25); color:#7eb3ff; }
+    .status.success { background:var(--teal-dim); border:1px solid rgba(0,212,170,.25); color:var(--teal); }
+    .status.error   { background:rgba(255,77,106,.07); border:1px solid rgba(255,77,106,.25); color:var(--red); }
+    .status-title   { font-weight:700; margin-bottom:5px; }
+    .status-row     { display:flex; align-items:center; gap:8px; margin-bottom:4px; font-family:"JetBrains Mono",monospace; font-size:12px; }
+    .status-row .arrow { color:var(--muted); }
+    .explorer-link  { display:inline-block; margin-top:5px; color:var(--blue); font-size:12px; font-family:"JetBrains Mono",monospace; }
+    .widget-footer  { margin-top:13px; padding-top:13px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-size:11px; color:var(--muted); }
+    .widget-footer a { color:var(--muted); }
+    .widget-footer a:hover { color:var(--blue); text-decoration:none; }
 
-    .btn-primary {
-      background: var(--blue); color: #fff;
-      border: none; padding: 9px 20px;
-      border-radius: var(--r-sm); font-size: 13px; font-weight: 600;
-      cursor: pointer; font-family: "Space Grotesk", sans-serif;
-      transition: opacity .15s;
-    }
-    .btn-primary:hover { opacity: .88; }
+    /* ── Bridge ── */
+    .bridge-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+    .bridge-title  { font-size:14px; font-weight:700; }
+    .bridge-badge  { font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--teal); background:var(--teal-dim); border:1px solid rgba(0,212,170,.2); padding:3px 8px; border-radius:100px; }
+    .chain-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+    .chain-pill { flex:1; background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r); padding:11px 14px; }
+    .chain-pill-label { font-size:10.5px; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+    .chain-pill-name { display:flex; align-items:center; gap:7px; font-size:13.5px; font-weight:600; color:var(--text); }
+    .chain-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .bridge-amount-wrap { background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r); padding:13px 15px; margin-bottom:13px; transition:border-color .2s; }
+    .bridge-amount-wrap:focus-within { border-color:var(--border-med); }
+    .bridge-amount-label { font-size:10.5px; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+    .bridge-amount-row { display:flex; align-items:center; gap:10px; }
+    .bridge-amount-input { flex:1; background:transparent; border:none; outline:none; font-family:"JetBrains Mono",monospace; font-size:26px; font-weight:500; color:var(--text); min-width:0; letter-spacing:-.5px; }
+    .bridge-amount-input::placeholder { color:var(--subtle); }
+    .bridge-token-badge { display:flex; align-items:center; gap:6px; background:var(--bg-card); border:1px solid var(--border-med); border-radius:100px; padding:6px 12px; font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:500; color:var(--text); }
+    .bridge-info { background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r-sm); padding:11px 13px; margin-bottom:13px; font-size:12px; color:var(--muted); line-height:1.9; }
+    .bridge-info-row { display:flex; justify-content:space-between; }
+    .bridge-info-val { color:var(--text); font-family:"JetBrains Mono",monospace; }
+    #bridge-btn { display:block; width:100%; background:var(--blue); color:#fff; border:none; border-radius:var(--r); padding:14px; font-size:15px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; transition:background .15s; }
+    #bridge-btn:hover { background:#2d6ee8; }
+    #bridge-btn:disabled { opacity:.4; cursor:not-allowed; }
+    .bridge-steps { margin-top:13px; display:none; flex-direction:column; gap:7px; }
+    .bridge-steps.visible { display:flex; }
+    .bridge-step { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); }
+    .bridge-step-dot { width:7px; height:7px; border-radius:50%; background:var(--border); flex-shrink:0; transition:background .3s; }
+    .bridge-step.done .bridge-step-dot { background:var(--teal); }
+    .bridge-step.active .bridge-step-dot { background:var(--blue); animation:blink 1s infinite; }
+    .bridge-step.done { color:var(--teal); }
+    .bridge-step.active { color:var(--text); }
+    #bridge-flip-btn { background:var(--bg-raised); border:1px solid var(--border-med); border-radius:var(--r-sm); width:34px; height:34px; color:var(--muted); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:border-color .15s,color .15s,transform .2s; flex-shrink:0; }
+    #bridge-flip-btn:hover { border-color:var(--teal); color:var(--teal); transform:rotate(180deg); }
 
-    /* ── Hero ──────────────────────────────────────────── */
-    #hero {
-      padding: 64px 28px 80px;
-      position: relative; overflow: hidden;
-    }
+    /* ── History ── */
+    .tx-row { display:flex; align-items:center; gap:11px; padding:11px 0; border-bottom:1px solid var(--border); font-size:13px; }
+    .tx-row:last-child { border-bottom:none; }
+    .tx-icon { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+    .tx-icon-swap { background:rgba(61,126,255,.1); }
+    .tx-icon-in   { background:rgba(0,212,170,.1); }
+    .tx-icon-out  { background:rgba(255,77,106,.08); }
+    .tx-info { flex:1; min-width:0; }
+    .tx-type { font-weight:600; color:var(--text); margin-bottom:1px; }
+    .tx-time { font-size:11px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
+    .tx-amount { text-align:right; flex-shrink:0; }
+    .tx-amount-val { font-family:"JetBrains Mono",monospace; font-weight:500; color:var(--text); font-size:12.5px; }
+    .tx-amount-token { font-size:10.5px; color:var(--muted); margin-top:1px; }
+    .tx-in  { color:var(--teal); }
+    .tx-out { color:var(--red); }
+    .tx-link { color:var(--blue); font-size:11px; text-decoration:none; border:1px solid rgba(61,126,255,.2); border-radius:var(--r-sm); padding:2px 7px; flex-shrink:0; white-space:nowrap; font-family:"JetBrains Mono",monospace; }
+    .tx-link:hover { background:var(--blue-dim); text-decoration:none; }
+    .history-loading { text-align:center; padding:26px 0; color:var(--muted); font-size:13px; }
+    .history-loading::after { content:''; display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--blue); border-radius:50%; animation:spin .8s linear infinite; vertical-align:middle; margin-left:8px; }
 
-    #hero::before {
-      content: '';
-      position: absolute; inset: 0;
-      background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
-      background-size: 30px 30px;
-      opacity: 0.4; pointer-events: none; z-index: 0;
-    }
-    #hero::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: radial-gradient(ellipse 80% 70% at 50% 100%, transparent 20%, var(--bg) 90%);
-      pointer-events: none; z-index: 0;
-    }
+    /* ── Sections ── */
+    section { padding:80px 28px; }
+    .container { max-width:1200px; margin:0 auto; }
+    .section-label { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:.14em; color:var(--blue); margin-bottom:14px; }
+    .section-title { font-size:clamp(26px,3.5vw,38px); font-weight:700; letter-spacing:-.8px; line-height:1.15; margin-bottom:12px; }
+    .section-sub   { color:var(--muted); font-size:15px; font-weight:400; max-width:460px; line-height:1.75; }
 
-    .hero-inner {
-      max-width: 1200px; margin: 0 auto;
-      position: relative; z-index: 1;
-      display: grid;
-      grid-template-columns: 1fr 460px;
-      gap: 64px;
-      align-items: flex-start;
-    }
-    @media (max-width: 1080px) {
-      .hero-inner { grid-template-columns: 1fr; gap: 48px; }
-      .app-sticky { position: static !important; }
-    }
+    /* ── Products section ── */
+    #products { background:var(--bg-card); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+    .products-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:stretch; }
+    @media(max-width:900px){ .products-grid{grid-template-columns:repeat(2,1fr);} }
+    @media(max-width:560px){ .products-grid{grid-template-columns:1fr;} }
+    .product-card { background:var(--bg); border:1px solid var(--border); border-radius:var(--r-lg); padding:24px; transition:border-color .2s,transform .2s; display:flex; flex-direction:column; text-decoration:none; color:inherit; min-height:220px; }
+    .product-card:hover { border-color:var(--border-med); transform:translateY(-2px); text-decoration:none; }
+    .product-card-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; }
+    .product-card-icon svg { width:22px; height:22px; stroke:currentColor; fill:none; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
+    .product-card-name { font-size:15px; font-weight:700; color:var(--text); margin-bottom:6px; letter-spacing:-.2px; }
+    .product-card-desc { font-size:13px; color:var(--muted); line-height:1.7; flex:1; margin-bottom:16px; font-weight:400; }
+    .product-card-link { font-size:12.5px; color:var(--blue); font-weight:600; display:flex; align-items:center; gap:4px; }
+    .product-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; padding:2px 8px; border-radius:100px; margin-bottom:10px; width:fit-content; }
+    .badge-live { background:var(--teal-dim); border:1px solid rgba(0,212,170,.2); color:var(--teal); }
+    .badge-new  { background:var(--blue-dim); border:1px solid rgba(61,126,255,.2); color:var(--blue); }
 
-    .hero-eyebrow {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-med);
-      color: var(--muted); font-size: 12px; font-weight: 500;
-      padding: 5px 12px; border-radius: 100px;
-      margin-bottom: 28px;
-    }
+    /* ── Ecosystem ── */
+    #ecosystem { background:var(--bg-card); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+    .eco-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:28px; flex-wrap:wrap; gap:20px; }
+    .eco-stats  { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
+    @media(max-width:700px){ .eco-stats{grid-template-columns:repeat(2,1fr);} }
+    .eco-stat { background:var(--bg); border:1px solid var(--border); border-radius:var(--r); padding:14px 18px; }
+    .eco-stat-val { font-family:"JetBrains Mono",monospace; font-size:22px; font-weight:500; color:var(--text); letter-spacing:-.5px; margin-bottom:3px; }
+    .eco-stat-lbl { font-size:11.5px; color:var(--muted); }
+    .eco-filters  { display:flex; gap:7px; margin-bottom:22px; flex-wrap:wrap; }
+    .eco-filter   { font-size:12px; font-weight:600; padding:5px 14px; border:1px solid var(--border); border-radius:100px; cursor:pointer; color:var(--muted); background:transparent; transition:all .15s; font-family:"Space Grotesk",sans-serif; }
+    .eco-filter:hover { border-color:var(--border-med); color:var(--text); }
+    .eco-filter.active { background:var(--blue-dim); border-color:rgba(61,126,255,.4); color:var(--blue); }
+    .eco-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+    @media(max-width:900px){ .eco-grid{grid-template-columns:repeat(2,1fr);} }
+    @media(max-width:560px){ .eco-grid{grid-template-columns:1fr;} }
+    .eco-card { background:var(--bg); border:1px solid var(--border); border-radius:var(--r-lg); padding:18px; transition:border-color .2s,transform .2s; display:flex; flex-direction:column; }
+    .eco-card:hover { border-color:var(--border-med); transform:translateY(-2px); }
+    .eco-card.featured { border-color:rgba(61,126,255,.35); background:linear-gradient(135deg,rgba(61,126,255,.04),rgba(0,212,170,.02)); }
+    .eco-card-top { display:flex; align-items:center; gap:11px; margin-bottom:11px; }
+    .eco-card-icon { width:38px; height:38px; border-radius:9px; background:var(--bg-raised); border:1px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:19px; overflow:hidden; }
+    .eco-card-icon img { width:100%; height:100%; object-fit:cover; }
+    .eco-card-name { font-size:14.5px; font-weight:700; color:var(--text); letter-spacing:-.2px; }
+    .eco-card-type { font-size:11px; color:var(--muted); margin-top:1px; }
+    .eco-featured-badge { display:inline-flex; align-items:center; gap:3px; background:linear-gradient(135deg,var(--blue),var(--teal)); color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:100px; margin-bottom:9px; width:fit-content; }
+    .eco-card-desc { font-size:13px; color:var(--muted); line-height:1.7; flex:1; margin-bottom:13px; }
+    .eco-card-tags { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:13px; }
+    .eco-tag { font-size:10px; padding:2px 7px; border-radius:var(--r-sm); background:var(--bg-raised); border:1px solid var(--border); color:var(--muted); }
+    .eco-card-footer { display:flex; justify-content:space-between; align-items:center; padding-top:11px; border-top:1px solid var(--border); }
+    .eco-status-live { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--teal); font-weight:600; }
+    .eco-status-dot  { width:5px; height:5px; border-radius:50%; background:var(--teal); animation:pulse 2s infinite; }
+    .eco-status-soon { font-size:12px; color:var(--muted); }
+    .eco-status-mainnet { font-size:12px; color:var(--blue); }
+    .eco-visit-btn { font-size:12px; color:var(--blue); font-weight:600; text-decoration:none; border:1px solid rgba(61,126,255,.25); border-radius:var(--r-sm); padding:4px 10px; transition:background .15s; }
+    .eco-visit-btn:hover { background:var(--blue-dim); text-decoration:none; }
+    .eco-submit-bar { background:var(--bg); border:1px solid var(--border-med); border-radius:var(--r-lg); padding:20px 24px; display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; }
+    .eco-submit-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:4px; }
+    .eco-submit-sub   { font-size:13px; color:var(--muted); }
+    .eco-submit-sub strong { color:var(--blue); }
+    .eco-submit-btn { background:var(--blue); color:#fff; border:none; border-radius:var(--r); padding:11px 22px; font-size:14px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; white-space:nowrap; text-decoration:none; display:inline-block; transition:background .15s; }
+    .eco-submit-btn:hover { background:#2d6ee8; text-decoration:none; }
 
-    h1 {
-      font-family: "Space Grotesk", sans-serif;
-      font-size: clamp(42px, 6vw, 70px);
-      font-weight: 700;
-      letter-spacing: -2px;
-      line-height: 1.05;
-      margin-bottom: 20px;
-      color: var(--text);
-    }
+    /* ── Compare ── */
+    #compare { background:var(--bg); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+    .compare-input-wrap { display:inline-flex; align-items:center; gap:12px; background:var(--bg-card); border:1px solid var(--border-med); border-radius:var(--r); padding:10px 16px; transition:border-color .15s; }
+    .compare-input-wrap:focus-within { border-color:var(--blue); }
+    .compare-input-label { font-size:12.5px; color:var(--muted); white-space:nowrap; font-weight:500; }
+    .compare-input { background:transparent; border:none; outline:none; font-family:"JetBrains Mono",monospace; font-size:20px; font-weight:500; color:var(--text); width:120px; text-align:right; }
+    .compare-currency { font-family:"JetBrains Mono",monospace; font-size:13px; color:var(--muted); }
+    .compare-table { width:100%; border-collapse:separate; border-spacing:0 7px; }
+    .compare-table thead th { font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); padding:0 18px 6px; text-align:left; }
+    .compare-table thead th:last-child { text-align:right; }
+    .compare-row { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r); transition:border-color .2s; }
+    .compare-row:hover { border-color:var(--border-med); }
+    .compare-row.best-row { background:linear-gradient(135deg,rgba(61,126,255,.06),rgba(0,212,170,.04)); border-color:rgba(61,126,255,.3); }
+    .compare-table td { padding:14px 18px; font-size:13.5px; }
+    .compare-table td:first-child { border-radius:var(--r) 0 0 var(--r); }
+    .compare-table td:last-child  { border-radius:0 var(--r) var(--r) 0; text-align:right; }
+    .provider-cell { display:flex; align-items:center; gap:11px; }
+    .provider-icon { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+    .provider-name { font-weight:600; color:var(--text); font-size:14px; }
+    .provider-type { font-size:11px; color:var(--muted); margin-top:1px; }
+    .amount-received { font-family:"JetBrains Mono",monospace; font-size:17px; font-weight:500; color:var(--text); }
+    .best-row .amount-received { color:var(--teal); }
+    .fee-cell { font-family:"JetBrains Mono",monospace; font-size:12.5px; color:var(--muted); }
+    .fee-cell .fee-val { color:var(--text); }
+    .speed-cell { font-size:12.5px; color:var(--muted); white-space:nowrap; }
+    .savings-badge { display:inline-flex; align-items:center; gap:4px; background:var(--teal-dim); border:1px solid rgba(0,212,170,.25); color:var(--teal); font-size:12px; font-weight:700; padding:3px 9px; border-radius:100px; white-space:nowrap; font-family:"JetBrains Mono",monospace; }
+    .best-badge    { display:inline-flex; align-items:center; gap:3px; background:var(--blue); color:#fff; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:100px; }
+    .baseline-pill { display:inline-flex; align-items:center; background:var(--bg-raised); border:1px solid var(--border); color:var(--muted); font-size:11.5px; font-weight:500; padding:3px 9px; border-radius:100px; white-space:nowrap; }
+    .compare-footer { margin-top:18px; font-size:11.5px; color:var(--muted); text-align:center; line-height:1.6; }
+    @media(max-width:700px){ .hide-mobile{display:none;} .compare-input{width:90px;} }
 
-    .gradient-text {
-      background: linear-gradient(135deg, #3d7eff 0%, #00d4aa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+    /* ── Waitlist ── */
+    #waitlist { background:var(--bg-card); border-top:1px solid var(--border); position:relative; overflow:hidden; }
+    #waitlist::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,var(--border) 1px,transparent 1px); background-size:30px 30px; opacity:.35; pointer-events:none; }
+    .waitlist-inner { position:relative; z-index:1; max-width:580px; margin:0 auto; text-align:center; }
+    .waitlist-inner .section-title { font-size:clamp(26px,4vw,44px); }
+    .waitlist-inner .section-sub { max-width:100%; margin:0 auto 40px; }
+    .waitlist-form { background:var(--bg); border:1px solid var(--border-med); border-radius:var(--r-lg); padding:28px; display:flex; flex-direction:column; gap:12px; text-align:left; }
+    .form-row { display:flex; gap:12px; }
+    @media(max-width:560px){ .form-row{flex-direction:column;} }
+    .form-field { flex:1; display:flex; flex-direction:column; gap:5px; }
+    .form-field label { font-size:11px; font-weight:600; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; }
+    .form-field input,.form-field select { width:100%; background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r-sm); color:var(--text); font-size:14px; font-family:"Space Grotesk",sans-serif; padding:10px 13px; outline:none; transition:border-color .15s; -webkit-appearance:none; }
+    .form-field input:focus,.form-field select:focus { border-color:var(--blue); }
+    .form-field input::placeholder { color:var(--subtle); }
+    .form-field select option { background:#0b0f1a; color:var(--text); }
+    .submit-btn { width:100%; background:var(--blue); color:#fff; border:none; border-radius:var(--r); padding:13px; font-size:14.5px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; transition:background .15s; }
+    .submit-btn:hover { background:#2d6ee8; }
+    .submit-btn:disabled { opacity:.5; cursor:not-allowed; }
+    .form-note { text-align:center; font-size:11.5px; color:var(--muted); }
+    .form-success { display:none; background:var(--teal-dim); border:1px solid rgba(0,212,170,.25); color:var(--teal); border-radius:var(--r); padding:18px; font-size:14px; text-align:center; margin-top:14px; }
 
-    .hero-sub {
-      font-size: 17px; color: var(--muted);
-      font-weight: 400; line-height: 1.7;
-      max-width: 440px; margin-bottom: 40px;
-    }
+    /* ── Footer ── */
+    footer { border-top:1px solid var(--border); padding:48px 28px 36px; }
+    .footer-inner { max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; gap:48px; flex-wrap:wrap; }
+    .footer-logo { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:700; color:var(--text); margin-bottom:10px; }
+    .footer-logo img { width:28px; height:28px; border-radius:50%; object-fit:cover; }
+    .footer-col-title { font-size:10.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:14px; }
+    .footer-link { font-size:13px; color:var(--muted); transition:color .15s; text-decoration:none; display:block; margin-bottom:9px; }
+    .footer-link:hover { color:var(--text); text-decoration:none; }
+    .footer-bottom { max-width:1200px; margin:28px auto 0; padding-top:24px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+    .footer-bottom span { font-size:11.5px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
 
-    /* Stats grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      overflow: hidden;
-      margin-bottom: 40px;
-    }
-    @media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    /* ── Balances hidden ── */
+    .balances-hidden { display:none; }
 
-    .stat-cell {
-      background: var(--bg-card);
-      padding: 18px 20px;
-      transition: background .2s;
-    }
-    .stat-cell:hover { background: var(--bg-raised); }
-    .stat-val {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 22px; font-weight: 500;
-      color: var(--text); letter-spacing: -0.5px;
-      margin-bottom: 3px;
-    }
-    .stat-lbl { font-size: 11.5px; color: var(--muted); }
-
-    /* App widget */
-    .app-sticky { position: sticky; top: 76px; }
-
-    .app-tabs {
-      display: flex;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg) var(--r-lg) 0 0;
-      border-bottom: none;
-      overflow: hidden;
-    }
-
-    .app-tab {
-      flex: 1; padding: 14px 12px;
-      font-size: 13.5px; font-weight: 600;
-      font-family: "Space Grotesk", sans-serif;
-      border: none; cursor: pointer;
-      transition: all .15s;
-      background: var(--bg-card);
-      color: var(--muted);
-      border-bottom: 2px solid transparent;
-    }
-    .app-tab.active {
-      background: var(--bg);
-      color: var(--text);
-      border-bottom: 2px solid var(--blue);
-    }
-    .app-tab.active.bridge-tab { border-bottom-color: var(--green); }
-    .app-tab.active.history-tab { border-bottom-color: var(--muted); }
-
-    .app-panel {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-top: none;
-      border-radius: 0 0 var(--r-lg) var(--r-lg);
-      padding: 22px;
-    }
-
-    /* Connect card */
-    .connect-card-inner {
-      text-align: center; padding: 16px 0 8px;
-    }
-    .connect-card-inner img {
-      width: 52px; height: 52px;
-      border-radius: 50%; object-fit: cover;
-      margin-bottom: 14px;
-    }
-    .connect-card-inner h3 {
-      font-size: 17px; font-weight: 700; margin-bottom: 8px;
-      letter-spacing: -0.3px;
-    }
-    .connect-card-inner p {
-      color: var(--muted); font-size: 13.5px;
-      margin-bottom: 22px; font-weight: 400;
-    }
-    .btn-connect-full {
-      display: block; width: 100%;
-      background: linear-gradient(135deg, #3d7eff, #00d4aa);
-      color: #fff; border: none;
-      border-radius: var(--r); padding: 14px;
-      font-size: 14.5px; font-weight: 600;
-      cursor: pointer; font-family: "Space Grotesk", sans-serif;
-      transition: opacity .15s;
-    }
-    .btn-connect-full:hover { opacity: .88; }
-
-    /* Swap widget internals */
-    .widget-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 18px;
-    }
-    .widget-title {
-      font-size: 14px; font-weight: 700; letter-spacing: -0.2px;
-    }
-    .widget-badge {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 10px; color: var(--green);
-      background: var(--green-dim);
-      border: 1px solid rgba(0,212,170,.2);
-      padding: 3px 8px; border-radius: 100px;
-    }
-
-    .token-block {
-      background: var(--bg-raised);
-      border: 1px solid var(--border);
-      border-radius: var(--r);
-      padding: 13px 15px;
-      transition: border-color .2s;
-    }
-    .token-block:focus-within { border-color: var(--border-med); }
-    .token-block-label {
-      font-size: 10.5px; color: var(--muted);
-      font-weight: 600; letter-spacing: 0.06em;
-      text-transform: uppercase; margin-bottom: 10px;
-    }
-    .token-row { display: flex; align-items: center; gap: 10px; }
-    .token-pill {
-      display: flex; align-items: center; gap: 7px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-med);
-      border-radius: 100px;
-      padding: 6px 12px 6px 7px;
-      white-space: nowrap;
-    }
-    .token-logo {
-      width: 22px; height: 22px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; flex-shrink: 0; font-weight: 700;
-    }
-    .logo-usdc { background: #2775ca; color: #fff; }
-    .logo-eurc { background: #1a3ca8; color: #fff; }
-    .token-name {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 13px; font-weight: 500; color: var(--text);
-    }
-    .amount-input {
-      flex: 1; background: transparent; border: none; outline: none;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 26px; font-weight: 500;
-      color: var(--text); text-align: right; min-width: 0;
-      letter-spacing: -0.5px;
-    }
-    .amount-input::placeholder { color: var(--subtle); }
-    .balance-row {
-      display: flex; justify-content: space-between;
-      align-items: center; margin-top: 7px;
-    }
-    .balance-label {
-      font-size: 11px; color: var(--muted);
-      font-family: "JetBrains Mono", monospace;
-    }
-    #max-btn {
-      font-size: 10.5px; font-weight: 700;
-      color: var(--blue); background: transparent;
-      border: none; cursor: pointer; padding: 0;
-      font-family: "Space Grotesk", sans-serif;
-      letter-spacing: 0.05em;
-    }
-    #max-btn:hover { opacity: .7; }
-
-    .flip-wrap { display: flex; justify-content: center; margin: 9px 0; }
-    #flip-btn {
-      width: 32px; height: 32px;
-      background: var(--bg-raised);
-      border: 1px solid var(--border-med);
-      border-radius: var(--r-sm);
-      color: var(--muted); font-size: 16px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: border-color .15s, color .15s, transform .2s;
-    }
-    #flip-btn:hover { border-color: var(--blue); color: var(--blue); transform: rotate(180deg); }
-
-    .output-block {
-      background: var(--bg-raised);
-      border: 1px solid var(--border);
-      border-radius: var(--r);
-      padding: 13px 15px;
-    }
-    .output-row { display: flex; align-items: center; gap: 10px; }
-    .estimate-amount {
-      flex: 1; text-align: right;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 26px; font-weight: 500;
-      color: var(--muted); letter-spacing: -0.5px;
-    }
-    #estimate-row {
-      display: flex; justify-content: space-between;
-      margin-top: 7px; font-size: 11px;
-      color: var(--muted);
-      font-family: "JetBrains Mono", monospace;
-    }
-
-    #swap-btn {
-      display: block; width: 100%; margin-top: 13px;
-      background: linear-gradient(135deg, #3d7eff, #00d4aa);
-      color: #fff; border: none; border-radius: var(--r);
-      padding: 14px; font-size: 15px; font-weight: 600;
-      cursor: pointer; font-family: "Space Grotesk", sans-serif;
-      transition: opacity .15s, transform .1s;
-    }
-    #swap-btn:hover { opacity: .88; transform: translateY(-1px); }
-    #swap-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-
-    #global-status, #swap-status, #bridge-status { margin-top: 11px; }
-    .status {
-      border-radius: var(--r-sm); padding: 11px 13px;
-      font-size: 13px; line-height: 1.6;
-    }
-    .status.info { background: var(--blue-dim); border: 1px solid rgba(61,126,255,.25); color: #7eb3ff; }
-    .status.success { background: var(--green-dim); border: 1px solid rgba(0,212,170,.25); color: var(--green); }
-    .status.error { background: rgba(255,77,106,.07); border: 1px solid rgba(255,77,106,.25); color: var(--red); }
-    .status-title { font-weight: 700; margin-bottom: 5px; }
-    .status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-family: "JetBrains Mono", monospace; font-size: 12px; }
-    .status-row .arrow { color: var(--muted); }
-    .status-fee { color: var(--muted); margin-bottom: 6px; font-size: 11.5px; font-family: "JetBrains Mono", monospace; }
-    .explorer-link { display: inline-block; margin-top: 5px; color: var(--blue); font-size: 12px; font-family: "JetBrains Mono", monospace; }
-    .explorer-link:hover { text-decoration: underline; }
-
-    .widget-footer {
-      margin-top: 13px; padding-top: 13px;
-      border-top: 1px solid var(--border);
-      display: flex; justify-content: space-between;
-      font-size: 11px; color: var(--muted);
-    }
-    .widget-footer a { color: var(--muted); }
-    .widget-footer a:hover { color: var(--blue); text-decoration: none; }
-
-    /* Bridge */
-    .bridge-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
-    .bridge-title { font-size: 14px; font-weight: 700; }
-    .bridge-badge {
-      font-family: "JetBrains Mono", monospace; font-size: 10px;
-      color: var(--green); background: var(--green-dim);
-      border: 1px solid rgba(0,212,170,.2);
-      padding: 3px 8px; border-radius: 100px;
-    }
-    .chain-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-    .chain-pill {
-      flex: 1; background: var(--bg-raised);
-      border: 1px solid var(--border); border-radius: var(--r);
-      padding: 11px 14px;
-    }
-    .chain-pill-label { font-size: 10.5px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
-    .chain-pill-name { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600; color: var(--text); }
-    .chain-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .chain-arrow { color: var(--muted); font-size: 18px; flex-shrink: 0; }
-    .bridge-amount-wrap {
-      background: var(--bg-raised); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 13px 15px; margin-bottom: 13px;
-      transition: border-color .2s;
-    }
-    .bridge-amount-wrap:focus-within { border-color: var(--border-med); }
-    .bridge-amount-label { font-size: 10.5px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
-    .bridge-amount-row { display: flex; align-items: center; gap: 10px; }
-    .bridge-amount-input {
-      flex: 1; background: transparent; border: none; outline: none;
-      font-family: "JetBrains Mono", monospace; font-size: 26px; font-weight: 500;
-      color: var(--text); min-width: 0; letter-spacing: -0.5px;
-    }
-    .bridge-amount-input::placeholder { color: var(--subtle); }
-    .bridge-token-badge {
-      display: flex; align-items: center; gap: 6px;
-      background: var(--bg-card); border: 1px solid var(--border-med);
-      border-radius: 100px; padding: 6px 12px;
-      font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 500; color: var(--text);
-    }
-    .bridge-info {
-      background: var(--bg-raised); border: 1px solid var(--border);
-      border-radius: var(--r-sm); padding: 11px 13px; margin-bottom: 13px;
-      font-size: 12px; color: var(--muted); line-height: 1.9;
-    }
-    .bridge-info-row { display: flex; justify-content: space-between; }
-    .bridge-info-val { color: var(--text); font-family: "JetBrains Mono", monospace; }
-    #bridge-btn {
-      display: block; width: 100%;
-      background: linear-gradient(135deg, #00d4aa, #3d7eff);
-      color: #fff; border: none; border-radius: var(--r);
-      padding: 14px; font-size: 15px; font-weight: 600;
-      cursor: pointer; font-family: "Space Grotesk", sans-serif;
-      transition: opacity .15s;
-    }
-    #bridge-btn:hover { opacity: .88; }
-    #bridge-btn:disabled { opacity: .4; cursor: not-allowed; }
-    .bridge-steps { margin-top: 13px; display: none; flex-direction: column; gap: 7px; }
-    .bridge-steps.visible { display: flex; }
-    .bridge-step { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted); }
-    .bridge-step-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; transition: background .3s; }
-    .bridge-step.done .bridge-step-dot { background: var(--green); }
-    .bridge-step.active .bridge-step-dot { background: var(--blue); animation: pulse 1s infinite; }
-    .bridge-step.done { color: var(--green); }
-    .bridge-step.active { color: var(--text); }
-
-    /* Bridge flip btn */
-    #bridge-flip-btn {
-      background: var(--bg-raised); border: 1px solid var(--border-med);
-      border-radius: var(--r-sm); width: 34px; height: 34px;
-      color: var(--muted); font-size: 16px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: border-color .15s, color .15s, transform .2s; flex-shrink: 0;
-    }
-    #bridge-flip-btn:hover { border-color: var(--green); color: var(--green); transform: rotate(180deg); }
-
-    /* History */
-    .tx-row {
-      display: flex; align-items: center; gap: 11px;
-      padding: 11px 0; border-bottom: 1px solid var(--border);
-      font-size: 13px;
-    }
-    .tx-row:last-child { border-bottom: none; }
-    .tx-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
-    .tx-icon-swap { background: rgba(61,126,255,.1); }
-    .tx-icon-in   { background: rgba(0,212,170,.1); }
-    .tx-icon-out  { background: rgba(255,77,106,.08); }
-    .tx-info { flex: 1; min-width: 0; }
-    .tx-type { font-weight: 600; color: var(--text); margin-bottom: 1px; }
-    .tx-time { font-size: 11px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
-    .tx-amount { text-align: right; flex-shrink: 0; }
-    .tx-amount-val { font-family: "JetBrains Mono", monospace; font-weight: 500; color: var(--text); font-size: 12.5px; }
-    .tx-amount-token { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
-    .tx-in  { color: var(--green); }
-    .tx-out { color: var(--red); }
-    .tx-link {
-      color: var(--blue); font-size: 11px; text-decoration: none;
-      border: 1px solid rgba(61,126,255,.2); border-radius: var(--r-sm);
-      padding: 2px 7px; flex-shrink: 0; white-space: nowrap;
-      font-family: "JetBrains Mono", monospace;
-    }
-    .tx-link:hover { background: var(--blue-dim); text-decoration: none; }
-    .history-loading {
-      text-align: center; padding: 26px 0;
-      color: var(--muted); font-size: 13px;
-    }
-    .history-loading::after {
-      content: ''; display: inline-block;
-      width: 14px; height: 14px;
-      border: 2px solid var(--border); border-top-color: var(--blue);
-      border-radius: 50%; animation: spin .8s linear infinite;
-      vertical-align: middle; margin-left: 8px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Sections ───────────────────────────────────────── */
-    section { padding: 80px 28px; }
-    .container { max-width: 1200px; margin: 0 auto; }
-
-    .section-label {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 11px; font-weight: 500;
-      text-transform: uppercase; letter-spacing: 0.14em;
-      color: var(--blue); margin-bottom: 14px;
-    }
-    .section-title {
-      font-family: "Space Grotesk", sans-serif;
-      font-size: clamp(26px, 3.5vw, 38px);
-      font-weight: 700; letter-spacing: -0.8px;
-      line-height: 1.15; margin-bottom: 12px;
-    }
-    .section-sub {
-      color: var(--muted); font-size: 15px;
-      font-weight: 400; max-width: 460px; line-height: 1.75;
-    }
-
-    /* ── Ecosystem ──────────────────────────────────────── */
-    #ecosystem { background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-    .eco-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px; flex-wrap: wrap; gap: 20px; }
-    .eco-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
-    @media (max-width: 700px) { .eco-stats { grid-template-columns: repeat(2,1fr); } }
-    .eco-stat { background: var(--bg); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 18px; transition: border-color .2s; }
-    .eco-stat:hover { border-color: var(--border-med); }
-    .eco-stat-val { font-family: "JetBrains Mono", monospace; font-size: 22px; font-weight: 500; color: var(--text); letter-spacing: -0.5px; margin-bottom: 3px; }
-    .eco-stat-lbl { font-size: 11.5px; color: var(--muted); }
-    .eco-filters { display: flex; gap: 7px; margin-bottom: 22px; flex-wrap: wrap; }
-    .eco-filter { font-size: 12px; font-weight: 600; padding: 5px 14px; border: 1px solid var(--border); border-radius: 100px; cursor: pointer; color: var(--muted); background: transparent; transition: all .15s; font-family: "Space Grotesk", sans-serif; }
-    .eco-filter:hover { border-color: var(--border-med); color: var(--text); }
-    .eco-filter.active { background: var(--blue-dim); border-color: rgba(61,126,255,.4); color: var(--blue); }
-    .eco-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 22px; }
-    @media (max-width: 900px) { .eco-grid { grid-template-columns: repeat(2,1fr); } }
-    @media (max-width: 560px) { .eco-grid { grid-template-columns: 1fr; } }
-    .eco-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px; transition: border-color .2s, transform .2s; display: flex; flex-direction: column; }
-    .eco-card:hover { border-color: var(--border-med); transform: translateY(-2px); }
-    .eco-card.featured { border-color: rgba(61,126,255,.35); background: linear-gradient(135deg, rgba(61,126,255,.04), rgba(0,212,170,.02)); }
-    .eco-card.featured:hover { border-color: rgba(61,126,255,.6); }
-    .eco-card-top { display: flex; align-items: center; gap: 11px; margin-bottom: 11px; }
-    .eco-card-icon { width: 38px; height: 38px; border-radius: 9px; overflow: hidden; background: var(--bg-raised); border: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 19px; }
-    .eco-card-icon img { width: 100%; height: 100%; object-fit: cover; }
-    .eco-card-name { font-family: "Space Grotesk", sans-serif; font-size: 14.5px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
-    .eco-card-type { font-size: 11px; color: var(--muted); margin-top: 1px; }
-    .eco-featured-badge { display: inline-flex; align-items: center; gap: 3px; background: linear-gradient(135deg, var(--blue), var(--green)); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 100px; margin-bottom: 9px; width: fit-content; }
-    .eco-card-desc { font-size: 13px; color: var(--muted); line-height: 1.7; font-weight: 400; flex: 1; margin-bottom: 13px; }
-    .eco-card-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 13px; }
-    .eco-tag { font-size: 10px; padding: 2px 7px; border-radius: var(--r-sm); background: var(--bg-raised); border: 1px solid var(--border); color: var(--muted); }
-    .eco-card-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 11px; border-top: 1px solid var(--border); }
-    .eco-status-live { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--green); font-weight: 600; }
-    .eco-status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
-    .eco-status-soon { font-size: 12px; color: var(--muted); }
-    .eco-status-mainnet { font-size: 12px; color: var(--blue); }
-    .eco-visit-btn { font-size: 12px; color: var(--blue); font-weight: 600; text-decoration: none; border: 1px solid rgba(61,126,255,.25); border-radius: var(--r-sm); padding: 4px 10px; transition: background .15s; }
-    .eco-visit-btn:hover { background: var(--blue-dim); text-decoration: none; }
-    .eco-submit-bar { background: var(--bg); border: 1px solid var(--border-med); border-radius: var(--r-lg); padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
-    .eco-submit-title { font-family: "Space Grotesk", sans-serif; font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-    .eco-submit-sub { font-size: 13px; color: var(--muted); }
-    .eco-submit-sub strong { color: var(--blue); }
-    .eco-submit-btn { background: linear-gradient(135deg, #3d7eff, #00d4aa); color: #fff; border: none; border-radius: var(--r); padding: 11px 22px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; white-space: nowrap; text-decoration: none; display: inline-block; transition: opacity .15s; }
-    .eco-submit-btn:hover { opacity: .88; text-decoration: none; }
-
-    /* ── Compare ─────────────────────────────────────────── */
-    #compare { background: var(--bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-    .compare-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px; flex-wrap: wrap; gap: 20px; }
-    .compare-input-wrap { display: flex; align-items: center; gap: 12px; background: var(--bg-card); border: 1px solid var(--border-med); border-radius: var(--r); padding: 10px 16px; transition: border-color .15s; }
-    .compare-input-wrap:focus-within { border-color: var(--blue); }
-    .compare-input-label { font-size: 12.5px; color: var(--muted); white-space: nowrap; font-weight: 500; }
-    .compare-input { background: transparent; border: none; outline: none; font-family: "JetBrains Mono", monospace; font-size: 20px; font-weight: 500; color: var(--text); width: 130px; text-align: right; }
-    .compare-currency { font-family: "JetBrains Mono", monospace; font-size: 13px; color: var(--muted); }
-    .compare-table { width: 100%; border-collapse: separate; border-spacing: 0 7px; }
-    .compare-table thead th { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); padding: 0 18px 6px; text-align: left; }
-    .compare-table thead th:last-child { text-align: right; }
-    .compare-row { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r); transition: border-color .2s, transform .15s; }
-    .compare-row:hover { border-color: var(--border-med); transform: translateY(-1px); }
-    .compare-row.best-row { background: linear-gradient(135deg, rgba(61,126,255,.06), rgba(0,212,170,.04)); border-color: rgba(61,126,255,.3); }
-    .compare-table td { padding: 14px 18px; font-size: 13.5px; }
-    .compare-table td:first-child { border-radius: var(--r) 0 0 var(--r); }
-    .compare-table td:last-child { border-radius: 0 var(--r) var(--r) 0; text-align: right; }
-    .provider-cell { display: flex; align-items: center; gap: 11px; }
-    .provider-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-    .provider-name { font-weight: 600; color: var(--text); font-size: 14px; }
-    .provider-type { font-size: 11px; color: var(--muted); margin-top: 1px; }
-    .amount-received { font-family: "JetBrains Mono", monospace; font-size: 17px; font-weight: 500; color: var(--text); }
-    .best-row .amount-received { color: var(--green); }
-    .fee-cell { font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--muted); }
-    .fee-cell .fee-val { color: var(--text); }
-    .speed-cell { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
-    .savings-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--green-dim); border: 1px solid rgba(0,212,170,.25); color: var(--green); font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 100px; white-space: nowrap; font-family: "JetBrains Mono", monospace; }
-    .best-badge { display: inline-flex; align-items: center; gap: 3px; background: linear-gradient(135deg, var(--blue), var(--green)); color: #fff; font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 100px; }
-    .compare-footer { margin-top: 18px; font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.6; }
-    @media (max-width: 700px) { .compare-table .hide-mobile { display: none; } .compare-input { width: 90px; font-size: 16px; } }
-
-    /* ── Waitlist ─────────────────────────────────────────── */
-    #waitlist { background: var(--bg-card); border-top: 1px solid var(--border); position: relative; overflow: hidden; }
-    #waitlist::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(circle, var(--border) 1px, transparent 1px); background-size: 30px 30px; opacity: 0.35; pointer-events: none; }
-    .waitlist-inner { position: relative; z-index: 1; max-width: 580px; margin: 0 auto; text-align: center; }
-    .waitlist-form { background: var(--bg); border: 1px solid var(--border-med); border-radius: var(--r-lg); padding: 28px; display: flex; flex-direction: column; gap: 12px; text-align: left; }
-    .form-row { display: flex; gap: 12px; }
-    @media (max-width: 560px) { .form-row { flex-direction: column; } }
-    .form-field { flex: 1; display: flex; flex-direction: column; gap: 5px; }
-    .form-field label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
-    .form-field input, .form-field select { width: 100%; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-size: 14px; font-family: "Space Grotesk", sans-serif; padding: 10px 13px; outline: none; transition: border-color .15s; -webkit-appearance: none; }
-    .form-field input:focus, .form-field select:focus { border-color: var(--blue); }
-    .form-field input::placeholder { color: var(--subtle); }
-    .form-field select option { background: #0b0f1a; color: var(--text); }
-    .submit-btn { width: 100%; background: linear-gradient(135deg, #3d7eff, #00d4aa); color: #fff; border: none; border-radius: var(--r); padding: 13px; font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: opacity .15s; letter-spacing: 0.01em; }
-    .submit-btn:hover { opacity: .88; }
-    .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
-    .form-note { text-align: center; font-size: 11.5px; color: var(--muted); }
-    .form-success { display: none; background: var(--green-dim); border: 1px solid rgba(0,212,170,.25); color: var(--green); border-radius: var(--r); padding: 18px; font-size: 14px; text-align: center; margin-top: 14px; }
-
-    /* ── Footer ──────────────────────────────────────────── */
-    footer { border-top: 1px solid var(--border); padding: 36px 28px; }
-    .footer-inner { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
-    .footer-logo { display: flex; align-items: center; gap: 10px; font-family: "Space Grotesk", sans-serif; font-size: 16px; font-weight: 700; color: var(--text); }
-    .footer-logo img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
-    .footer-links { display: flex; gap: 22px; font-size: 13px; }
-    .footer-links a { color: var(--muted); transition: color .15s; }
-    .footer-links a:hover { color: var(--text); text-decoration: none; }
-    .footer-right { font-size: 11.5px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
-
-    /* ── Hidden balance storage ───────────────────────────── */
-    .balances-hidden { display: none; }
-
-    /* ── Reveal animation ─────────────────────────────────── */
-    .reveal { opacity: 0; transform: translateY(16px); transition: opacity .5s ease, transform .5s ease; }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
-
-    /* ── Nav dropdown ───────────────────────────────────── */
-    .nav-dropdown-wrap { position: relative; }
-    .nav-dropdown-btn {
-      background: none; border: none; cursor: pointer;
-      display: flex; align-items: center; gap: 5px;
-      font-family: "Space Grotesk", sans-serif;
-    }
-    .nav-caret { font-size: 10px; opacity: .6; transition: transform .2s; }
-    .nav-dropdown-wrap:hover .nav-caret { transform: rotate(180deg); }
-
-    .nav-dropdown {
-      display: none;
-      position: absolute; top: calc(100% + 12px); left: 50%;
-      transform: translateX(-50%);
-      background: var(--bg-card);
-      border: 1px solid var(--border-med);
-      border-radius: var(--r-lg);
-      width: 440px;
-      box-shadow: 0 20px 60px rgba(0,0,0,.5);
-      z-index: 500;
-      overflow: hidden;
-    }
-    .nav-dropdown-wrap:hover .nav-dropdown { display: block; }
-
-    .nav-dropdown-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 2px; padding: 8px;
-    }
-
-    .nav-dd-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 14px; border-radius: var(--r);
-      transition: background .15s; text-decoration: none;
-      color: inherit;
-    }
-    .nav-dd-item:hover { background: var(--bg-raised); text-decoration: none; }
-
-    .nav-dd-icon {
-      width: 36px; height: 36px; border-radius: var(--r-sm);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 17px; flex-shrink: 0;
-    }
-    .nav-dd-name { font-size: 13.5px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-    .nav-dd-sub  { font-size: 11px; color: var(--muted); }
-
-    .nav-dd-footer {
-      border-top: 1px solid var(--border);
-      padding: 10px 18px;
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: 11.5px; color: var(--muted);
-    }
-    .nav-dd-footer a { color: var(--blue); font-size: 11.5px; }
-    .nav-dd-footer a:hover { text-decoration: underline; }
-
-    /* ── Products showcase section ───────────────────────── */
-    #products {
-      background: var(--bg-card);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .products-header {
-      text-align: center;
-      max-width: 560px;
-      margin: 0 auto 48px;
-    }
-
-    .products-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-    }
-    @media (max-width: 900px) { .products-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 560px) { .products-grid { grid-template-columns: 1fr; } }
-
-    .product-card {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      padding: 24px;
-      transition: border-color .2s, transform .2s;
-      display: flex; flex-direction: column;
-      text-decoration: none; color: inherit;
-    }
-    .product-card:hover {
-      border-color: var(--border-med);
-      transform: translateY(-2px);
-      text-decoration: none;
-    }
-
-    .product-card-icon {
-      width: 44px; height: 44px;
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px; margin-bottom: 16px;
-    }
-
-    .product-card-name {
-      font-size: 15px; font-weight: 700;
-      color: var(--text); margin-bottom: 6px;
-      letter-spacing: -0.2px;
-    }
-
-    .product-card-desc {
-      font-size: 13px; color: var(--muted);
-      line-height: 1.7; flex: 1; margin-bottom: 16px;
-      font-weight: 400;
-    }
-
-    .product-card-link {
-      font-size: 12.5px; color: var(--blue);
-      font-weight: 600; display: flex;
-      align-items: center; gap: 4px;
-    }
-
-    .product-badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      font-size: 10px; font-weight: 700;
-      padding: 2px 8px; border-radius: 100px;
-      margin-bottom: 10px; width: fit-content;
-    }
-    .badge-live { background: var(--tdim); border: 1px solid rgba(0,212,170,.2); color: var(--teal); }
-    .badge-new  { background: var(--bdim); border: 1px solid rgba(61,126,255,.2); color: var(--blue); }
-
-    /* ── Cleaner hero subtext ─────────────────────────────── */
-    .hero-powered {
-      display: flex; align-items: center; gap: 8px;
-      flex-wrap: wrap; font-size: 12.5px; color: var(--muted);
-    }
-    .hero-powered-dot { color: var(--border); }
-    .hero-powered span { color: var(--text); font-weight: 600; }
-
-    .footer-link {
-      font-size: 13px; color: var(--muted);
-      transition: color .15s; text-decoration: none;
-    }
-    .footer-link:hover { color: var(--text); text-decoration: none; }
+    /* ── Reveal animation ── */
+    .reveal { opacity:0; transform:translateY(16px); transition:opacity .5s ease,transform .5s ease; }
+    .reveal.visible { opacity:1; transform:translateY(0); }
   </style>
 </head>
 <body>
-
-  <!-- Circle API proxy -->
-  <script>
-    (function() {
-      var _f = window.fetch.bind(window);
-      window.fetch = function(input, init) {
-        if (typeof input === "string" && input.includes("api.circle.com"))
-          input = input.replace("https://api.circle.com", "/circle-proxy");
-        else if (input instanceof Request && input.url.includes("api.circle.com"))
-          input = new Request(input.url.replace("https://api.circle.com", "/circle-proxy"), input);
-        return _f(input, init);
-      };
-    })();
-  </script>
-
   <div class="balances-hidden">
     <span id="balance-USDC">—</span>
     <span id="balance-EURC">—</span>
   </div>
 
-  <!-- ── Ticker ─────────────────────────────────────────── -->
-  <div class="ticker-wrap">
-    <div class="ticker-track">
-      <span class="ticker-item"><span class="ticker-live"></span> <strong>6 tools</strong> live on Arc</span>
-      <span class="ticker-item">Swap <strong>USDC ↔ EURC</strong></span>
-      <span class="ticker-item">Bridge <strong>via CCTP</strong></span>
-      <span class="ticker-item">Multisend <strong>500 wallets</strong></span>
-      <span class="ticker-item">Pay links <strong>+ Invoices</strong></span>
-      <span class="ticker-item">Settlement <strong>&lt; 1 second</strong></span>
-      <span class="ticker-item">Gas token <strong>USDC</strong></span>
-      <span class="ticker-item">Arc raised <strong>$222M · $3B val</strong></span>
-      <span class="ticker-item">Built on <strong>Circle App Kit</strong></span>
-      <span class="ticker-item"><span class="ticker-live"></span> <strong>6 tools</strong> live on Arc</span>
-      <span class="ticker-item">Swap <strong>USDC ↔ EURC</strong></span>
-      <span class="ticker-item">Bridge <strong>via CCTP</strong></span>
-      <span class="ticker-item">Multisend <strong>500 wallets</strong></span>
-      <span class="ticker-item">Pay links <strong>+ Invoices</strong></span>
-      <span class="ticker-item">Settlement <strong>&lt; 1 second</strong></span>
-      <span class="ticker-item">Gas token <strong>USDC</strong></span>
-      <span class="ticker-item">Arc raised <strong>$222M · $3B val</strong></span>
-      <span class="ticker-item">Built on <strong>Circle App Kit</strong></span>
+  <!-- Circle API proxy -->
+  <script>
+    (function(){
+      var _f=window.fetch.bind(window);
+      window.fetch=function(input,init){
+        if(typeof input==="string"&&input.includes("api.circle.com"))
+          input=input.replace("https://api.circle.com","/circle-proxy");
+        else if(input instanceof Request&&input.url.includes("api.circle.com"))
+          input=new Request(input.url.replace("https://api.circle.com","/circle-proxy"),input);
+        return _f(input,init);
+      };
+    })();
+  </script>
+
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stats-bar-inner">
+      <div class="stats-bar-item">
+        <span class="stats-bar-dot"></span>
+        <span class="stats-bar-label">Arc Testnet</span>
+        <span class="stats-bar-val">Live</span>
+      </div>
+      <div class="stats-bar-sep"></div>
+      <div class="stats-bar-item">
+        <span class="stats-bar-label">Settlement</span>
+        <span class="stats-bar-val" style="color:var(--teal)">&lt; 1 second</span>
+      </div>
+      <div class="stats-bar-sep"></div>
+      <div class="stats-bar-item">
+        <span class="stats-bar-label">Gas token</span>
+        <span class="stats-bar-val">USDC</span>
+      </div>
+      <div class="stats-bar-sep"></div>
+      <div class="stats-bar-item">
+        <span class="stats-bar-label">Avg fee</span>
+        <span class="stats-bar-val" style="color:var(--teal)">$0.0002</span>
+      </div>
+      <div class="stats-bar-sep"></div>
+      <div class="stats-bar-item">
+        <span class="stats-bar-label">Arc raised</span>
+        <span class="stats-bar-val">$222M at $3B</span>
+      </div>
+      <div class="stats-bar-sep"></div>
+      <div class="stats-bar-item">
+        <span class="stats-bar-label">Tools</span>
+        <span class="stats-bar-val">6 live</span>
+      </div>
     </div>
   </div>
 
-  <!-- ── Nav ────────────────────────────────────────────── -->
+  <!-- Nav -->
   <nav>
-    <!-- Logo -->
     <div class="nav-logo">
       <img src="/logo.png" alt="ArcFX" />
       ArcFX
     </div>
-
-    <!-- Center links -->
     <div class="nav-center">
-      <!-- Products dropdown -->
       <div class="nav-dropdown-wrap">
-        <button class="nav-link nav-dropdown-btn">
-          Products <span class="nav-caret">▾</span>
-        </button>
+        <button class="nav-link nav-dropdown-btn">Products <span class="nav-caret">▾</span></button>
         <div class="nav-dropdown">
           <div class="nav-dropdown-grid">
             <a href="#app" class="nav-dd-item">
-              <div class="nav-dd-icon" style="background:rgba(61,126,255,.12)">⇄</div>
+              <div class="nav-dd-icon" style="background:rgba(61,126,255,.12);color:#3d7eff;"><svg viewBox="0 0 24 24"><path d="M7 16l-4-4 4-4"/><path d="M3 12h18"/><path d="M17 8l4 4-4 4"/></svg></div>
               <div><div class="nav-dd-name">Swap</div><div class="nav-dd-sub">USDC ↔ EURC instantly</div></div>
             </a>
-            <a href="#app" class="nav-dd-item" onclick="switchAppTab&&switchAppTab('bridge')">
-              <div class="nav-dd-icon" style="background:rgba(0,212,170,.1)">⇅</div>
+            <a href="#app" onclick="setTimeout(()=>switchAppTab('bridge'),100)" class="nav-dd-item">
+              <div class="nav-dd-icon" style="background:rgba(0,212,170,.1);color:#00d4aa;"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></div>
               <div><div class="nav-dd-name">Bridge</div><div class="nav-dd-sub">Cross-chain via CCTP</div></div>
             </a>
             <a href="/multisend" class="nav-dd-item">
-              <div class="nav-dd-icon" style="background:rgba(255,107,53,.1)">💸</div>
+              <div class="nav-dd-icon" style="background:rgba(255,107,53,.1);color:#ff6b35;"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
               <div><div class="nav-dd-name">Multisender</div><div class="nav-dd-sub">Batch transfers</div></div>
             </a>
             <a href="/pay" class="nav-dd-item">
-              <div class="nav-dd-icon" style="background:rgba(61,126,255,.12)">⚡</div>
-              <div><div class="nav-dd-name">Pay links</div><div class="nav-dd-sub">Accept stablecoin payments</div></div>
+              <div class="nav-dd-icon" style="background:rgba(61,126,255,.12);color:#3d7eff;"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+              <div><div class="nav-dd-name">Pay links</div><div class="nav-dd-sub">Accept payments</div></div>
             </a>
             <a href="/invoice" class="nav-dd-item">
-              <div class="nav-dd-icon" style="background:rgba(0,212,170,.1)">📄</div>
-              <div><div class="nav-dd-name">Invoices</div><div class="nav-dd-sub">PDF invoices with Pay Now</div></div>
+              <div class="nav-dd-icon" style="background:rgba(0,212,170,.1);color:#00d4aa;"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+              <div><div class="nav-dd-name">Invoices</div><div class="nav-dd-sub">PDF invoices + Pay Now</div></div>
             </a>
             <a href="/history" class="nav-dd-item">
-              <div class="nav-dd-icon" style="background:rgba(61,126,255,.12)">📋</div>
-              <div><div class="nav-dd-name">History</div><div class="nav-dd-sub">Transaction records + CSV</div></div>
+              <div class="nav-dd-icon" style="background:rgba(61,126,255,.12);color:#3d7eff;"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+              <div><div class="nav-dd-name">History</div><div class="nav-dd-sub">Transactions + CSV export</div></div>
             </a>
           </div>
           <div class="nav-dd-footer">
@@ -915,59 +437,31 @@
           </div>
         </div>
       </div>
-
       <a href="#ecosystem" class="nav-link">Ecosystem</a>
       <a href="#compare" class="nav-link">Compare rates</a>
     </div>
-
-    <!-- Right -->
     <div class="nav-right">
-      <a href="https://x.com/arcfxapp" target="_blank" rel="noopener"
-         class="nav-link" style="font-size:16px;padding:6px 10px;" title="@arcfxapp">𝕏</a>
-      <a href="#waitlist" class="btn-primary" style="font-size:13px;padding:8px 18px;text-decoration:none;">
-        Get early access
-      </a>
+      <a href="#waitlist" class="btn-primary" style="font-size:13px;padding:8px 18px;">Get early access</a>
       <button id="connect-btn" class="btn-ghost">Connect wallet</button>
     </div>
   </nav>
 
-  <!-- ── Hero ───────────────────────────────────────────── -->
+  <!-- Hero -->
   <section id="hero">
     <div class="hero-inner">
-
-      <!-- Left: copy -->
       <div style="padding-top:12px;">
         <div class="hero-eyebrow">
-          <span class="ticker-live"></span>
+          <span class="eyebrow-dot"></span>
           6 tools · Arc Testnet · Powered by Circle
         </div>
-
-        <h1>Stablecoin FX<br><span class="gradient-text">on Arc.</span></h1>
-
-        <p class="hero-sub">
-          Swap USDC ↔ EURC in under one second.
-          Bridge from any chain. No ETH required.
-        </p>
-
+        <h1>The business layer<br><span class="gradient-text">on Arc.</span></h1>
+        <p class="hero-sub">Swap, bridge, invoice, pay and batch-send stablecoins on Arc. The complete financial toolkit for teams building on USDC.</p>
         <div class="stats-grid reveal">
-          <div class="stat-cell">
-            <div class="stat-val">6</div>
-            <div class="stat-lbl">Business tools</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-val">&lt; 1s</div>
-            <div class="stat-lbl">Settlement time</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-val">500</div>
-            <div class="stat-lbl">Wallets per batch send</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-val">$3B</div>
-            <div class="stat-lbl">Arc valuation</div>
-          </div>
+          <div class="stat-cell"><div class="stat-val">6</div><div class="stat-lbl">Business tools</div></div>
+          <div class="stat-cell"><div class="stat-val" style="color:var(--teal)">&lt; 1s</div><div class="stat-lbl">Settlement time</div></div>
+          <div class="stat-cell"><div class="stat-val">500</div><div class="stat-lbl">Wallets per batch</div></div>
+          <div class="stat-cell"><div class="stat-val">$3B</div><div class="stat-lbl">Arc valuation</div></div>
         </div>
-
         <div class="hero-powered">
           <span>Non-custodial</span>
           <div class="hero-powered-dot">·</div>
@@ -979,27 +473,25 @@
         </div>
       </div>
 
-      <!-- Right: App widget -->
+      <!-- App widget -->
       <div class="app-sticky" id="app">
         <div class="app-tabs">
-          <button id="tab-swap" class="app-tab active" onclick="switchAppTab('swap')">⇄ Swap</button>
-          <button id="tab-bridge" class="app-tab bridge-tab" onclick="switchAppTab('bridge')">⇅ Bridge</button>
+          <button id="tab-swap"    class="app-tab active"      onclick="switchAppTab('swap')">⇄ Swap</button>
+          <button id="tab-bridge"  class="app-tab bridge-tab"  onclick="switchAppTab('bridge')">⇅ Bridge</button>
           <button id="tab-history" class="app-tab history-tab" onclick="switchAppTab('history')">📋 History</button>
         </div>
 
-        <!-- Swap Panel -->
+        <!-- Swap -->
         <div id="panel-swap" class="app-panel">
           <div id="global-status"></div>
-
           <div id="connect-card">
             <div class="connect-card-inner">
               <img src="/logo.png" alt="ArcFX" />
-              <h3>Swap stablecoins on Arc</h3>
-              <p>Connect MetaMask to swap USDC ↔ EURC with sub-second settlement.</p>
+              <h3>Stablecoin tools on Arc</h3>
+              <p>Connect MetaMask to swap, bridge and manage stablecoins on Arc.</p>
               <button id="big-connect-btn" class="btn-connect-full">Connect MetaMask</button>
             </div>
           </div>
-
           <div class="hidden" id="swap-card">
             <div class="widget-header">
               <span class="widget-title">Swap</span>
@@ -1043,7 +535,7 @@
           </div>
         </div>
 
-        <!-- Bridge Panel -->
+        <!-- Bridge -->
         <div id="panel-bridge" class="app-panel" style="display:none;">
           <div id="bridge-global-status"></div>
           <div class="bridge-header">
@@ -1094,7 +586,7 @@
           </div>
         </div>
 
-        <!-- History Panel -->
+        <!-- History -->
         <div id="panel-history" class="app-panel" style="display:none;min-height:180px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <span style="font-size:14px;font-weight:700;">Transaction history</span>
@@ -1103,720 +595,338 @@
           <div id="history-content">
             <div style="text-align:center;padding:28px 0;color:var(--muted);font-size:13px;">Connect your wallet to view history</div>
           </div>
+          <div style="text-align:center;margin-top:14px;">
+            <a href="/history" style="font-size:12px;color:var(--blue);">View full history + CSV export →</a>
+          </div>
         </div>
-
       </div>
     </div>
   </section>
 
   <!-- Products -->
-  <section id="products" style="background:var(--bg-card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:80px 28px;">
+  <section id="products" style="background:var(--bg-card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
     <div class="container">
       <div style="text-align:center;max-width:560px;margin:0 auto 48px;">
         <div class="section-label">Business toolkit</div>
-        <div class="section-title">Everything you need to manage stablecoins on Arc</div>
+        <div class="section-title">Everything your team needs on Arc</div>
       </div>
       <div class="products-grid">
         <a href="#app" class="product-card">
-          <div class="product-card-icon" style="background:rgba(61,126,255,.1);">⇄</div>
+          <div class="product-card-icon" style="background:rgba(61,126,255,.1);color:#3d7eff;"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;"><path d="M7 16l-4-4 4-4"/><path d="M3 12h18"/><path d="M17 8l4 4-4 4"/></svg></div>
           <div class="badge-live product-badge">● Live</div>
           <div class="product-card-name">Swap</div>
           <div class="product-card-desc">Exchange USDC ↔ EURC in under one second. Sub-second finality, predictable fees, no ETH required.</div>
-          <div class="product-card-link">Try it now →</div>
+          <div class="product-card-link">Launch Swap →</div>
         </a>
-        <a href="#app" class="product-card">
-          <div class="product-card-icon" style="background:rgba(0,212,170,.1);">⇅</div>
+        <a href="#app" onclick="setTimeout(()=>switchAppTab('bridge'),100)" class="product-card">
+          <div class="product-card-icon" style="background:rgba(0,212,170,.1);color:#00d4aa;"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></div>
           <div class="badge-live product-badge">● Live</div>
           <div class="product-card-name">Bridge</div>
           <div class="product-card-desc">Move USDC from Ethereum or Base to Arc in ~30 seconds via Circle CCTP. Native token, not wrapped.</div>
-          <div class="product-card-link">Bridge now →</div>
+          <div class="product-card-link">Launch Bridge →</div>
         </a>
         <a href="/multisend" class="product-card">
-          <div class="product-card-icon" style="background:rgba(255,107,53,.1);">💸</div>
+          <div class="product-card-icon" style="background:rgba(255,107,53,.1);color:#ff6b35;"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
           <div class="badge-live product-badge">● Live</div>
           <div class="product-card-name">Multisender</div>
           <div class="product-card-desc">Send USDC or EURC to 500 wallets in one transaction. Built for payroll, airdrops, and DAO payments.</div>
-          <div class="product-card-link">Open Multisender →</div>
+          <div class="product-card-link">Launch Multisender →</div>
         </a>
         <a href="/pay" class="product-card">
-          <div class="product-card-icon" style="background:rgba(61,126,255,.1);">⚡</div>
+          <div class="product-card-icon" style="background:rgba(61,126,255,.1);color:#3d7eff;"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
           <div class="badge-new product-badge">✦ New</div>
           <div class="product-card-name">Pay links</div>
           <div class="product-card-desc">Generate a shareable link and get paid in USDC or EURC instantly. For freelancers, agencies and merchants.</div>
-          <div class="product-card-link">Create pay link →</div>
+          <div class="product-card-link">Launch Pay →</div>
         </a>
         <a href="/invoice" class="product-card">
-          <div class="product-card-icon" style="background:rgba(0,212,170,.1);">📄</div>
+          <div class="product-card-icon" style="background:rgba(0,212,170,.1);color:#00d4aa;"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
           <div class="badge-new product-badge">✦ New</div>
           <div class="product-card-name">Invoices</div>
           <div class="product-card-desc">Professional PDF invoices with a built-in Pay Now link. Clients pay in USDC or EURC in one click.</div>
-          <div class="product-card-link">Create invoice →</div>
+          <div class="product-card-link">Launch Invoices →</div>
         </a>
         <a href="/history" class="product-card">
-          <div class="product-card-icon" style="background:rgba(61,126,255,.1);">📋</div>
+          <div class="product-card-icon" style="background:rgba(61,126,255,.1);color:#3d7eff;"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
           <div class="badge-new product-badge">✦ New</div>
           <div class="product-card-name">History</div>
           <div class="product-card-desc">Full transaction history for your wallet. Filter by type and export to CSV for accounting and reporting.</div>
-          <div class="product-card-link">View history →</div>
+          <div class="product-card-link">Launch History →</div>
         </a>
       </div>
     </div>
   </section>
 
-
-    <section id="ecosystem">
+  <!-- Ecosystem -->
+  <section id="ecosystem" style="background:var(--bg-card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
     <div class="container">
-
       <div class="eco-header reveal">
         <div>
           <div class="section-label">Arc Ecosystem</div>
           <div class="section-title">Every project building on Arc</div>
           <p class="section-sub">The go-to directory for Arc builders, users, and investors.</p>
         </div>
-        <div style="text-align:right">
-          <a href="mailto:arcfxapp@gmail.com?subject=List my project on ArcFX"
-             style="display:inline-flex;align-items:center;gap:6px;background:var(--bdim);border:1px solid rgba(61,126,255,.3);color:var(--blue);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:var(--r-sm);text-decoration:none;transition:background .15s;"
-             onmouseover="this.style.background='rgba(61,126,255,.18)'"
-             onmouseout="this.style.background='var(--bdim)'">
-            + List your project
-          </a>
+        <div>
+          <a href="mailto:arcfxapp@gmail.com?subject=List my project on ArcFX" style="display:inline-flex;align-items:center;gap:6px;background:var(--blue-dim);border:1px solid rgba(61,126,255,.3);color:var(--blue);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:var(--r-sm);text-decoration:none;transition:background .15s;" onmouseover="this.style.background='rgba(61,126,255,.18)'" onmouseout="this.style.background='var(--blue-dim)'">+ List your project</a>
         </div>
       </div>
-
-      <!-- Stats -->
       <div class="eco-stats reveal">
-        <div class="eco-stat">
-          <div class="eco-stat-val">7</div>
-          <div class="eco-stat-lbl">Projects building</div>
-        </div>
-        <div class="eco-stat">
-          <div class="eco-stat-val">$222M</div>
-          <div class="eco-stat-lbl">Arc raised</div>
-        </div>
-        <div class="eco-stat">
-          <div class="eco-stat-val">3</div>
-          <div class="eco-stat-lbl">Genesis partners</div>
-        </div>
-        <div class="eco-stat">
-          <div class="eco-stat-val">$3B</div>
-          <div class="eco-stat-lbl">Network valuation</div>
-        </div>
+        <div class="eco-stat"><div class="eco-stat-val">7</div><div class="eco-stat-lbl">Projects building</div></div>
+        <div class="eco-stat"><div class="eco-stat-val">$222M</div><div class="eco-stat-lbl">Arc raised</div></div>
+        <div class="eco-stat"><div class="eco-stat-val">3</div><div class="eco-stat-lbl">Genesis partners</div></div>
+        <div class="eco-stat"><div class="eco-stat-val">$3B</div><div class="eco-stat-lbl">Network valuation</div></div>
       </div>
-
-      <!-- Filters -->
       <div class="eco-filters reveal">
-        <button class="eco-filter active" onclick="filterEco('all', this)">All</button>
-        <button class="eco-filter" onclick="filterEco('fx', this)">FX / Swap</button>
-        <button class="eco-filter" onclick="filterEco('lending', this)">Lending</button>
-        <button class="eco-filter" onclick="filterEco('payments', this)">Payments</button>
-        <button class="eco-filter" onclick="filterEco('agents', this)">Agents</button>
-        <button class="eco-filter" onclick="filterEco('infra', this)">Infrastructure</button>
+        <button class="eco-filter active" onclick="filterEco('all',this)">All</button>
+        <button class="eco-filter" onclick="filterEco('fx',this)">FX / Swap</button>
+        <button class="eco-filter" onclick="filterEco('lending',this)">Lending</button>
+        <button class="eco-filter" onclick="filterEco('payments',this)">Payments</button>
+        <button class="eco-filter" onclick="filterEco('agents',this)">Agents</button>
       </div>
-
-      <!-- Project grid -->
       <div class="eco-grid reveal" id="eco-grid">
-
-        <!-- ArcFX — Featured -->
         <div class="eco-card featured" data-cat="fx">
           <div class="eco-card-top">
-            <div class="eco-card-icon">
-              <img src="/logo.png" alt="ArcFX" />
-            </div>
-            <div>
-              <div class="eco-card-name">ArcFX</div>
-              <div class="eco-card-type">FX Exchange</div>
-            </div>
+            <div class="eco-card-icon"><img src="/logo.png" alt="ArcFX" /></div>
+            <div><div class="eco-card-name">ArcFX</div><div class="eco-card-type">Business toolkit</div></div>
           </div>
           <div class="eco-featured-badge">✦ Featured</div>
-          <p class="eco-card-desc">
-            Non-custodial stablecoin FX exchange. Swap USDC ↔ EURC
-            in under 1 second with no ETH required. Bridge from Ethereum
-            via CCTP. Rate comparison vs Wise & Western Union.
-          </p>
-          <div class="eco-card-tags">
-            <span class="eco-tag">USDC</span>
-            <span class="eco-tag">EURC</span>
-            <span class="eco-tag">Circle App Kit</span>
-            <span class="eco-tag">CCTP</span>
-          </div>
-          <div class="eco-card-footer">
-            <div class="eco-status-live">
-              <div class="eco-status-dot"></div> Live on Testnet
-            </div>
-            <a href="https://arcfx.app" class="eco-visit-btn" target="_blank" rel="noopener">Visit ↗</a>
-          </div>
+          <p class="eco-card-desc">The business layer on Arc. Swap, bridge, invoice, pay, batch-send and track stablecoins — 6 tools in one platform.</p>
+          <div class="eco-card-tags"><span class="eco-tag">USDC</span><span class="eco-tag">EURC</span><span class="eco-tag">Circle App Kit</span><span class="eco-tag">CCTP</span></div>
+          <div class="eco-card-footer"><div class="eco-status-live"><div class="eco-status-dot"></div>Live on Testnet</div><a href="https://arcfx.app" class="eco-visit-btn" target="_blank">Visit ↗</a></div>
         </div>
-
-        <!-- Tower Exchange -->
         <div class="eco-card" data-cat="fx">
           <div class="eco-card-top">
             <div class="eco-card-icon">🏰</div>
-            <div>
-              <div class="eco-card-name">Tower Exchange</div>
-              <div class="eco-card-type">DEX Aggregator</div>
-            </div>
+            <div><div class="eco-card-name">Tower Exchange</div><div class="eco-card-type">DEX Aggregator</div></div>
           </div>
-          <p class="eco-card-desc">
-            AI-powered stablecoin DEX aggregator with portfolio management,
-            recurring orders, yield, liquidity pools, and an AI trading agent.
-          </p>
-          <div class="eco-card-tags">
-            <span class="eco-tag">USDC</span>
-            <span class="eco-tag">EURC</span>
-            <span class="eco-tag">AI Agent</span>
-            <span class="eco-tag">Yield</span>
-          </div>
-          <div class="eco-card-footer">
-            <div class="eco-status-live">
-              <div class="eco-status-dot"></div> Live on Testnet
-            </div>
-            <a href="https://tower.exchange" class="eco-visit-btn" target="_blank" rel="noopener">Visit ↗</a>
-          </div>
+          <p class="eco-card-desc">AI-powered stablecoin DEX aggregator with portfolio management, recurring orders, yield, and liquidity pools.</p>
+          <div class="eco-card-tags"><span class="eco-tag">USDC</span><span class="eco-tag">EURC</span><span class="eco-tag">AI Agent</span></div>
+          <div class="eco-card-footer"><div class="eco-status-live"><div class="eco-status-dot"></div>Live on Testnet</div><a href="https://tower.exchange" class="eco-visit-btn" target="_blank">Visit ↗</a></div>
         </div>
-
-        <!-- Morpho -->
         <div class="eco-card" data-cat="lending">
           <div class="eco-card-top">
             <div class="eco-card-icon">🔷</div>
-            <div>
-              <div class="eco-card-name">Morpho on Arc</div>
-              <div class="eco-card-type">Lending & Credit</div>
-            </div>
+            <div><div class="eco-card-name">Morpho on Arc</div><div class="eco-card-type">Lending & Credit</div></div>
           </div>
-          <p class="eco-card-desc">
-            Composable borrowing and lending on Arc. Confirmed genesis partner,
-            bringing credible onchain credit infrastructure from day one of mainnet.
-          </p>
-          <div class="eco-card-tags">
-            <span class="eco-tag">Lending</span>
-            <span class="eco-tag">USDC</span>
-            <span class="eco-tag">Genesis Partner</span>
-          </div>
-          <div class="eco-card-footer">
-            <div class="eco-status-mainnet">🔵 Mainnet Genesis</div>
-            <a href="https://morpho.org" class="eco-visit-btn" target="_blank" rel="noopener">Visit ↗</a>
-          </div>
+          <p class="eco-card-desc">Composable borrowing and lending on Arc. Confirmed genesis partner, bringing onchain credit from day one of mainnet.</p>
+          <div class="eco-card-tags"><span class="eco-tag">Lending</span><span class="eco-tag">USDC</span><span class="eco-tag">Genesis</span></div>
+          <div class="eco-card-footer"><div class="eco-status-mainnet">🔵 Mainnet Genesis</div><a href="https://morpho.org" class="eco-visit-btn" target="_blank">Visit ↗</a></div>
         </div>
-
-        <!-- Radius -->
         <div class="eco-card" data-cat="payments">
           <div class="eco-card-top">
             <div class="eco-card-icon">📡</div>
-            <div>
-              <div class="eco-card-name">Radius</div>
-              <div class="eco-card-type">P2P Payments</div>
-            </div>
+            <div><div class="eco-card-name">Radius</div><div class="eco-card-type">P2P Payments</div></div>
           </div>
-          <p class="eco-card-desc">
-            Peer-to-peer stablecoin payments on Arc Testnet. Social wallets,
-            payment requests, contacts, transaction history, and yield.
-          </p>
-          <div class="eco-card-tags">
-            <span class="eco-tag">P2P</span>
-            <span class="eco-tag">USDC</span>
-            <span class="eco-tag">Social</span>
-          </div>
-          <div class="eco-card-footer">
-            <div class="eco-status-live">
-              <div class="eco-status-dot"></div> Live on Testnet
-            </div>
-            <a href="https://radius-gules.vercel.app" class="eco-visit-btn" target="_blank" rel="noopener">Visit ↗</a>
-          </div>
+          <p class="eco-card-desc">Peer-to-peer stablecoin payments on Arc Testnet. Social wallets, payment requests, contacts and history.</p>
+          <div class="eco-card-tags"><span class="eco-tag">P2P</span><span class="eco-tag">USDC</span><span class="eco-tag">Social</span></div>
+          <div class="eco-card-footer"><div class="eco-status-live"><div class="eco-status-dot"></div>Live on Testnet</div><a href="https://radius-gules.vercel.app" class="eco-visit-btn" target="_blank">Visit ↗</a></div>
         </div>
-
-        <!-- Arcflow -->
         <div class="eco-card" data-cat="payments">
           <div class="eco-card-top">
             <div class="eco-card-icon">💧</div>
-            <div>
-              <div class="eco-card-name">Arcflow</div>
-              <div class="eco-card-type">Payments App</div>
-            </div>
+            <div><div class="eco-card-name">Arcflow</div><div class="eco-card-type">Payments App</div></div>
           </div>
-          <p class="eco-card-desc">
-            Full USDC payment app on Arc. Dashboard, transaction history,
-            payment links, and a real-time savings calculator vs Western Union.
-          </p>
-          <div class="eco-card-tags">
-            <span class="eco-tag">Payments</span>
-            <span class="eco-tag">USDC</span>
-            <span class="eco-tag">Payment links</span>
-          </div>
-          <div class="eco-card-footer">
-            <div class="eco-status-live">
-              <div class="eco-status-dot"></div> Live on Testnet
-            </div>
-            <a href="https://arcflow.live" class="eco-visit-btn" target="_blank" rel="noopener">Visit ↗</a>
-          </div>
+          <p class="eco-card-desc">Full USDC payment app on Arc. Dashboard, transaction history, payment links, and real-time savings vs Western Union.</p>
+          <div class="eco-card-tags"><span class="eco-tag">Payments</span><span class="eco-tag">USDC</span></div>
+          <div class="eco-card-footer"><div class="eco-status-live"><div class="eco-status-dot"></div>Live on Testnet</div><a href="https://arcflow.live" class="eco-visit-btn" target="_blank">Visit ↗</a></div>
         </div>
-
-        <!-- Your project here -->
-        <div class="eco-card" data-cat="all" style="border-style:dashed;display:flex;align-items:center;justify-content:center;min-height:200px;text-align:center;">
+        <div class="eco-card" data-cat="all" style="border:2px dashed rgba(61,126,255,.4);display:flex;align-items:center;justify-content:center;min-height:200px;text-align:center;background:rgba(61,126,255,.02);">
           <div>
             <div style="font-size:28px;margin-bottom:12px;">+</div>
-            <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">Your project here</div>
+            <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">Your project here</div>
             <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Get listed and reach the Arc community</div>
-            <a href="mailto:arcfxapp@gmail.com" class="eco-visit-btn" style="display:inline-block;">
-              Get listed →
-            </a>
+            <a href="mailto:arcfxapp@gmail.com?subject=List my project on ArcFX Ecosystem" class="eco-visit-btn" style="display:inline-block;background:var(--blue-dim);">Get listed →</a>
           </div>
         </div>
-
       </div>
-
-      <!-- Submit bar -->
       <div class="eco-submit-bar reveal">
-        <div class="eco-submit-copy">
-          <div class="eco-submit-title">Building on Arc? Get listed.</div>
-          <div class="eco-submit-sub">
-            Reach Arc builders, users, and investors directly.
-            Featured spots from <strong>$199/month</strong> — 
-            free listings available for early-stage projects.
-          </div>
-        </div>
-        <a href="mailto:arcfxapp@gmail.com?subject=List my project on ArcFX Ecosystem&body=Project name:%0AWebsite:%0ADescription:%0ACategory:"
-           class="eco-submit-btn">
-          Submit your project →
-        </a>
+        <div><div class="eco-submit-title">Building on Arc? Get listed.</div><div class="eco-submit-sub">Reach Arc builders, users, and investors. Featured spots from <strong>$199/month</strong>.</div></div>
+        <a href="mailto:arcfxapp@gmail.com?subject=List my project on ArcFX Ecosystem&body=Project name:%0AWebsite:%0ADescription:%0ACategory:" class="eco-submit-btn">Submit your project →</a>
       </div>
-
     </div>
   </section>
 
-    <section id="compare">
-    <div class="compare-inner container">
-
-      <div class="compare-header reveal">
-        <div>
-          <div class="section-label">Why ArcFX</div>
-          <div class="section-title">See how much you save</div>
-          <p class="section-sub">Compare ArcFX against traditional FX providers in real time.</p>
-        </div>
-
+  <!-- Compare -->
+  <section id="compare" style="background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+    <div class="container">
+      <div style="text-align:center;margin-bottom:32px;" class="reveal">
+        <div class="section-label">Why ArcFX</div>
+        <div class="section-title">See exactly how much you save</div>
+        <p class="section-sub" style="margin:0 auto 24px;">Compare ArcFX against traditional providers. Enter any amount — all rates update instantly.</p>
         <div class="compare-input-wrap">
           <span class="compare-input-label">You send</span>
-          <input
-            id="compare-amount"
-            class="compare-input"
-            type="number"
-            value="1000"
-            min="1"
-            step="any"
-            autocomplete="off"
-          />
+          <input id="compare-amount" class="compare-input" type="number" value="1000" min="1" step="any" autocomplete="off" />
           <span class="compare-currency">USDC</span>
         </div>
       </div>
-
       <div class="reveal">
         <table class="compare-table">
-          <thead>
-            <tr>
-              <th style="width:220px">Provider</th>
-              <th>You receive</th>
-              <th class="hide-mobile">Fee</th>
-              <th class="hide-mobile">Speed</th>
-              <th>Savings</th>
-            </tr>
-          </thead>
-          <tbody id="compare-body">
-            <!-- filled by JS -->
-          </tbody>
+          <thead><tr><th style="width:220px">Provider</th><th>You receive</th><th class="hide-mobile">Fee</th><th class="hide-mobile">Speed</th><th>Savings</th></tr></thead>
+          <tbody id="compare-body"></tbody>
         </table>
-
-        <p class="compare-footer">
-          ⚠️ Traditional provider rates are estimates based on typical fees and spreads. 
-          ArcFX rate is fetched live from Arc Testnet via Circle App Kit. 
-          Rates update as you type. Not financial advice.
-        </p>
+        <p class="compare-footer">⚠️ Traditional provider rates are estimates. ArcFX rate is live from Arc Testnet via Circle App Kit. Not financial advice.</p>
       </div>
-
     </div>
   </section>
 
-    <section id="waitlist">
-    <div class="waitlist-inner">
-      <div class="section-label" style="text-align:center">Early access</div>
-      <div class="section-title reveal">Be first on<br><span class="gradient-text">ArcFX mainnet</span></div>
-      <p class="section-sub reveal" style="margin:14px auto 36px">
-        Mainnet is coming. Join the waitlist for early access to
-        institutional-grade stablecoin FX with zero ETH required.
-      </p>
-
-      <!--
-        SETUP: Replace YOUR_FORM_ID with your Formspree form ID.
-        1. Go to https://formspree.io and sign up (free)
-        2. Create a new form → copy the form ID (e.g. xpwzgkrb)
-        3. Replace YOUR_FORM_ID below
-      -->
-      <form id="waitlist-form" class="waitlist-form reveal"
-        action="https://formspree.io/f/maqvkybb" method="POST">
-
-        <div class="form-row">
-          <div class="form-field">
-            <label for="wl-name">Full name</label>
-            <input id="wl-name" type="text" name="name" placeholder="Your name" required />
+  <!-- Waitlist -->
+  <section id="waitlist" style="background:var(--bg-card);border-top:1px solid var(--border);">
+    <div class="container">
+      <div class="waitlist-inner">
+        <div class="section-label" style="text-align:center;">Early access</div>
+        <div class="section-title" style="text-align:center;margin-bottom:16px;">Be first on Arc Mainnet</div>
+        <p class="section-sub" style="text-align:center;margin:0 auto 36px;">Join the waitlist and get early access to ArcFX on Arc Mainnet — plus co-marketing opportunities for builders.</p>
+        <form class="waitlist-form" id="waitlist-form" action="https://formspree.io/f/maqvkybb" method="POST">
+          <div class="form-row">
+            <div class="form-field"><label>First name</label><input type="text" name="first_name" placeholder="Jaroslav" required /></div>
+            <div class="form-field"><label>Last name</label><input type="text" name="last_name" placeholder="Golis" required /></div>
           </div>
+          <div class="form-field"><label>Email</label><input type="email" name="email" placeholder="you@company.com" required /></div>
           <div class="form-field">
-            <label for="wl-email">Email address</label>
-            <input id="wl-email" type="email" name="email" placeholder="you@example.com" required />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-field">
-            <label for="wl-role">I am a...</label>
-            <select id="wl-role" name="role">
+            <label>I am a</label>
+            <select name="role">
               <option value="">Select your role</option>
-              <option value="trader">Crypto trader</option>
-              <option value="developer">Developer / Builder</option>
-              <option value="business">Business / Treasury</option>
-              <option value="defi">DeFi power user</option>
+              <option value="builder">Builder / Developer</option>
+              <option value="business">Business / Team</option>
+              <option value="dao">DAO / Protocol</option>
               <option value="investor">Investor</option>
               <option value="other">Other</option>
             </select>
           </div>
-          <div class="form-field">
-            <label for="wl-volume">Monthly FX volume</label>
-            <select id="wl-volume" name="volume">
-              <option value="">Select range</option>
-              <option value="under-10k">Under $10,000</option>
-              <option value="10k-100k">$10K – $100K</option>
-              <option value="100k-1m">$100K – $1M</option>
-              <option value="over-1m">Over $1,000,000</option>
-            </select>
-          </div>
+          <button type="submit" class="submit-btn" id="waitlist-submit">Request early access →</button>
+          <p class="form-note">No spam. Early access only. Unsubscribe anytime.</p>
+        </form>
+        <div class="form-success" id="form-success">
+          ✅ You're on the list. We'll be in touch when mainnet launches.<br>
+          <span style="font-size:12px;margin-top:8px;display:block;">Follow us: <a href="https://x.com/arcfxapp" target="_blank" rel="noopener" style="color:var(--teal);">@arcfxapp</a></span>
         </div>
-
-        <input type="hidden" name="_subject" value="New ArcFX waitlist signup" />
-        <button type="submit" class="submit-btn" id="waitlist-submit">Request early access →</button>
-        <p class="form-note">No spam. Mainnet launch notifications only.</p>
-      </form>
-
-      <div class="form-success" id="form-success">
-        ✅ You're on the list. We'll be in touch when mainnet launches.<br>
-        <span style="font-size:12px;margin-top:8px;display:block;">Follow us for updates: <a href="https://x.com/arcfxapp" target="_blank" rel="noopener" style="color:#22d3a0;">@arcfxapp</a></span>
       </div>
     </div>
   </section>
 
-  <!-- ── Footer -->
+  <!-- Footer -->
   <footer>
     <div class="footer-inner">
-      <div>
-        <div class="footer-logo">
-          <img src="/logo.png" alt="ArcFX" />
-          ArcFX
-        </div>
-        <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8;">
-          The business layer for stablecoins on Arc.<br>
-          Built on Arc · Powered by Circle App Kit
-        </div>
+      <div style="max-width:220px;">
+        <div class="footer-logo"><img src="/logo.png" alt="ArcFX" />ArcFX</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8;">The business layer for stablecoins on Arc.<br>Built on Arc · Powered by Circle App Kit</div>
       </div>
-
-      <div style="display:flex;gap:60px;flex-wrap:wrap;">
-        <div>
-          <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;">Products</div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <a href="#app"       class="footer-link">Swap</a>
-            <a href="#app"       class="footer-link">Bridge</a>
-            <a href="/multisend" class="footer-link">Multisender</a>
-            <a href="/pay"       class="footer-link">Pay links</a>
-            <a href="/invoice"   class="footer-link">Invoices</a>
-            <a href="/history"   class="footer-link">History</a>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;">Ecosystem</div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <a href="#ecosystem"                                          class="footer-link">Arc directory</a>
-            <a href="#compare"                                            class="footer-link">Compare rates</a>
-            <a href="https://arc.network"  target="_blank" rel="noopener" class="footer-link">Arc Network</a>
-            <a href="https://docs.arc.network" target="_blank" rel="noopener" class="footer-link">Arc Docs</a>
-            <a href="https://testnet.arcscan.app" target="_blank" rel="noopener" class="footer-link">ArcScan</a>
-            <a href="https://faucet.circle.com"   target="_blank" rel="noopener" class="footer-link">USDC Faucet</a>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;">Connect</div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <a href="https://x.com/arcfxapp"         target="_blank" rel="noopener" class="footer-link">𝕏 @arcfxapp</a>
-            <a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" class="footer-link">GitHub</a>
-            <a href="mailto:arcfxapp@gmail.com"        class="footer-link">arcfxapp@gmail.com</a>
-            <a href="#waitlist"                         class="footer-link">Join waitlist</a>
-          </div>
-        </div>
+      <div>
+        <div class="footer-col-title">Products</div>
+        <a href="#app"       class="footer-link">Swap</a>
+        <a href="#app"       class="footer-link">Bridge</a>
+        <a href="/multisend" class="footer-link">Multisender</a>
+        <a href="/pay"       class="footer-link">Pay links</a>
+        <a href="/invoice"   class="footer-link">Invoices</a>
+        <a href="/history"   class="footer-link">History</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Ecosystem</div>
+        <a href="#ecosystem"                                               class="footer-link">Arc directory</a>
+        <a href="#compare"                                                 class="footer-link">Compare rates</a>
+        <a href="https://arc.network"          target="_blank" rel="noopener" class="footer-link">Arc Network</a>
+        <a href="https://docs.arc.network"     target="_blank" rel="noopener" class="footer-link">Arc Docs</a>
+        <a href="https://testnet.arcscan.app"  target="_blank" rel="noopener" class="footer-link">ArcScan</a>
+        <a href="https://faucet.circle.com"    target="_blank" rel="noopener" class="footer-link">USDC Faucet</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Connect</div>
+        <a href="https://x.com/arcfxapp"            target="_blank" rel="noopener" class="footer-link">𝕏 @arcfxapp</a>
+        <a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" class="footer-link">GitHub</a>
+        <a href="mailto:arcfxapp@gmail.com"          class="footer-link">arcfxapp@gmail.com</a>
+        <a href="#waitlist"                          class="footer-link">Join waitlist</a>
       </div>
     </div>
-
-    <div style="max-width:1200px;margin:28px auto 0;padding-top:24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-      <div style="font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;">
-        © 2026 ArcFX · Arc Testnet · Non-custodial
-      </div>
-      <div style="font-size:11.5px;color:var(--muted);">
-        Contract: <span style="font-family:'JetBrains Mono',monospace;">0xF7aeb369...e71398</span>
-      </div>
+    <div class="footer-bottom">
+      <span>© 2026 ArcFX · Arc Testnet · Non-custodial</span>
+      <span>Contract: 0xF7aeb369...e71398</span>
     </div>
   </footer>
 
   <script type="module" src="/src/main.ts"></script>
 
-    <!-- ── Rate Comparison Logic ─────────────────────────── -->
+  <!-- Compare widget -->
   <script>
-    // Provider data — fees and FX rate offsets vs mid-market
-    // All rates relative to USDC→EURC where 1 USDC ≈ 0.9047 EURC (mid-market)
-    const PROVIDERS = [
-      {
-        name: "ArcFX",
-        type: "Onchain DEX · Arc Testnet",
-        icon: "/logo.png",
-        isLogo: true,
-        bgColor: "#0A1525",
-        feeFixed: 0.0002,      // $0.0002 flat fee
-        feePercent: 0,         // 0% spread
-        spreadOffset: 0,       // uses Arc native rate
-        speed: "< 1 second",
-        speedColor: "var(--green)",
-        isArcFX: true,
-      },
-      {
-        name: "Wise",
-        type: "Bank transfer",
-        icon: "💚",
-        bgColor: "#1a3a1a",
-        feeFixed: 0,
-        feePercent: 0.41,      // ~0.41% fee
-        spreadOffset: 0.002,   // small spread
-        speed: "1–2 business days",
-        speedColor: "var(--muted)",
-      },
-      {
-        name: "Revolut",
-        type: "Fintech app",
-        icon: "🖤",
-        bgColor: "#1a1a2e",
-        feeFixed: 0,
-        feePercent: 0.5,       // 0.5% on weekends, ~0% on weekdays (we show avg)
-        spreadOffset: 0.004,
-        speed: "Instant (limits apply)",
-        speedColor: "var(--muted)",
-      },
-      {
-        name: "PayPal",
-        type: "Digital wallet",
-        icon: "🔵",
-        bgColor: "#0a1a3a",
-        feeFixed: 0,
-        feePercent: 3.5,       // ~3-4% spread
-        spreadOffset: 0.02,
-        speed: "Instant",
-        speedColor: "var(--muted)",
-      },
-      {
-        name: "Western Union",
-        type: "Money transfer",
-        icon: "🟡",
-        bgColor: "#2a1f00",
-        feeFixed: 4.99,
-        feePercent: 2.0,       // ~2% exchange rate margin
-        spreadOffset: 0.025,
-        speed: "Minutes–3 days",
-        speedColor: "var(--muted)",
-      },
-      {
-        name: "Bank wire",
-        type: "Traditional bank",
-        icon: "🏦",
-        bgColor: "#1a1a1a",
-        feeFixed: 15,
-        feePercent: 1.5,
-        spreadOffset: 0.03,
-        speed: "1–5 business days",
-        speedColor: "var(--muted)",
-      },
+    const PROVIDERS=[
+      {name:"ArcFX",type:"Onchain · Arc Testnet",icon:"/logo.png",isLogo:true,bgColor:"#0A1525",feeFixed:0.0002,feePercent:0,spreadOffset:0,speed:"< 1 second",speedColor:"var(--teal)",isArcFX:true},
+      {name:"Wise",type:"Bank transfer",icon:"💚",bgColor:"#1a3a1a",feeFixed:0,feePercent:0.41,spreadOffset:0.002,speed:"1–2 business days",speedColor:"var(--muted)"},
+      {name:"Revolut",type:"Fintech app",icon:"🖤",bgColor:"#1a1a2e",feeFixed:0,feePercent:0.5,spreadOffset:0.004,speed:"Instant (limits apply)",speedColor:"var(--muted)"},
+      {name:"PayPal",type:"Digital wallet",icon:"🔵",bgColor:"#0a1a3a",feeFixed:0,feePercent:3.5,spreadOffset:0.02,speed:"Instant",speedColor:"var(--muted)"},
+      {name:"Western Union",type:"Money transfer",icon:"🟡",bgColor:"#2a1f00",feeFixed:4.99,feePercent:2.0,spreadOffset:0.025,speed:"Minutes–3 days",speedColor:"var(--muted)"},
+      {name:"Bank wire",type:"Traditional bank",icon:"🏦",bgColor:"#1a1a1a",feeFixed:15,feePercent:1.5,spreadOffset:0.03,speed:"1–5 business days",speedColor:"var(--muted)"},
     ];
-
-    // Mid-market rate USDC→EURC (approx, updates from swap widget if available)
-    let MID_RATE = 0.9047;
-
-    function calcReceived(provider, amount) {
-      const feeAmt  = provider.feeFixed + (amount * provider.feePercent / 100);
-      const netAmt  = amount - feeAmt;
-      const rate    = MID_RATE - provider.spreadOffset;
-      return {
-        received: Math.max(0, netAmt * rate),
-        fee: feeAmt,
-        rate: rate,
-      };
-    }
-
-    function fmtEUR(n) {
-      return "€" + n.toFixed(2);
-    }
-
-    function fmtFee(provider, amount) {
-      const fee = provider.feeFixed + (amount * provider.feePercent / 100);
-      if (provider.feeFixed > 0 && provider.feePercent > 0) {
-        return `$${provider.feeFixed.toFixed(2)} + ${provider.feePercent}%`;
-      } else if (provider.feeFixed > 0) {
-        return `$${provider.feeFixed.toFixed(2)} fixed`;
-      } else if (provider.feePercent > 0) {
-        return `${provider.feePercent}% spread`;
-      } else {
-        return `$${fee.toFixed(4)}`;
-      }
-    }
-
-    function renderTable(amount) {
-      if (!amount || amount <= 0) amount = 1000;
-
-      // Calculate all results
-      const results = PROVIDERS.map(p => ({
-        provider: p,
-        ...calcReceived(p, amount),
-      }));
-
-      // Sort by received (best first)
-      results.sort((a, b) => b.received - a.received);
-
-      const best = results[0].received;
-
-      const tbody = document.getElementById("compare-body");
-      if (!tbody) return;
-
-      tbody.innerHTML = results.map((r, idx) => {
-        const p       = r.provider;
-        const savings = r.received - results[results.length - 1].received;
-        const isBest  = idx === 0;
-        const isArcFX = p.isArcFX;
-
-        const iconHtml = p.isLogo
-          ? `<img src="${p.icon}" alt="ArcFX" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" />`
-          : `<div class="provider-icon" style="background:${p.bgColor}">${p.icon}</div>`;
-
-        const savingsHtml = isBest
-          ? `<span class="best-badge">✦ Best rate</span>`
-          : savings > 0
-            ? `<span class="savings-badge">+${fmtEUR(savings)}</span>`
-            : `<span style="color:var(--muted);font-size:13px;">—</span>`;
-
-        return `
-          <tr class="compare-row${isBest ? " best-row" : ""}">
-            <td>
-              <div class="provider-cell">
-                ${iconHtml}
-                <div>
-                  <div class="provider-name">${p.name}</div>
-                  <div class="provider-type">${p.type}</div>
-                </div>
-              </div>
-            </td>
-            <td>
-              <div class="amount-received">${fmtEUR(r.received)}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace;">
-                rate: ${r.rate.toFixed(4)}
-              </div>
-            </td>
-            <td class="fee-cell hide-mobile">
-              <span class="fee-val">${p.isArcFX ? "$0.0002" : fmtFee(p, amount)}</span>
-            </td>
-            <td class="speed-cell hide-mobile" style="color:${p.speedColor}">
-              ${p.speed}
-            </td>
-            <td>${savingsHtml}</td>
-          </tr>
-        `;
+    let MID_RATE=0.9047;
+    function calcReceived(p,amt){const fee=p.feeFixed+(amt*p.feePercent/100);const net=amt-fee;const rate=MID_RATE-p.spreadOffset;return{received:Math.max(0,net*rate),fee,rate};}
+    function fmtEUR(n){return"€"+n.toFixed(2);}
+    function renderTable(amount){
+      if(!amount||amount<=0)amount=1000;
+      const results=PROVIDERS.map(p=>({provider:p,...calcReceived(p,amount)}));
+      results.sort((a,b)=>b.received-a.received);
+      const tbody=document.getElementById("compare-body");
+      if(!tbody)return;
+      tbody.innerHTML=results.map((r,idx)=>{
+        const p=r.provider;
+        const isBest=idx===0;
+        const isWorst=idx===results.length-1;
+        const savings=r.received-results[results.length-1].received;
+        const iconHtml=p.isLogo?`<img src="${p.icon}" alt="ArcFX" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" />`:`<div class="provider-icon" style="background:${p.bgColor}">${p.icon}</div>`;
+        const feeAmt=p.feeFixed+(parseFloat(String(amount))*p.feePercent/100);
+        const feeDisplay=p.isArcFX?"$0.0002":`$${feeAmt.toFixed(2)}`;
+        const savingsHtml=isBest?`<span class="best-badge">✦ Best rate</span>`:isWorst?`<span class="baseline-pill">Baseline</span>`:savings>0?`<span class="savings-badge">+${fmtEUR(savings)}</span>`:`<span style="color:var(--muted)">—</span>`;
+        return`<tr class="compare-row${isBest?" best-row":""}"><td><div class="provider-cell">${iconHtml}<div><div class="provider-name">${p.name}</div><div class="provider-type">${p.type}</div></div></div></td><td><div class="amount-received">${fmtEUR(r.received)}</div><div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;">rate: ${r.rate.toFixed(4)}</div></td><td class="fee-cell hide-mobile"><span class="fee-val">${feeDisplay}</span></td><td class="speed-cell hide-mobile" style="color:${p.speedColor}">${p.speed}</td><td>${savingsHtml}</td></tr>`;
       }).join("");
     }
-
-    // Init + debounce input
-    function debounceCompare(fn, ms) {
-      let t;
-      return function(...args) { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
+    function debounce(fn,ms){let t;return function(...a){clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
+    document.addEventListener("DOMContentLoaded",function(){
       renderTable(1000);
-
-      const inp = document.getElementById("compare-amount");
-      if (inp) {
-        inp.addEventListener("input", debounceCompare(function(e) {
-          const val = parseFloat(e.target.value);
-          renderTable(val);
-        }, 300));
-      }
+      const inp=document.getElementById("compare-amount");
+      if(inp)inp.addEventListener("input",debounce(function(e){renderTable(parseFloat(e.target.value));},300));
     });
-
-    // Update mid-rate from live swap estimate if available
-    // Called by main.ts when an estimate is fetched
-    window.updateCompareRate = function(rate) {
-      if (rate && rate > 0) {
-        MID_RATE = rate;
-        const inp = document.getElementById("compare-amount");
-        renderTable(inp ? parseFloat(inp.value) || 1000 : 1000);
-      }
-    };
+    window.updateCompareRate=function(rate){if(rate>0){MID_RATE=rate;const inp=document.getElementById("compare-amount");renderTable(inp?parseFloat(inp.value)||1000:1000);}};
   </script>
 
-
-
-    <!-- ── Ecosystem Filter Logic ────────────────────────── -->
+  <!-- Ecosystem filter -->
   <script>
-    function filterEco(cat, btn) {
-      // Update active filter button
-      document.querySelectorAll(".eco-filter").forEach(b => b.classList.remove("active"));
+    function filterEco(cat,btn){
+      document.querySelectorAll(".eco-filter").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
-
-      // Show/hide cards
-      document.querySelectorAll(".eco-card").forEach(card => {
-        const cardCat = card.getAttribute("data-cat");
-        if (cat === "all" || cardCat === cat || cardCat === "all") {
-          card.style.display = "flex";
-        } else {
-          card.style.display = "none";
-        }
+      document.querySelectorAll(".eco-card").forEach(card=>{
+        const cc=card.getAttribute("data-cat");
+        card.style.display=(cat==="all"||cc===cat||cc==="all")?"flex":"none";
       });
     }
   </script>
 
-
-  <!-- ── Tab switcher ───────────────────────────────────── -->
+  <!-- Tab switcher + reveal + waitlist -->
   <script>
-    function switchAppTab(tab) {
-      ["swap","bridge","history"].forEach(t => {
-        const panel = document.getElementById("panel-"+t);
-        const btn   = document.getElementById("tab-"+t);
-        if (!panel || !btn) return;
-        if (t === tab) {
-          panel.style.display = "block";
-          btn.classList.add("active");
-        } else {
-          panel.style.display = "none";
-          btn.classList.remove("active");
-        }
+    function switchAppTab(tab){
+      ["swap","bridge","history"].forEach(t=>{
+        const panel=document.getElementById("panel-"+t);
+        const btn=document.getElementById("tab-"+t);
+        if(!panel||!btn)return;
+        if(t===tab){panel.style.display="block";btn.classList.add("active");}
+        else{panel.style.display="none";btn.classList.remove("active");}
       });
-      if (tab === "history" && typeof window.loadHistory === "function") window.loadHistory();
+      if(tab==="history"&&typeof window.loadHistory==="function")window.loadHistory();
     }
 
     // Reveal on scroll
-    const obs = new IntersectionObserver(entries => {
-      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); } });
-    }, { threshold: 0.1 });
-    document.querySelectorAll(".reveal").forEach(el => obs.observe(el));
+    const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");obs.unobserve(e.target);}});},{threshold:0.1});
+    document.querySelectorAll(".reveal").forEach(el=>obs.observe(el));
 
     // Waitlist form
-    const wlForm = document.getElementById("waitlist-form");
-    const wlSuccess = document.getElementById("form-success");
-    const wlBtn = document.getElementById("waitlist-submit");
-    if (wlForm) {
-      wlForm.addEventListener("submit", async function(e) {
+    const wlForm=document.getElementById("waitlist-form");
+    const wlSuccess=document.getElementById("form-success");
+    const wlBtn=document.getElementById("waitlist-submit");
+    if(wlForm){
+      wlForm.addEventListener("submit",async function(e){
         e.preventDefault();
-        wlBtn.disabled = true; wlBtn.textContent = "Submitting…";
-        try {
-          const res = await fetch(wlForm.action, { method: "POST", body: new FormData(wlForm), headers: { Accept: "application/json" } });
-          if (res.ok) { wlForm.style.display = "none"; wlSuccess.style.display = "block"; }
-          else { wlBtn.disabled = false; wlBtn.textContent = "Request early access →"; alert("Try again."); }
-        } catch { wlBtn.disabled = false; wlBtn.textContent = "Request early access →"; }
+        wlBtn.disabled=true;wlBtn.textContent="Submitting…";
+        try{
+          const res=await fetch(wlForm.action,{method:"POST",body:new FormData(wlForm),headers:{Accept:"application/json"}});
+          if(res.ok){wlForm.style.display="none";wlSuccess.style.display="block";}
+          else{wlBtn.disabled=false;wlBtn.textContent="Request early access →";alert("Try again.");}
+        }catch{wlBtn.disabled=false;wlBtn.textContent="Request early access →";}
       });
     }
   </script>
