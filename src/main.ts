@@ -366,8 +366,19 @@ async function executeBridge(): Promise<void> {
     });
 
     ["bstep-approve","bstep-burn","bstep-attest","bstep-mint"].forEach(id => setBridgeStep(id,"done"));
-    const last = (result as any)?.steps?.[(result as any).steps.length-1];
-    const explorerUrl = last?.data?.explorerUrl ?? (toArc ? "https://testnet.arcscan.app" : "https://sepolia.etherscan.io");
+    // Get tx hash from bridge result — try multiple paths
+    const steps    = (result as any)?.steps ?? [];
+    const lastStep = steps[steps.length - 1];
+    const txHash   = lastStep?.data?.txHash
+                  ?? lastStep?.txHash
+                  ?? lastStep?.data?.transactionHash
+                  ?? (result as any)?.txHash
+                  ?? null;
+
+    const baseUrl  = toArc ? "https://testnet.arcscan.app" : "https://sepolia.etherscan.io";
+    // Use tx URL if we have hash, otherwise link to user address (shows all related txs)
+    const explorerUrl = lastStep?.data?.explorerUrl
+                     ?? (txHash ? `${baseUrl}/tx/${txHash}` : `${baseUrl}/address/${userAddress}`);
 
     setHTML("bridge-status",`<div class="status success"><div class="status-title">✅ Bridge complete</div><div class="status-row"><span>${amount} USDC</span><span class="arrow">→</span><strong>${amount} USDC on ${destName}</strong></div><a class="explorer-link" href="${explorerUrl}" target="_blank" rel="noopener">View on explorer ↗</a></div>`);
     if (amtInput) amtInput.value = "";
