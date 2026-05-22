@@ -1360,76 +1360,206 @@
   </section>
 
   <!-- Waitlist -->
-  <section id="waitlist" style="background:var(--bg-card);border-top:1px solid var(--border);">
-    <div class="container">
-      <div class="waitlist-inner">
-        <div class="section-label" style="text-align:center;">Early access</div>
-        <div class="section-title" style="text-align:center;margin-bottom:16px;">Be first on Arc Mainnet</div>
-        <p class="section-sub" style="text-align:center;margin:0 auto 36px;">Join the waitlist and get early access to ArcFX on Arc Mainnet — plus co-marketing opportunities for builders.</p>
-        <form class="waitlist-form" id="waitlist-form" action="https://formspree.io/f/maqvkybb" method="POST">
-          <div class="form-row">
-            <div class="form-field"><label>First name</label><input type="text" name="first_name" placeholder="Jaroslav" required /></div>
-            <div class="form-field"><label>Last name</label><input type="text" name="last_name" placeholder="Golis" required /></div>
+  <!-- ── Waitlist ── -->
+  <section id="waitlist" style="background:#060b18;border-top:1px solid #1e293b;padding:80px 28px;">
+    <div style="max-width:520px;margin:0 auto;">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:40px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;
+                    color:#2563eb;text-transform:uppercase;letter-spacing:0.14em;margin-bottom:14px;">
+          Early access
+        </div>
+        <h2 style="font-size:clamp(24px,3.5vw,36px);font-weight:700;color:#f1f5f9;
+                   letter-spacing:-0.8px;line-height:1.2;margin-bottom:14px;">
+          Be first on Arc Mainnet
+        </h2>
+        <p style="font-size:15px;color:#475569;line-height:1.7;max-width:400px;margin:0 auto;">
+          Get early access to ArcFX on Arc Mainnet and co-marketing opportunities for builders.
+        </p>
+      </div>
+
+      <!-- Form card -->
+      <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:28px;">
+        <form id="waitlist-form" action="https://formspree.io/f/maqvkybb" method="POST">
+
+          <!-- Name row -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label style="display:block;font-size:10px;font-weight:600;color:#334155;
+                            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
+                First name
+              </label>
+              <input type="text" name="first_name" placeholder="First name" required
+                     style="width:100%;background:#060b18;border:1px solid #1e293b;border-radius:6px;
+                            color:#f1f5f9;font-size:13.5px;font-family:inherit;padding:10px 12px;
+                            outline:none;transition:border-color .15s;"
+                     onfocus="this.style.borderColor='#2563eb'"
+                     onblur="this.style.borderColor='#1e293b'" />
+            </div>
+            <div>
+              <label style="display:block;font-size:10px;font-weight:600;color:#334155;
+                            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
+                Last name
+              </label>
+              <input type="text" name="last_name" placeholder="Last name" required
+                     style="width:100%;background:#060b18;border:1px solid #1e293b;border-radius:6px;
+                            color:#f1f5f9;font-size:13.5px;font-family:inherit;padding:10px 12px;
+                            outline:none;transition:border-color .15s;"
+                     onfocus="this.style.borderColor='#2563eb'"
+                     onblur="this.style.borderColor='#1e293b'" />
+            </div>
           </div>
-          <div class="form-field"><label>Email</label><input type="email" name="email" placeholder="you@company.com" required /></div>
-          <div class="form-field">
-            <label>I am a</label>
-            <select name="role">
-              <option value="">Select your role</option>
-              <option value="builder">Builder / Developer</option>
-              <option value="business">Business / Team</option>
-              <option value="dao">DAO / Protocol</option>
-              <option value="investor">Investor</option>
-              <option value="other">Other</option>
+
+          <!-- Email -->
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:10px;font-weight:600;color:#334155;
+                          text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
+              Work email
+            </label>
+            <input type="email" name="email" placeholder="you@company.com" required
+                   style="width:100%;background:#060b18;border:1px solid #1e293b;border-radius:6px;
+                          color:#f1f5f9;font-size:13.5px;font-family:inherit;padding:10px 12px;
+                          outline:none;transition:border-color .15s;"
+                   onfocus="this.style.borderColor='#2563eb'"
+                   onblur="this.style.borderColor='#1e293b'" />
+          </div>
+
+          <!-- Role -->
+          <div style="margin-bottom:24px;">
+            <label style="display:block;font-size:10px;font-weight:600;color:#334155;
+                          text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
+              I am a
+            </label>
+            <select name="role"
+                    style="width:100%;background:#060b18;border:1px solid #1e293b;border-radius:6px;
+                           color:#f1f5f9;font-size:13.5px;font-family:inherit;padding:10px 12px;
+                           outline:none;transition:border-color .15s;-webkit-appearance:none;
+                           cursor:pointer;"
+                    onfocus="this.style.borderColor='#2563eb'"
+                    onblur="this.style.borderColor='#1e293b'">
+              <option value="" style="background:#0f172a;">Select your role</option>
+              <option value="builder"  style="background:#0f172a;">Builder / Developer</option>
+              <option value="business" style="background:#0f172a;">Business / Team</option>
+              <option value="dao"      style="background:#0f172a;">DAO / Protocol</option>
+              <option value="investor" style="background:#0f172a;">Investor</option>
+              <option value="other"    style="background:#0f172a;">Other</option>
             </select>
           </div>
-          <button type="submit" class="submit-btn" id="waitlist-submit">Request early access →</button>
-          <p class="form-note">No spam. Early access only. Unsubscribe anytime.</p>
+
+          <!-- Submit button -->
+          <button type="submit" id="waitlist-submit"
+                  style="width:100%;padding:13px;background:#2563eb;color:#fff;border:none;
+                         border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;
+                         font-family:inherit;letter-spacing:-0.1px;transition:background .15s;"
+                  onmouseover="this.style.background='#1d4ed8'"
+                  onmouseout="this.style.background='#2563eb'">
+            Request early access →
+          </button>
+
+          <p style="text-align:center;font-size:11.5px;color:#334155;margin-top:14px;">
+            No spam. Early access only. Unsubscribe anytime.
+          </p>
         </form>
-        <div class="form-success" id="form-success">
-          ✅ You're on the list. We'll be in touch when mainnet launches.<br>
-          <span style="font-size:12px;margin-top:8px;display:block;">Follow us: <a href="https://x.com/arcfxapp" target="_blank" rel="noopener" style="color:var(--teal);">@arcfxapp</a></span>
+
+        <!-- Success state -->
+        <div id="form-success" style="display:none;text-align:center;padding:20px 0;">
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(16,185,129,0.1);
+                      border:1px solid rgba(16,185,129,0.2);display:flex;align-items:center;
+                      justify-content:center;margin:0 auto 14px;font-size:18px;">✓</div>
+          <div style="font-size:15px;font-weight:600;color:#f1f5f9;margin-bottom:6px;">
+            You're on the list.
+          </div>
+          <div style="font-size:13px;color:#475569;line-height:1.7;">
+            We'll be in touch when Arc Mainnet launches.<br>
+            <a href="https://x.com/arcfxapp" target="_blank" rel="noopener"
+               style="color:#2563eb;text-decoration:none;">Follow @arcfxapp →</a>
+          </div>
         </div>
       </div>
+
     </div>
   </section>
 
-  <!-- Footer -->
-  <footer>
-    <div class="footer-inner">
-      <div style="max-width:220px;">
-        <div class="footer-logo"><img src="/logo.png" alt="ArcFX" />ArcFX</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8;">The business layer for stablecoins on Arc.<br>Built on Arc · Powered by Circle App Kit</div>
+  <!-- ── Footer ── -->
+  <footer style="background:#060b18;border-top:1px solid #1e293b;padding:56px 28px 36px;">
+    <div style="max-width:1100px;margin:0 auto;">
+
+      <!-- Top row: brand + link columns -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px;">
+
+        <!-- Brand -->
+        <div>
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;">
+            <img src="/logo.png" alt="ArcFX"
+                 style="width:26px;height:26px;border-radius:50%;object-fit:cover;
+                        border:1px solid #1e293b;" />
+            <span style="font-size:14px;font-weight:600;color:#f1f5f9;">ArcFX</span>
+          </div>
+          <p style="font-size:12px;color:#334155;line-height:1.8;">
+            The business layer on Arc.<br>
+            Built with Circle App Kit.
+          </p>
+        </div>
+
+        <!-- Products -->
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+                      color:#334155;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:14px;">
+            Products
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <a href="#app"       style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Swap</a>
+            <a href="#app"       style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Bridge</a>
+            <a href="/multisend" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Multisender</a>
+            <a href="/pay"       style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Pay links</a>
+            <a href="/invoice"   style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Invoices</a>
+            <a href="/history"   style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">History</a>
+          </div>
+        </div>
+
+        <!-- Ecosystem -->
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+                      color:#334155;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:14px;">
+            Ecosystem
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <a href="#ecosystem"                                               style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Arc directory</a>
+            <a href="#compare"                                                 style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Compare rates</a>
+            <a href="https://arc.network"         target="_blank" rel="noopener" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Arc Network</a>
+            <a href="https://testnet.arcscan.app" target="_blank" rel="noopener" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">ArcScan</a>
+            <a href="https://faucet.circle.com"   target="_blank" rel="noopener" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">USDC Faucet</a>
+          </div>
+        </div>
+
+        <!-- Company -->
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+                      color:#334155;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:14px;">
+            Company
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <a href="#waitlist"                                                style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Early access</a>
+            <a href="https://x.com/arcfxapp"           target="_blank" rel="noopener" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">@arcfxapp</a>
+            <a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">GitHub</a>
+            <a href="mailto:arcfxapp@gmail.com"         style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Contact</a>
+          </div>
+        </div>
+
       </div>
-      <div>
-        <div class="footer-col-title">Products</div>
-        <a href="#app"       class="footer-link">Swap</a>
-        <a href="#app"       class="footer-link">Bridge</a>
-        <a href="/multisend" class="footer-link">Multisender</a>
-        <a href="/pay"       class="footer-link">Pay links</a>
-        <a href="/invoice"   class="footer-link">Invoices</a>
-        <a href="/history"   class="footer-link">History</a>
+
+      <!-- Bottom bar -->
+      <div style="padding-top:24px;border-top:1px solid #1e293b;display:flex;
+                  justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#334155;">
+          © 2026 ArcFX · Arc Testnet · Non-custodial
+        </span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#1e293b;">
+          0xF7aeb369...e71398
+        </span>
       </div>
-      <div>
-        <div class="footer-col-title">Ecosystem</div>
-        <a href="#ecosystem"                                               class="footer-link">Arc directory</a>
-        <a href="#compare"                                                 class="footer-link">Compare rates</a>
-        <a href="https://arc.network"          target="_blank" rel="noopener" class="footer-link">Arc Network</a>
-        <a href="https://docs.arc.network"     target="_blank" rel="noopener" class="footer-link">Arc Docs</a>
-        <a href="https://testnet.arcscan.app"  target="_blank" rel="noopener" class="footer-link">ArcScan</a>
-        <a href="https://faucet.circle.com"    target="_blank" rel="noopener" class="footer-link">USDC Faucet</a>
-      </div>
-      <div>
-        <div class="footer-col-title">Connect</div>
-        <a href="https://x.com/arcfxapp"            target="_blank" rel="noopener" class="footer-link">𝕏 @arcfxapp</a>
-        <a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" class="footer-link">GitHub</a>
-        <a href="mailto:arcfxapp@gmail.com"          class="footer-link">arcfxapp@gmail.com</a>
-        <a href="#waitlist"                          class="footer-link">Join waitlist</a>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <span>© 2026 ArcFX · Arc Testnet · Non-custodial</span>
-      <span>Contract: 0xF7aeb369...e71398</span>
+
     </div>
   </footer>
 
