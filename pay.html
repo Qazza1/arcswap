@@ -484,7 +484,7 @@ async function sendPayment() {
     const payments = new Contract(PAYMENTS_ADDRESS, PAYMENTS_ABI, signer);
 
     // Build paymentId from note or fallback
-    const noteText = urlNote || "arcfx-payment";
+    const noteText = note || "arcfx-payment";
     const paymentId = ethersId(noteText); // keccak256 of the note string
 
     // Step 1 — Approve ArcFXPayments to spend gross amount
