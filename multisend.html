@@ -1104,29 +1104,29 @@
     function renderContactsPanel() {
       const container = document.getElementById("contacts-list");
       if (!container) return;
-      const raw = localStorage.getItem("arcfx_address_book");
-      const entries = raw ? JSON.parse(raw) : [];
+      const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
 
       if (!entries.length) {
-        container.innerHTML = '<div style="text-align:center;padding:28px;color:#475569;font-size:13px;">No contacts saved yet — add one above.</div>';
+        container.innerHTML = "<div style=\"text-align:center;padding:28px;color:#475569;font-size:13px;\">No contacts saved yet — add one above.</div>";
         return;
       }
 
-      container.innerHTML = entries.map(function(e, i) {
+      let html = "";
+      entries.forEach(function(e, i) {
         const initial = (e.name || "?").charAt(0).toUpperCase();
-        const addr = e.address || "";
-        const name = (e.name || "").replace(/'/g, "&#39;");
-        const addrSafe = addr.replace(/'/g, "&#39;");
-        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#0a0f1e;border:1px solid #1e293b;">'
-          + '<div style="width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;">' + initial + '</div>'
-          + '<div style="flex:1;min-width:0;">'
-          + '<div style="font-size:13px;font-weight:600;color:#f1f5f9;">' + name + '</div>'
-          + '<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + addr + '</div>'
-          + '</div>'
-          + '<input id="cab-' + i + '" type="number" min="0" step="any" placeholder="Amount" style="width:86px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;color:#f1f5f9;font-size:12px;font-family:inherit;padding:6px 9px;outline:none;text-align:right;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" />'
-          + '<button onclick="addContactAsRecipient('' + addrSafe + '','' + name + '',' + i + ')" style="padding:7px 12px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">+ Add</button>'
-          + '</div>';
-      }).join("");
+        const addr    = (e.address || "");
+        const name    = (e.name || "");
+        html += "<div style=\"display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;\">";
+        html += "<div style=\"width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;\">" + initial + "</div>";
+        html += "<div style=\"flex:1;min-width:0;\">";
+        html += "<div style=\"font-size:13px;font-weight:600;color:#f1f5f9;\">" + name + "</div>";
+        html += "<div style=\"font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\">" + addr + "</div>";
+        html += "</div>";
+        html += "<input id=\"cab-" + i + "\" type=\"number\" min=\"0\" step=\"any\" placeholder=\"Amount\" style=\"width:86px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;color:#f1f5f9;font-size:12px;font-family:inherit;padding:6px 9px;outline:none;text-align:right;\" />";
+        html += "<button onclick=\"addContactAsRecipient(" + i + ")\" style=\"padding:7px 12px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;\">+ Add</button>";
+        html += "</div>";
+      });
+      container.innerHTML = html;
     }
 
     window.saveContactFromMultisend = function() {
@@ -1151,12 +1151,15 @@
       renderContactsPanel();
     };
 
-    window.addContactAsRecipient = function(address, name, idx) {
-      const amtEl = document.getElementById("cab-" + idx);
-      const amt   = amtEl ? amtEl.value.trim() : "";
+    window.addContactAsRecipient = function(idx) {
+      const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+      const e       = entries[idx];
+      if (!e) return;
+      const amtEl   = document.getElementById("cab-" + idx);
+      const amt     = amtEl ? amtEl.value.trim() : "";
 
       if (!amt || parseFloat(amt) <= 0) {
-        showStatus("Enter an amount for " + name + ".", "error");
+        showStatus("Enter an amount for " + e.name + ".", "error");
         if (amtEl) amtEl.focus();
         return;
       }
@@ -1167,11 +1170,11 @@
         return;
       }
 
-      recipients.push({ address, amount: amt, label: name });
+      recipients.push({ address: e.address, amount: amt, label: e.name });
       if (amtEl) amtEl.value = "";
       renderTable();
       updateSummary();
-      showStatus(name + " added as recipient.", "");
+      showStatus(e.name + " added as recipient.", "");
     };
 
     window.setMode = function(mode) {
