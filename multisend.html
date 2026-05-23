@@ -383,9 +383,23 @@
       </p>
       <div class="feature-pills">
         <div class="pill"><div class="pill-dot" style="background:var(--green)"></div> Free up to 5 recipients</div>
-        <div class="pill"><div class="pill-dot" style="background:var(--amber)"></div> Pro: up to 500 — 0.1% fee</div>
+        <div class="pill"><div class="pill-dot" style="background:var(--amber)"></div> Pro: up to 500 — 0.15% fee</div>
         <div class="pill"><div class="pill-dot" style="background:var(--blue)"></div> CSV upload supported</div>
         <div class="pill"><div class="pill-dot" style="background:var(--blue)"></div> One MetaMask signature</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+        <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:4px;background:#0a0f1e;border:1px solid #1e293b;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#475569;letter-spacing:0.04em;">Safe / Multi-Sig Compatible</span>
+        </div>
+        <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:4px;background:#0a0f1e;border:1px solid #1e293b;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#475569;letter-spacing:0.04em;">Non-custodial</span>
+        </div>
+        <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:4px;background:#0a0f1e;border:1px solid rgba(16,185,129,0.3);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#10b981;letter-spacing:0.04em;">Live on Arc Testnet</span>
+        </div>
       </div>
     </div>
 
@@ -468,6 +482,10 @@
             <button class="upload-tab active" id="tab-manual" onclick="setMode('manual')">Manual</button>
             <button class="upload-tab" id="tab-csv" onclick="setMode('csv')">Paste CSV</button>
             <button class="upload-tab" id="tab-upload" onclick="setMode('upload')">Upload file</button>
+            <button class="upload-tab" id="tab-contacts" onclick="setMode('contacts')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px;"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+              Contacts
+            </button>
           </div>
 
           <!-- Manual mode -->
@@ -489,6 +507,13 @@
             <button onclick="parseCSV()" style="margin-top:10px;background:var(--blue-dim);border:1px solid rgba(61,126,255,.3);color:var(--blue);border-radius:var(--rsm);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">
               Parse CSV →
             </button>
+          </div>
+
+          <!-- Contacts mode -->
+          <div id="contacts-mode" style="display:none;">
+            <div id="contacts-list" style="display:flex;flex-direction:column;gap:8px;padding:12px 0;">
+              <!-- populated by JS -->
+            </div>
           </div>
 
           <!-- File upload mode -->
@@ -593,7 +618,7 @@
             </div>
             <div class="summary-cell">
               <div class="summary-val" id="sum-fee">0.00</div>
-              <div class="summary-lbl">ArcFX fee (0.1%)</div>
+              <div class="summary-lbl">ArcFX fee (0.15%)</div>
             </div>
           </div>
 
@@ -1039,6 +1064,70 @@
     let rawData      = [];   // raw 2D array from file
 
     // ── Mode switcher (extend existing setMode) ───────────────────────────
+    // ── Contacts mode ────────────────────────────────────────────────────
+    function renderContactsPanel() {
+      const container = document.getElementById("contacts-list");
+      if (!container) return;
+      const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+
+      if (!entries.length) {
+        container.innerHTML = `<div style="text-align:center;padding:28px;color:#475569;font-size:13px;">
+          No contacts saved yet.<br>
+          <a href="/" style="color:#2563eb;text-decoration:none;font-size:12px;">Add contacts on the main page →</a>
+        </div>`;
+        return;
+      }
+
+      container.innerHTML = entries.map((e, i) => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;
+                    border-radius:8px;background:#0a0f1e;border:1px solid #1e293b;">
+          <div style="width:34px;height:34px;border-radius:50%;background:rgba(37,99,235,0.15);
+                      border:1px solid rgba(37,99,235,0.2);display:flex;align-items:center;
+                      justify-content:center;font-size:13px;font-weight:600;
+                      color:#2563eb;flex-shrink:0;">${e.name.charAt(0).toUpperCase()}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:#f1f5f9;">${e.name}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569;
+                        overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.address}</div>
+          </div>
+          <input id="contact-amt-${i}" type="number" min="0" step="any" placeholder="Amount"
+                 style="width:90px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;
+                        color:#f1f5f9;font-size:12px;font-family:inherit;padding:6px 9px;
+                        outline:none;text-align:right;"
+                 onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" />
+          <button onclick="addContactAsRecipient('${e.address}', '${e.name}', ${i})"
+                  style="padding:7px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;
+                         font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
+                         white-space:nowrap;transition:background .15s;"
+                  onmouseover="this.style.background='#1d4ed8'"
+                  onmouseout="this.style.background='#2563eb'">+ Add</button>
+        </div>
+      `).join("");
+    }
+
+    window.addContactAsRecipient = function(address, name, idx) {
+      const amtEl = document.getElementById("contact-amt-" + idx);
+      const amt   = amtEl ? amtEl.value.trim() : "";
+
+      if (!amt || parseFloat(amt) <= 0) {
+        showStatus("Enter an amount for " + name + ".", "error");
+        if (amtEl) amtEl.focus();
+        return;
+      }
+
+      const limit = selectedTier === "free" ? 5 : 500;
+      if (recipients.length >= limit) {
+        showStatus((selectedTier === "free" ? "Free" : "Pro") + " tier limit: " + limit + " recipients.", "error");
+        return;
+      }
+
+      recipients.push({ address, amount: amt, label: name });
+      if (amtEl) amtEl.value = "";
+      renderTable();
+      updateSummary();
+      showStatus(name + " added as recipient.", "");
+    };
+
     const _origSetMode = window.setMode;
     window.setMode = function(mode) {
       document.querySelectorAll(".upload-tab").forEach(b => b.classList.remove("active"));
@@ -1288,5 +1377,41 @@
     };
   </script>
 
+
+  <script>
+    // Address book import from sessionStorage (set by main page)
+    function checkAddressBookImport() {
+      const raw = sessionStorage.getItem("arcfx_ab_import");
+      if (!raw) return;
+      try {
+        const entries = JSON.parse(raw);
+        if (!entries.length) return;
+        const banner = document.getElementById("ab-import-banner");
+        const label  = document.getElementById("ab-import-label");
+        if (banner) banner.style.display = "flex";
+        if (label)  label.textContent = entries.length + " address book contact" + (entries.length !== 1 ? "s" : "") + " ready to import";
+      } catch {}
+    }
+
+    function importFromAddressBook() {
+      const raw = sessionStorage.getItem("arcfx_ab_import");
+      if (!raw) return;
+      try {
+        const entries = JSON.parse(raw);
+        entries.forEach(e => {
+          // Add each contact as a recipient row with amount 0
+          if (typeof addRecipient === "function") {
+            addRecipient(e.address, "", e.name);
+          }
+        });
+        sessionStorage.removeItem("arcfx_ab_import");
+        const banner = document.getElementById("ab-import-banner");
+        if (banner) banner.style.display = "none";
+      } catch {}
+    }
+
+    window.importFromAddressBook = importFromAddressBook;
+    document.addEventListener("DOMContentLoaded", checkAddressBookImport);
+  </script>
 </body>
 </html>
