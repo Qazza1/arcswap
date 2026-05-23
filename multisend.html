@@ -814,10 +814,21 @@
     // ─── Input mode ───────────────────────────────────────────────────────────
     window.setMode = function(mode) {
       inputMode = mode;
-      el("tab-manual").classList.toggle("active", mode === "manual");
-      el("tab-csv").classList.toggle("active", mode === "csv");
-      el("manual-mode").style.display = mode === "manual" ? "block" : "none";
-      el("csv-mode").style.display    = mode === "csv"    ? "block" : "none";
+      // Update tab active states
+      document.querySelectorAll(".upload-tab").forEach(b => b.classList.remove("active"));
+      const activeTab = document.getElementById("tab-" + mode);
+      if (activeTab) activeTab.classList.add("active");
+      // Show/hide panels
+      el("manual-mode").style.display  = mode === "manual"   ? "block" : "none";
+      el("csv-mode").style.display     = mode === "csv"      ? "block" : "none";
+      const um = document.getElementById("upload-mode");
+      if (um) um.style.display         = mode === "upload"   ? "block" : "none";
+      const cm = document.getElementById("contacts-mode");
+      if (cm) cm.style.display         = mode === "contacts" ? "block" : "none";
+      // Render contacts when switching to contacts tab
+      if (mode === "contacts" && typeof renderContactsPanel === "function") {
+        renderContactsPanel();
+      }
     };
 
     // ─── Recipients ───────────────────────────────────────────────────────────
