@@ -238,7 +238,7 @@
         return "<div style='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;'>"
           + "<div style='width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;'>" + (e.name||"?").charAt(0).toUpperCase() + "</div>"
           + "<div style='flex:1;min-width:0;'><div style='font-size:13px;font-weight:600;color:#f1f5f9;'>" + (e.name||"") + "</div><div style='font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>" + (e.address||"") + "</div></div>"
-          + "<button onclick="navigator.clipboard.writeText('" + (e.address||"") + "')" style='background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;font-family:inherit;'>Copy</button>"
+          + "<button onclick='copyContact(" + i + ")' style='background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;font-family:inherit;'>Copy</button>"
           + "</div>";
       }).join("");
     }
