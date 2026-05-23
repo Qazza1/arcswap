@@ -1163,15 +1163,17 @@
       showStatus(name + " added as recipient.", "");
     };
 
-    const _origSetMode = window.setMode;
     window.setMode = function(mode) {
       document.querySelectorAll(".upload-tab").forEach(b => b.classList.remove("active"));
       const tab = document.getElementById("tab-"+mode);
       if (tab) tab.classList.add("active");
 
-      document.getElementById("manual-mode").style.display = mode==="manual" ? "block" : "none";
-      document.getElementById("csv-mode").style.display    = mode==="csv"    ? "block" : "none";
-      document.getElementById("upload-mode").style.display = mode==="upload" ? "block" : "none";
+      document.getElementById("manual-mode").style.display   = mode==="manual"   ? "block" : "none";
+      document.getElementById("csv-mode").style.display      = mode==="csv"      ? "block" : "none";
+      document.getElementById("upload-mode").style.display   = mode==="upload"   ? "block" : "none";
+      const cm = document.getElementById("contacts-mode");
+      if (cm) cm.style.display = mode==="contacts" ? "block" : "none";
+      if (mode === "contacts") renderContactsPanel();
     };
 
     // ── Drag and drop ──────────────────────────────────────────────────────
