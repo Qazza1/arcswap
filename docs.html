@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcFX API Docs — Developer Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root {
+      --navy:    #0a0f1e;
+      --card:    #0f172a;
+      --raised:  #111827;
+      --border:  #1e293b;
+      --blue:    #2563eb;
+      --teal:    #10b981;
+      --white:   #f1f5f9;
+      --muted:   #475569;
+      --subtle:  #334155;
+      --red:     #ef4444;
+      --amber:   #f59e0b;
+      --green:   #10b981;
+    }
+    html,body { height:100%; }
+    body { font-family:"Inter",system-ui,sans-serif; background:var(--navy); color:var(--white); line-height:1.6; -webkit-font-smoothing:antialiased; display:flex; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width:240px; flex-shrink:0; height:100vh; position:sticky; top:0;
+      background:var(--card); border-right:1px solid var(--border);
+      overflow-y:auto; padding:24px 0;
+    }
+    .sidebar-logo { display:flex; align-items:center; gap:9px; padding:0 20px 24px; border-bottom:1px solid var(--border); margin-bottom:20px; }
+    .sidebar-logo img { width:28px; height:28px; border-radius:50%; border:1px solid var(--border); }
+    .sidebar-logo span { font-size:14px; font-weight:600; color:var(--white); }
+    .sidebar-logo .version { font-family:"JetBrains Mono",monospace; font-size:9px; color:var(--blue); background:rgba(37,99,235,0.1); border:1px solid rgba(37,99,235,0.2); padding:1px 6px; border-radius:3px; margin-left:4px; }
+    .nav-section { padding:0 20px; margin-bottom:20px; }
+    .nav-section-title { font-family:"JetBrains Mono",monospace; font-size:9.5px; font-weight:600; color:var(--subtle); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:8px; }
+    .nav-link { display:block; padding:6px 10px; border-radius:5px; font-size:13px; color:var(--muted); text-decoration:none; transition:all .15s; margin-bottom:1px; }
+    .nav-link:hover { color:var(--white); background:var(--border); }
+    .nav-link.active { color:var(--white); background:rgba(37,99,235,0.15); border-left:2px solid var(--blue); padding-left:8px; }
+    .method-badge { font-family:"JetBrains Mono",monospace; font-size:8.5px; font-weight:600; padding:1px 5px; border-radius:3px; margin-right:6px; vertical-align:middle; }
+    .method-get  { background:rgba(16,185,129,0.15); color:#10b981; }
+    .method-post { background:rgba(37,99,235,0.15); color:#3b82f6; }
+    .method-del  { background:rgba(239,68,68,0.15); color:#ef4444; }
+
+    /* ── Main ── */
+    .main { flex:1; min-width:0; }
+
+    /* ── Top nav ── */
+    .topnav {
+      height:64px; display:flex; align-items:center; justify-content:space-between;
+      padding:0 40px; border-bottom:1px solid var(--border);
+      background:rgba(10,15,30,0.97); position:sticky; top:0; z-index:40;
+    }
+    .topnav-left { display:flex; align-items:center; gap:24px; }
+    .topnav-link { font-size:13.5px; color:var(--muted); text-decoration:none; transition:color .15s; }
+    .topnav-link:hover { color:var(--white); }
+    .pricing-badge { display:flex; align-items:center; gap:6px; padding:6px 14px; border-radius:6px; background:var(--blue); color:#fff; font-size:13px; font-weight:600; text-decoration:none; }
+
+    /* ── Content ── */
+    .content { max-width:860px; padding:48px 40px 80px; }
+
+    /* Section */
+    .section { margin-bottom:64px; }
+    .section-eyebrow { font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:600; color:var(--blue); text-transform:uppercase; letter-spacing:0.14em; margin-bottom:10px; }
+    .section-title { font-size:28px; font-weight:700; color:var(--white); letter-spacing:-0.5px; margin-bottom:12px; }
+    .section-sub { font-size:15px; color:var(--muted); line-height:1.7; max-width:640px; }
+
+    /* Endpoint card */
+    .endpoint { background:var(--card); border:1px solid var(--border); border-radius:10px; margin-bottom:24px; overflow:hidden; }
+    .endpoint-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+    .endpoint-method { font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:700; padding:3px 10px; border-radius:5px; }
+    .endpoint-path { font-family:"JetBrains Mono",monospace; font-size:14px; color:var(--white); font-weight:500; }
+    .endpoint-desc { font-size:13px; color:var(--muted); margin-left:auto; }
+    .endpoint-body { padding:20px; }
+
+    /* Code block */
+    .code-label { font-family:"JetBrains Mono",monospace; font-size:9.5px; font-weight:600; color:var(--subtle); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px; }
+    pre {
+      background:#060b18; border:1px solid var(--border); border-radius:8px;
+      padding:16px; overflow-x:auto; font-family:"JetBrains Mono",monospace;
+      font-size:12.5px; line-height:1.7; color:#94a3b8; margin-bottom:16px;
+    }
+    .k { color:#3b82f6; } /* keyword */
+    .s { color:#10b981; } /* string */
+    .n { color:#f59e0b; } /* number */
+    .c { color:#334155; } /* comment */
+    .p { color:#e2e8f0; } /* punctuation */
+    .key { color:#93c5fd; } /* json key */
+
+    /* Params table */
+    .params-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .params-table th { text-align:left; padding:8px 12px; font-size:9.5px; font-family:"JetBrains Mono",monospace; font-weight:600; color:var(--subtle); text-transform:uppercase; letter-spacing:0.1em; background:#060b18; border-bottom:1px solid var(--border); }
+    .params-table td { padding:10px 12px; border-bottom:1px solid #0f172a; vertical-align:top; }
+    .params-table tr:last-child td { border-bottom:none; }
+    .param-name { font-family:"JetBrains Mono",monospace; font-size:12.5px; color:#93c5fd; }
+    .param-type { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--subtle); }
+    .param-req  { font-size:10px; color:#ef4444; font-weight:600; }
+    .param-desc { color:var(--muted); font-size:13px; }
+
+    /* Info boxes */
+    .info-box { border-radius:8px; padding:14px 16px; margin-bottom:20px; font-size:13px; line-height:1.7; }
+    .info-blue  { background:rgba(37,99,235,0.08); border:1px solid rgba(37,99,235,0.2); color:#93c5fd; }
+    .info-green { background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); color:#6ee7b7; }
+    .info-amber { background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); color:#fcd34d; }
+
+    /* Divider */
+    .divider { border:none; border-top:1px solid var(--border); margin:48px 0; }
+
+    /* Pricing cards */
+    .pricing-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:24px; }
+    .pricing-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; }
+    .pricing-card.featured { border-color:var(--blue); background:rgba(37,99,235,0.05); }
+    .pricing-price { font-size:36px; font-weight:700; color:var(--white); letter-spacing:-1px; margin:8px 0; font-family:"JetBrains Mono",monospace; }
+    .pricing-price span { font-size:14px; color:var(--muted); font-weight:400; }
+    .pricing-feature { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin-top:10px; }
+    .pricing-feature svg { flex-shrink:0; color:var(--teal); }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <img src="/logo.png" alt="ArcFX" />
+    <span>ArcFX</span>
+    <span class="version">v1</span>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Getting started</div>
+    <a href="#overview"       class="nav-link active">Overview</a>
+    <a href="#authentication" class="nav-link">Authentication</a>
+    <a href="#errors"         class="nav-link">Errors</a>
+    <a href="#pricing"        class="nav-link">Pricing</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Payments</div>
+    <a href="#create-payment" class="nav-link"><span class="method-badge method-post">POST</span>Create payment</a>
+    <a href="#get-payment"    class="nav-link"><span class="method-badge method-get">GET</span>Get payment</a>
+    <a href="#list-payments"  class="nav-link"><span class="method-badge method-get">GET</span>List payments</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Multisend</div>
+    <a href="#multisend"        class="nav-link"><span class="method-badge method-post">POST</span>Create batch</a>
+    <a href="#multisend-status" class="nav-link"><span class="method-badge method-get">GET</span>Batch status</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Invoices</div>
+    <a href="#create-invoice" class="nav-link"><span class="method-badge method-post">POST</span>Create invoice</a>
+    <a href="#invoice-status" class="nav-link"><span class="method-badge method-get">GET</span>Invoice status</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Webhooks</div>
+    <a href="#webhooks" class="nav-link"><span class="method-badge method-post">POST</span>Register webhook</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Analytics</div>
+    <a href="#analytics-volume"  class="nav-link"><span class="method-badge method-get">GET</span>Volume</a>
+    <a href="#analytics-wallets" class="nav-link"><span class="method-badge method-get">GET</span>Wallets</a>
+  </div>
+</aside>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- Top nav -->
+  <nav class="topnav">
+    <div class="topnav-left">
+      <a href="/" class="topnav-link">← Back to ArcFX</a>
+      <a href="#" class="topnav-link">Changelog</a>
+    </div>
+    <a href="#pricing" class="pricing-badge">
+      $99/month — Get API access
+    </a>
+  </nav>
+
+  <div class="content">
+
+    <!-- ── Overview ── -->
+    <div class="section" id="overview">
+      <div class="section-eyebrow">API Reference</div>
+      <h1 class="section-title">ArcFX Developer API</h1>
+      <p class="section-sub">Programmatically create payments, send batch transfers, generate invoices, and query analytics on Arc. Built for businesses that need stablecoin infrastructure, not just a UI.</p>
+
+      <div class="info-green" style="margin-top:24px;">
+        <strong>Base URL:</strong> <code style="font-family:'JetBrains Mono',monospace;">https://api.arcfx.app/v1</code>
+        &nbsp;·&nbsp; All requests over HTTPS &nbsp;·&nbsp; Responses in JSON
+      </div>
+
+      <div class="code-label" style="margin-top:24px;">Quick example</div>
+      <pre><span class="c"># Create a payment link and get back a shareable URL</span>
+<span class="k">curl</span> -X POST https://api.arcfx.app/v1/payments/create \
+  -H <span class="s">"Authorization: Bearer YOUR_API_KEY"</span> \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{
+    "recipient": "0x4F81E3939232815e3C98B124A17BaC75304C82D8",
+    "amount": "250.00",
+    "token": "USDC",
+    "note": "Invoice #INV-2026-041"
+  }'</span>
+
+<span class="c"># Response</span>
+<span class="p">{</span>
+  <span class="key">"id"</span><span class="p">:</span> <span class="s">"pay_3k9xmT2qR8Lv"</span><span class="p">,</span>
+  <span class="key">"url"</span><span class="p">:</span> <span class="s">"https://arcfx.app/pay?to=0x4F81...&amount=250&token=USDC"</span><span class="p">,</span>
+  <span class="key">"status"</span><span class="p">:</span> <span class="s">"pending"</span><span class="p">,</span>
+  <span class="key">"created_at"</span><span class="p">:</span> <span class="s">"2026-05-23T09:41:00Z"</span>
+<span class="p">}</span></pre>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── Authentication ── -->
+    <div class="section" id="authentication">
+      <div class="section-eyebrow">Authentication</div>
+      <h2 class="section-title">API Keys</h2>
+      <p class="section-sub">All API requests require a Bearer token in the Authorization header. Generate your API key from the ArcFX dashboard after subscribing.</p>
+
+      <div class="info-amber" style="margin-top:20px;">
+        Keep your API key secret. Never expose it in client-side code or public repositories.
+      </div>
+
+      <div class="code-label">Authorization header</div>
+      <pre>Authorization: Bearer <span class="s">arcfx_live_sk_xxxxxxxxxxxxxxxxxxxx</span></pre>
+
+      <table class="params-table" style="margin-top:8px;">
+        <thead><tr><th>Key prefix</th><th>Environment</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="param-name">arcfx_live_sk_</span></td><td><span class="param-type">production</span></td><td class="param-desc">Real USDC on Arc Mainnet</td></tr>
+          <tr><td><span class="param-name">arcfx_test_sk_</span></td><td><span class="param-type">testnet</span></td><td class="param-desc">Test USDC on Arc Testnet</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── Payments ── -->
+    <div class="section" id="create-payment">
+      <div class="section-eyebrow">Payments</div>
+      <h2 class="section-title">Create a payment</h2>
+      <p class="section-sub">Generate a shareable pay link. The recipient receives net amount after the 0.15% protocol fee.</p>
+
+      <!-- POST endpoint -->
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="endpoint-method method-post" style="background:rgba(37,99,235,0.15);color:#3b82f6;">POST</span>
+          <span class="endpoint-path">/v1/payments/create</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="code-label">Request body</div>
+          <table class="params-table" style="margin-bottom:20px;">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><span class="param-name">recipient</span></td><td><span class="param-type">string</span></td><td><span class="param-req">required</span></td><td class="param-desc">Wallet address that receives payment</td></tr>
+              <tr><td><span class="param-name">amount</span></td><td><span class="param-type">string</span></td><td><span class="param-req">required</span></td><td class="param-desc">Amount in token units (e.g. "250.00")</td></tr>
+              <tr><td><span class="param-name">token</span></td><td><span class="param-type">string</span></td><td><span class="param-req">required</span></td><td class="param-desc">"USDC" or "EURC"</td></tr>
+              <tr><td><span class="param-name">note</span></td><td><span class="param-type">string</span></td><td><span class="param-type">optional</span></td><td class="param-desc">Reference note shown to payer</td></tr>
+              <tr><td><span class="param-name">webhook_url</span></td><td><span class="param-type">string</span></td><td><span class="param-type">optional</span></td><td class="param-desc">POST endpoint for payment confirmation</td></tr>
+            </tbody>
+          </table>
+
+          <div class="code-label">Response</div>
+          <pre><span class="p">{</span>
+  <span class="key">"id"</span><span class="p">:</span>          <span class="s">"pay_3k9xmT2qR8Lv"</span><span class="p">,</span>
+  <span class="key">"url"</span><span class="p">:</span>         <span class="s">"https://arcfx.app/pay?to=0x4F81...&amount=250&token=USDC&note=INV-041"</span><span class="p">,</span>
+  <span class="key">"recipient"</span><span class="p">:</span>   <span class="s">"0x4F81E3939232815e3C98B124A17BaC75304C82D8"</span><span class="p">,</span>
+  <span class="key">"amount"</span><span class="p">:</span>      <span class="s">"250.00"</span><span class="p">,</span>
+  <span class="key">"fee"</span><span class="p">:</span>         <span class="s">"0.375"</span><span class="p">,</span>      <span class="c">// 0.15% of 250</span>
+  <span class="key">"net"</span><span class="p">:</span>         <span class="s">"249.625"</span><span class="p">,</span>
+  <span class="key">"token"</span><span class="p">:</span>       <span class="s">"USDC"</span><span class="p">,</span>
+  <span class="key">"status"</span><span class="p">:</span>      <span class="s">"pending"</span><span class="p">,</span>    <span class="c">// pending | paid | expired</span>
+  <span class="key">"created_at"</span><span class="p">:</span>  <span class="s">"2026-05-23T09:41:00Z"</span>
+<span class="p">}</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- GET payment -->
+    <div class="endpoint" id="get-payment">
+      <div class="endpoint-header">
+        <span class="endpoint-method method-get" style="background:rgba(16,185,129,0.15);color:#10b981;">GET</span>
+        <span class="endpoint-path">/v1/payments/<span style="color:#f59e0b;">{id}</span></span>
+        <span class="endpoint-desc">Retrieve a payment by ID</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="code-label">Example</div>
+        <pre><span class="k">curl</span> https://api.arcfx.app/v1/payments/pay_3k9xmT2qR8Lv \
+  -H <span class="s">"Authorization: Bearer YOUR_API_KEY"</span></pre>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── Multisend ── -->
+    <div class="section" id="multisend">
+      <div class="section-eyebrow">Multisend</div>
+      <h2 class="section-title">Batch transfers</h2>
+      <p class="section-sub">Send USDC or EURC to up to 500 wallets in a single on-chain transaction. Ideal for payroll, DAO distributions, and airdrops.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="endpoint-method method-post" style="background:rgba(37,99,235,0.15);color:#3b82f6;">POST</span>
+          <span class="endpoint-path">/v1/multisend</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="code-label">Request body</div>
+          <pre><span class="p">{</span>
+  <span class="key">"token"</span><span class="p">:</span>      <span class="s">"USDC"</span><span class="p">,</span>
+  <span class="key">"recipients"</span><span class="p">: [</span>
+    <span class="p">{</span> <span class="key">"address"</span><span class="p">:</span> <span class="s">"0xABC..."</span><span class="p">,</span> <span class="key">"amount"</span><span class="p">:</span> <span class="s">"500.00"</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="key">"address"</span><span class="p">:</span> <span class="s">"0xDEF..."</span><span class="p">,</span> <span class="key">"amount"</span><span class="p">:</span> <span class="s">"1250.00"</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="key">"address"</span><span class="p">:</span> <span class="s">"0x123..."</span><span class="p">,</span> <span class="key">"amount"</span><span class="p">:</span> <span class="s">"750.00"</span> <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="key">"memo"</span><span class="p">:</span>       <span class="s">"May 2026 payroll"</span>  <span class="c">// optional</span>
+<span class="p">}</span></pre>
+
+          <div class="code-label">Response</div>
+          <pre><span class="p">{</span>
+  <span class="key">"batch_id"</span><span class="p">:</span>     <span class="s">"batch_7mNpQx9R"</span><span class="p">,</span>
+  <span class="key">"tx_hash"</span><span class="p">:</span>      <span class="s">"0x02ab...17b4"</span><span class="p">,</span>
+  <span class="key">"recipients"</span><span class="p">:</span>   <span class="n">3</span><span class="p">,</span>
+  <span class="key">"total_amount"</span><span class="p">:</span> <span class="s">"2500.00"</span><span class="p">,</span>
+  <span class="key">"fee"</span><span class="p">:</span>          <span class="s">"3.75"</span><span class="p">,</span>           <span class="c">// 0.15% of total</span>
+  <span class="key">"status"</span><span class="p">:</span>       <span class="s">"confirmed"</span><span class="p">,</span>
+  <span class="key">"explorer"</span><span class="p">:</span>     <span class="s">"https://testnet.arcscan.app/tx/0x02ab...17b4"</span>
+<span class="p">}</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── Invoices ── -->
+    <div class="section" id="create-invoice">
+      <div class="section-eyebrow">Invoices</div>
+      <h2 class="section-title">Generate invoices</h2>
+      <p class="section-sub">Programmatically create professional PDF invoices with an embedded Pay Now link. Returns a hosted PDF URL and a payment link.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="endpoint-method method-post" style="background:rgba(37,99,235,0.15);color:#3b82f6;">POST</span>
+          <span class="endpoint-path">/v1/invoices/create</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="code-label">Request body</div>
+          <pre><span class="p">{</span>
+  <span class="key">"from"</span><span class="p">:</span> <span class="p">{</span> <span class="key">"name"</span><span class="p">:</span> <span class="s">"ArcFX Ltd"</span><span class="p">,</span> <span class="key">"wallet"</span><span class="p">:</span> <span class="s">"0x4F81..."</span> <span class="p">},</span>
+  <span class="key">"to"</span><span class="p">:</span>   <span class="p">{</span> <span class="key">"name"</span><span class="p">:</span> <span class="s">"Client Corp"</span><span class="p">,</span> <span class="key">"email"</span><span class="p">:</span> <span class="s">"ap@client.com"</span> <span class="p">},</span>
+  <span class="key">"token"</span><span class="p">:</span> <span class="s">"USDC"</span><span class="p">,</span>
+  <span class="key">"items"</span><span class="p">: [</span>
+    <span class="p">{</span> <span class="key">"description"</span><span class="p">:</span> <span class="s">"Smart contract audit"</span><span class="p">,</span> <span class="key">"qty"</span><span class="p">:</span> <span class="n">1</span><span class="p">,</span> <span class="key">"unit_price"</span><span class="p">:</span> <span class="n">2500</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="key">"description"</span><span class="p">:</span> <span class="s">"Integration support"</span><span class="p">,</span>  <span class="key">"qty"</span><span class="p">:</span> <span class="n">4</span><span class="p">,</span> <span class="key">"unit_price"</span><span class="p">:</span> <span class="n">150</span>  <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="key">"due_date"</span><span class="p">:</span> <span class="s">"2026-06-01"</span>
+<span class="p">}</span></pre>
+
+          <div class="code-label">Response</div>
+          <pre><span class="p">{</span>
+  <span class="key">"invoice_id"</span><span class="p">:</span>  <span class="s">"inv_9bKpRm3xQ"</span><span class="p">,</span>
+  <span class="key">"pdf_url"</span><span class="p">:</span>     <span class="s">"https://api.arcfx.app/v1/invoices/inv_9bKpRm3xQ/pdf"</span><span class="p">,</span>
+  <span class="key">"pay_url"</span><span class="p">:</span>     <span class="s">"https://arcfx.app/pay?to=0x4F81...&amount=3100&token=USDC"</span><span class="p">,</span>
+  <span class="key">"total"</span><span class="p">:</span>       <span class="s">"3100.00"</span><span class="p">,</span>
+  <span class="key">"status"</span><span class="p">:</span>      <span class="s">"unpaid"</span>   <span class="c">// unpaid | paid | overdue</span>
+<span class="p">}</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── Webhooks ── -->
+    <div class="section" id="webhooks">
+      <div class="section-eyebrow">Webhooks</div>
+      <h2 class="section-title">Payment webhooks</h2>
+      <p class="section-sub">Receive real-time notifications when a payment is confirmed on-chain. ArcFX listens to the PaymentExecuted contract event and POSTs to your endpoint within seconds.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="endpoint-method method-post" style="background:rgba(37,99,235,0.15);color:#3b82f6;">POST</span>
+          <span class="endpoint-path">/v1/webhooks/register</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="code-label">Register your endpoint</div>
+          <pre><span class="p">{</span>
+  <span class="key">"url"</span><span class="p">:</span>    <span class="s">"https://your-server.com/arcfx/webhook"</span><span class="p">,</span>
+  <span class="key">"events"</span><span class="p">:</span> <span class="p">[</span><span class="s">"payment.confirmed"</span><span class="p">,</span> <span class="s">"multisend.confirmed"</span><span class="p">]</span>
+<span class="p">}</span></pre>
+
+          <div class="code-label">Webhook payload (sent to your server)</div>
+          <pre><span class="p">{</span>
+  <span class="key">"event"</span><span class="p">:</span>      <span class="s">"payment.confirmed"</span><span class="p">,</span>
+  <span class="key">"payment_id"</span><span class="p">:</span> <span class="s">"pay_3k9xmT2qR8Lv"</span><span class="p">,</span>
+  <span class="key">"tx_hash"</span><span class="p">:</span>    <span class="s">"0x02ab...17b4"</span><span class="p">,</span>
+  <span class="key">"amount"</span><span class="p">:</span>     <span class="s">"250.00"</span><span class="p">,</span>
+  <span class="key">"token"</span><span class="p">:</span>      <span class="s">"USDC"</span><span class="p">,</span>
+  <span class="key">"payer"</span><span class="p">:</span>      <span class="s">"0xABC..."</span><span class="p">,</span>
+  <span class="key">"recipient"</span><span class="p">:</span>  <span class="s">"0x4F81..."</span><span class="p">,</span>
+  <span class="key">"block"</span><span class="p">:</span>      <span class="n">43571839</span><span class="p">,</span>
+  <span class="key">"timestamp"</span><span class="p">:</span>  <span class="s">"2026-05-23T09:43:17Z"</span>
+<span class="p">}</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── Errors ── -->
+    <div class="section" id="errors">
+      <div class="section-eyebrow">Errors</div>
+      <h2 class="section-title">Error codes</h2>
+      <table class="params-table">
+        <thead><tr><th>Status</th><th>Code</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="param-name" style="color:#ef4444;">400</span></td><td><span class="param-type">invalid_request</span></td><td class="param-desc">Missing or malformed parameters</td></tr>
+          <tr><td><span class="param-name" style="color:#ef4444;">401</span></td><td><span class="param-type">unauthorized</span></td><td class="param-desc">Invalid or missing API key</td></tr>
+          <tr><td><span class="param-name" style="color:#ef4444;">402</span></td><td><span class="param-type">subscription_required</span></td><td class="param-desc">Active $99/month subscription needed</td></tr>
+          <tr><td><span class="param-name" style="color:#f59e0b;">429</span></td><td><span class="param-type">rate_limited</span></td><td class="param-desc">100 requests/minute per API key</td></tr>
+          <tr><td><span class="param-name" style="color:#ef4444;">500</span></td><td><span class="param-type">chain_error</span></td><td class="param-desc">On-chain transaction failed</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── Pricing ── -->
+    <div class="section" id="pricing">
+      <div class="section-eyebrow">Pricing</div>
+      <h2 class="section-title">Simple, usage-based</h2>
+      <p class="section-sub">Two revenue streams — an on-chain protocol fee on every payment, and a monthly API subscription for programmatic access.</p>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div style="font-size:11px;font-weight:600;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;font-family:'JetBrains Mono',monospace;">Protocol fee</div>
+          <div class="pricing-price">0.15%<span> per payment</span></div>
+          <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Collected on-chain automatically</div>
+          <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> No invoicing or manual settlement</div>
+          <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> USDC and EURC supported</div>
+          <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Free up to 5 multisend recipients</div>
+        </div>
+        <div class="pricing-card featured">
+          <div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:0.1em;font-family:'JetBrains Mono',monospace;">API access</div>
+          <div class="pricing-price" style="color:var(--blue);">$99<span>/month</span></div>
+          <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Full REST API access</div>
+          <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Webhook delivery</div>
+          <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Circle Wallets integration</div>
+          <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 100 req/min rate limit</div>
+          <div style="margin-top:20px;">
+            <a href="mailto:arcfxapp@gmail.com" style="display:block;text-align:center;padding:10px;background:var(--blue);color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;">Request early API access →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

@@ -12,6 +12,8 @@
     { "src": "/history",    "dest": "/history.html" },
     { "src": "/history/",   "dest": "/history.html" },
     { "src": "/analytics",  "dest": "/analytics.html" },
-    { "src": "/analytics/", "dest": "/analytics.html" }
+    { "src": "/analytics/", "dest": "/analytics.html" },
+    { "src": "/docs",     "dest": "/docs.html" },
+    { "src": "/docs/",    "dest": "/docs.html" }
   ]
 }
