@@ -469,6 +469,13 @@
                      font-weight:500;color:#64748b;">Testnet</span>
       </div>
 
+            <!-- Contacts / Address Book -->
+      <button onclick="toggleAddressBook()" id="contacts-btn"
+              style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        Contacts
+      </button>
+
       <!-- Connect Wallet -->
       <button id="connect-btn"
               style="padding:8px 18px;border-radius:6px;background:#2563eb;color:#fff;
@@ -483,6 +490,42 @@
   </nav>
 
   <script>
+    // Address book toggle — defined early so nav button can call it immediately
+    function toggleAddressBook() {
+      const modal = document.getElementById("address-book-modal");
+      if (!modal) return;
+      const isOpen = modal.style.display === "flex";
+      modal.style.display = isOpen ? "none" : "flex";
+      if (!isOpen) {
+        // render entries
+        const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+        const container = document.getElementById("ab-entries");
+        const countEl   = document.getElementById("ab-count");
+        if (countEl) countEl.textContent = entries.length + " contact" + (entries.length !== 1 ? "s" : "") + " saved";
+        if (container) {
+          if (!entries.length) {
+            container.innerHTML = '<div style="text-align:center;padding:32px 0;color:#334155;font-size:13px;">No contacts yet. Add a wallet address above.</div>';
+          } else {
+            container.innerHTML = entries.map((e, i) => `
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:7px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;">
+                <div style="width:34px;height:34px;border-radius:50%;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#2563eb;flex-shrink:0;">${e.name.charAt(0).toUpperCase()}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:13px;font-weight:600;color:#f1f5f9;">${e.name}</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.address}</div>
+                </div>
+                <button onclick="navigator.clipboard.writeText('${e.address}')" style="background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;font-family:inherit;">Copy</button>
+                <button onclick="removeABEntry(${i})" style="background:transparent;border:none;color:#334155;cursor:pointer;font-size:16px;padding:0 4px;">×</button>
+              </div>`).join("");
+          }
+        }
+      }
+    }
+    function removeABEntry(i) {
+      const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+      entries.splice(i, 1);
+      localStorage.setItem("arcfx_address_book", JSON.stringify(entries));
+      toggleAddressBook(); toggleAddressBook(); // close and reopen to refresh
+    }
     function toggleTools() {
       const dd = document.getElementById('tools-dropdown');
       dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
@@ -1774,9 +1817,12 @@
       if (!isOpen) renderAddressBook();
     }
 
-    // Close on backdrop click
-    document.getElementById("address-book-modal").addEventListener("click", function(e) {
-      if (e.target === this) toggleAddressBook();
+    // Close on backdrop click — use DOMContentLoaded to be safe
+    document.addEventListener("DOMContentLoaded", function() {
+      const modal = document.getElementById("address-book-modal");
+      if (modal) modal.addEventListener("click", function(e) {
+        if (e.target === this) toggleAddressBook();
+      });
     });
 
     function renderAddressBook() {
