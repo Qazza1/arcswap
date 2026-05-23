@@ -383,23 +383,9 @@
       </p>
       <div class="feature-pills">
         <div class="pill"><div class="pill-dot" style="background:var(--green)"></div> Free up to 5 recipients</div>
-        <div class="pill"><div class="pill-dot" style="background:var(--amber)"></div> Pro: up to 500 — 0.15% fee</div>
+        <div class="pill"><div class="pill-dot" style="background:var(--amber)"></div> Pro: up to 500 — 0.1% fee</div>
         <div class="pill"><div class="pill-dot" style="background:var(--blue)"></div> CSV upload supported</div>
         <div class="pill"><div class="pill-dot" style="background:var(--blue)"></div> One MetaMask signature</div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-        <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:4px;background:#0a0f1e;border:1px solid #1e293b;">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#475569;letter-spacing:0.04em;">Safe / Multi-Sig Compatible</span>
-        </div>
-        <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:4px;background:#0a0f1e;border:1px solid #1e293b;">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#475569;letter-spacing:0.04em;">Non-custodial</span>
-        </div>
-        <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:4px;background:#0a0f1e;border:1px solid rgba(16,185,129,0.3);">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#10b981;letter-spacing:0.04em;">Live on Arc Testnet</span>
-        </div>
       </div>
     </div>
 
@@ -607,7 +593,7 @@
             </div>
             <div class="summary-cell">
               <div class="summary-val" id="sum-fee">0.00</div>
-              <div class="summary-lbl">ArcFX fee (0.15%)</div>
+              <div class="summary-lbl">ArcFX fee (0.1%)</div>
             </div>
           </div>
 
@@ -1302,41 +1288,5 @@
     };
   </script>
 
-
-  <script>
-    // Address book import from sessionStorage (set by main page)
-    function checkAddressBookImport() {
-      const raw = sessionStorage.getItem("arcfx_ab_import");
-      if (!raw) return;
-      try {
-        const entries = JSON.parse(raw);
-        if (!entries.length) return;
-        const banner = document.getElementById("ab-import-banner");
-        const label  = document.getElementById("ab-import-label");
-        if (banner) banner.style.display = "flex";
-        if (label)  label.textContent = entries.length + " address book contact" + (entries.length !== 1 ? "s" : "") + " ready to import";
-      } catch {}
-    }
-
-    function importFromAddressBook() {
-      const raw = sessionStorage.getItem("arcfx_ab_import");
-      if (!raw) return;
-      try {
-        const entries = JSON.parse(raw);
-        entries.forEach(e => {
-          // Add each contact as a recipient row with amount 0
-          if (typeof addRecipient === "function") {
-            addRecipient(e.address, "", e.name);
-          }
-        });
-        sessionStorage.removeItem("arcfx_ab_import");
-        const banner = document.getElementById("ab-import-banner");
-        if (banner) banner.style.display = "none";
-      } catch {}
-    }
-
-    window.importFromAddressBook = importFromAddressBook;
-    document.addEventListener("DOMContentLoaded", checkAddressBookImport);
-  </script>
 </body>
 </html>

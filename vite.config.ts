@@ -22,7 +22,6 @@ export default defineConfig({
         invoice:   resolve(__dirname, "invoice.html"),
         history:   resolve(__dirname, "history.html"),
         analytics: resolve(__dirname, "analytics.html"),
-        docs:      resolve(__dirname, "docs.html"),
       },
     },
   },
