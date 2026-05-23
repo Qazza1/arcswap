@@ -524,8 +524,40 @@
       const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
       entries.splice(i, 1);
       localStorage.setItem("arcfx_address_book", JSON.stringify(entries));
-      toggleAddressBook(); toggleAddressBook(); // close and reopen to refresh
+      toggleAddressBook(); toggleAddressBook();
     }
+
+    function addAddressBookEntry() {
+      const nameEl  = document.getElementById("ab-name");
+      const addrEl  = document.getElementById("ab-address");
+      const errEl   = document.getElementById("ab-error");
+      const name    = nameEl ? nameEl.value.trim() : "";
+      const address = addrEl ? addrEl.value.trim() : "";
+      if (!name) { if(errEl){errEl.textContent="Enter a label.";errEl.style.display="block";} return; }
+      if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
+        if(errEl){errEl.textContent="Enter a valid 0x wallet address.";errEl.style.display="block";} return;
+      }
+      if(errEl) errEl.style.display="none";
+      const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+      if (entries.some(e => e.address.toLowerCase() === address.toLowerCase())) {
+        if(errEl){errEl.textContent="Address already saved.";errEl.style.display="block";} return;
+      }
+      entries.push({ name, address });
+      localStorage.setItem("arcfx_address_book", JSON.stringify(entries));
+      if(nameEl) nameEl.value = "";
+      if(addrEl) addrEl.value = "";
+      // Refresh the list
+      toggleAddressBook(); toggleAddressBook();
+    }
+
+    function copyAddressBookToMultisend() {
+      const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+      if (!entries.length) return;
+      sessionStorage.setItem("arcfx_ab_import", JSON.stringify(entries));
+      toggleAddressBook();
+      window.location.href = "/multisend";
+    }
+
     function toggleTools() {
       const dd = document.getElementById('tools-dropdown');
       dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
