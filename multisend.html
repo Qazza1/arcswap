@@ -825,10 +825,23 @@
       if (um) um.style.display         = mode === "upload"   ? "block" : "none";
       const cm = document.getElementById("contacts-mode");
       if (cm) cm.style.display         = mode === "contacts" ? "block" : "none";
-      // Render contacts when switching to contacts tab
       if (mode === "contacts" && typeof renderContactsPanel === "function") {
         renderContactsPanel();
       }
+    };
+
+    // Expose addToRecipients so plain scripts (contacts panel) can add recipients
+    window.addToRecipients = function(address, amount, label) {
+      const limit = selectedTier === "free" ? 5 : 500;
+      if (recipients.length >= limit) {
+        showStatus((selectedTier === "free" ? "Free" : "Pro") + " tier limit: " + limit + " recipients.", "error");
+        return false;
+      }
+      recipients.push({ address: address, amount: String(amount), label: label });
+      renderTable();
+      updateSummary();
+      showStatus(label + " added.", "");
+      return true;
     };
 
     // ─── Recipients ───────────────────────────────────────────────────────────
@@ -1159,22 +1172,19 @@
       const amt     = amtEl ? amtEl.value.trim() : "";
 
       if (!amt || parseFloat(amt) <= 0) {
-        showStatus("Enter an amount for " + e.name + ".", "error");
+        const errDiv = document.getElementById("ms-ab-error");
+        if (errDiv) { errDiv.textContent = "Enter an amount for " + e.name + "."; errDiv.style.display = "block"; }
         if (amtEl) amtEl.focus();
         return;
       }
 
-      const limit = selectedTier === "free" ? 5 : 500;
-      if (recipients.length >= limit) {
-        showStatus((selectedTier === "free" ? "Free" : "Pro") + " tier limit: " + limit + " recipients.", "error");
-        return;
+      // Use module-exposed function to add to recipients
+      const added = window.addToRecipients(e.address, amt, e.name);
+      if (added) {
+        if (amtEl) amtEl.value = "";
+        const errDiv = document.getElementById("ms-ab-error");
+        if (errDiv) errDiv.style.display = "none";
       }
-
-      recipients.push({ address: e.address, amount: amt, label: e.name });
-      if (amtEl) amtEl.value = "";
-      renderTable();
-      updateSummary();
-      showStatus(e.name + " added as recipient.", "");
     };
 
     window.setMode = function(mode) {
