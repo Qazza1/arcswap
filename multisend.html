@@ -511,7 +511,32 @@
 
           <!-- Contacts mode -->
           <div id="contacts-mode" style="display:none;">
-            <div id="contacts-list" style="display:flex;flex-direction:column;gap:8px;padding:12px 0;">
+
+            <!-- Add new contact inline -->
+            <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;
+                        padding:12px 0 14px;border-bottom:1px solid #1e293b;margin-bottom:12px;">
+              <input id="ms-ab-name" type="text" placeholder="Contact name"
+                     style="background:#060b18;border:1px solid #1e293b;border-radius:6px;
+                            color:#f1f5f9;font-size:13px;font-family:inherit;padding:8px 11px;outline:none;"
+                     onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" />
+              <input id="ms-ab-addr" type="text" placeholder="0x... wallet address"
+                     style="background:#060b18;border:1px solid #1e293b;border-radius:6px;
+                            color:#f1f5f9;font-size:12px;font-family:'JetBrains Mono',monospace;
+                            padding:8px 11px;outline:none;"
+                     onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" />
+              <button onclick="saveContactFromMultisend()"
+                      style="padding:8px 14px;background:#0f172a;color:#94a3b8;border:1px solid #1e293b;
+                             border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;
+                             font-family:inherit;white-space:nowrap;transition:all .15s;"
+                      onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'"
+                      onmouseout="this.style.borderColor='#1e293b';this.style.color='#94a3b8'">
+                + Save contact
+              </button>
+            </div>
+            <div id="ms-ab-error" style="display:none;font-size:11px;color:#ef4444;margin:-8px 0 10px;"></div>
+
+            <!-- Contact list -->
+            <div id="contacts-list" style="display:flex;flex-direction:column;gap:8px;">
               <!-- populated by JS -->
             </div>
           </div>
@@ -1068,45 +1093,55 @@
     function renderContactsPanel() {
       const container = document.getElementById("contacts-list");
       if (!container) return;
-      const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+      const raw = localStorage.getItem("arcfx_address_book");
+      const entries = raw ? JSON.parse(raw) : [];
 
       if (!entries.length) {
-        container.innerHTML = `<div style="text-align:center;padding:28px;color:#475569;font-size:13px;">
-          No contacts saved yet.<br>
-          <a href="/" style="color:#2563eb;text-decoration:none;font-size:12px;">Add contacts on the main page →</a>
-        </div>`;
+        container.innerHTML = '<div style="text-align:center;padding:28px;color:#475569;font-size:13px;">No contacts saved yet — add one above.</div>';
         return;
       }
 
-      container.innerHTML = entries.map((e, i) => `
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;
-                    border-radius:8px;background:#0a0f1e;border:1px solid #1e293b;">
-          <div style="width:34px;height:34px;border-radius:50%;background:rgba(37,99,235,0.15);
-                      border:1px solid rgba(37,99,235,0.2);display:flex;align-items:center;
-                      justify-content:center;font-size:13px;font-weight:600;
-                      color:#2563eb;flex-shrink:0;">${e.name.charAt(0).toUpperCase()}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:600;color:#f1f5f9;">${e.name}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569;
-                        overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.address}</div>
-          </div>
-          <input id="contact-amt-${i}" type="number" min="0" step="any" placeholder="Amount"
-                 style="width:90px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;
-                        color:#f1f5f9;font-size:12px;font-family:inherit;padding:6px 9px;
-                        outline:none;text-align:right;"
-                 onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" />
-          <button onclick="addContactAsRecipient('${e.address}', '${e.name}', ${i})"
-                  style="padding:7px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;
-                         font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
-                         white-space:nowrap;transition:background .15s;"
-                  onmouseover="this.style.background='#1d4ed8'"
-                  onmouseout="this.style.background='#2563eb'">+ Add</button>
-        </div>
-      `).join("");
+      container.innerHTML = entries.map(function(e, i) {
+        const initial = (e.name || "?").charAt(0).toUpperCase();
+        const addr = e.address || "";
+        const name = (e.name || "").replace(/'/g, "&#39;");
+        const addrSafe = addr.replace(/'/g, "&#39;");
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#0a0f1e;border:1px solid #1e293b;">'
+          + '<div style="width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;">' + initial + '</div>'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="font-size:13px;font-weight:600;color:#f1f5f9;">' + name + '</div>'
+          + '<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + addr + '</div>'
+          + '</div>'
+          + '<input id="cab-' + i + '" type="number" min="0" step="any" placeholder="Amount" style="width:86px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;color:#f1f5f9;font-size:12px;font-family:inherit;padding:6px 9px;outline:none;text-align:right;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" />'
+          + '<button onclick="addContactAsRecipient('' + addrSafe + '','' + name + '',' + i + ')" style="padding:7px 12px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">+ Add</button>'
+          + '</div>';
+      }).join("");
     }
 
+    window.saveContactFromMultisend = function() {
+      const nameEl = document.getElementById("ms-ab-name");
+      const addrEl = document.getElementById("ms-ab-addr");
+      const errEl  = document.getElementById("ms-ab-error");
+      const name   = nameEl ? nameEl.value.trim() : "";
+      const addr   = addrEl ? addrEl.value.trim() : "";
+      if (!name) { if(errEl){errEl.textContent="Enter a name.";errEl.style.display="block";} return; }
+      if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) {
+        if(errEl){errEl.textContent="Enter a valid 0x address.";errEl.style.display="block";} return;
+      }
+      if(errEl) errEl.style.display = "none";
+      const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+      if (entries.some(function(e){ return e.address.toLowerCase() === addr.toLowerCase(); })) {
+        if(errEl){errEl.textContent="Already saved.";errEl.style.display="block";} return;
+      }
+      entries.push({ name: name, address: addr });
+      localStorage.setItem("arcfx_address_book", JSON.stringify(entries));
+      if(nameEl) nameEl.value = "";
+      if(addrEl) addrEl.value = "";
+      renderContactsPanel();
+    };
+
     window.addContactAsRecipient = function(address, name, idx) {
-      const amtEl = document.getElementById("contact-amt-" + idx);
+      const amtEl = document.getElementById("cab-" + idx);
       const amt   = amtEl ? amtEl.value.trim() : "";
 
       if (!amt || parseFloat(amt) <= 0) {
