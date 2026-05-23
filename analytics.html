@@ -209,7 +209,11 @@
         }
       });
     </script>
-    <div class="nav-right">
+    <div class="nav-right" style="display:flex;align-items:center;gap:8px;">
+      <button onclick="toggleAnalyticsContacts()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        Contacts
+      </button>
       <div style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;border:1px solid #1e293b;background:#0f172a;">
         <span style="width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.7);animation:pulse-dot 2s ease-in-out infinite;display:inline-block;"></span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#475569;">Testnet</span>
@@ -321,5 +325,35 @@
   </div>
 
   <script type="module" src="/src/analytics.ts"></script>
+
+  <!-- Contacts modal for analytics -->
+  <div id="analytics-contacts-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;" onclick="if(event.target===this)toggleAnalyticsContacts()">
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;width:480px;max-width:calc(100vw - 32px);max-height:80vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #1e293b;">
+        <div><div style="font-size:15px;font-weight:600;color:#f1f5f9;">Address Book</div></div>
+        <button onclick="toggleAnalyticsContacts()" style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:20px;padding:4px;">×</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:12px 20px;" id="analytics-contacts-list"></div>
+    </div>
+  </div>
+  <script>
+    function toggleAnalyticsContacts() {
+      var modal = document.getElementById("analytics-contacts-modal");
+      if (!modal) return;
+      modal.style.display = modal.style.display === "flex" ? "none" : "flex";
+      if (modal.style.display === "flex") {
+        var list = document.getElementById("analytics-contacts-list");
+        var entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+        if (!entries.length) { list.innerHTML = "<div style='text-align:center;padding:24px;color:#475569;font-size:13px;'>No contacts saved yet.</div>"; return; }
+        list.innerHTML = entries.map(function(e,i) {
+          return "<div style='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;'>"
+            + "<div style='width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;'>" + (e.name||"?").charAt(0).toUpperCase() + "</div>"
+            + "<div style='flex:1;min-width:0;'><div style='font-size:13px;font-weight:600;color:#f1f5f9;'>" + (e.name||"") + "</div><div style='font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>" + (e.address||"") + "</div></div>"
+            + "<button onclick='navigator.clipboard.writeText("" + (e.address||"") + "")' style='background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;font-family:inherit;'>Copy</button>"
+            + "</div>";
+        }).join("");
+      }
+    }
+  </script>
 </body>
 </html>
