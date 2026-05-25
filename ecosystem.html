@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arc Ecosystem — Projects building on Arc | ArcFX</title>
+  <meta name="description" content="Discover every project building on Arc. The go-to directory for builders, users, and investors in the Arc stablecoin ecosystem." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0a0f1e;
+      --bg-card:  #0f172a;
+      --bg-raised:#111827;
+      --border:   #1e293b;
+      --border-med:#334155;
+      --blue:     #3d7eff;
+      --teal:     #00d4aa;
+      --text:     #f1f5f9;
+      --muted:    #475569;
+      --blue-dim: rgba(61,126,255,.1);
+      --r:        8px;
+      --r-sm:     5px;
+      --r-lg:     12px;
+    }
+    body { font-family: "Inter", system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    a { text-decoration: none; }
+
+    /* ── Stats bar ── */
+    .stats-bar { background: rgba(2,6,23,0.95); border-bottom: 1px solid var(--border); padding: 0 28px; height: 34px; display: flex; align-items: center; overflow: hidden; }
+    .stats-bar-inner { display: flex; align-items: center; gap: 20px; font-size: 11.5px; white-space: nowrap; }
+    .stats-bar-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
+    .stats-bar-label { color: var(--muted); margin-right: 4px; }
+    .stats-bar-val { color: var(--text); font-weight: 600; }
+    .stats-bar-sep { color: var(--border-med); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── Nav ── */
+    nav { position: sticky; top: 0; z-index: 50; height: 64px; display: grid; grid-template-columns: 1fr auto auto; align-items: center; padding: 0 24px; background: rgba(2,6,23,0.97); border-bottom: 1px solid var(--border); }
+    .nav-logo { display: flex; align-items: center; gap: 10px; }
+    .nav-logo img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-med); }
+    .nav-logo span { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
+    .nav-center { display: flex; align-items: center; gap: 2px; }
+    .nav-link { color: var(--muted); font-size: 13.5px; font-weight: 500; padding: 6px 14px; border-radius: 6px; transition: all .15s; }
+    .nav-link:hover { color: var(--text); background: var(--border); }
+    .nav-link.active { color: var(--text); }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+
+    /* ── Page ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 28px; }
+
+    /* ── Page header ── */
+    .page-header { padding: 64px 0 48px; }
+    .page-eyebrow { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; color: var(--blue); text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 14px; }
+    .page-title { font-size: clamp(32px, 4vw, 48px); font-weight: 700; letter-spacing: -1.2px; line-height: 1.1; margin-bottom: 14px; }
+    .page-sub { font-size: 16px; color: var(--muted); max-width: 560px; line-height: 1.7; margin-bottom: 20px; }
+    .page-intro { font-size: 14px; color: #64748b; max-width: 620px; line-height: 1.8; padding: 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-lg); border-left: 3px solid var(--blue); }
+
+    /* ── Stats row ── */
+    .eco-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 40px 0 36px; }
+    @media(max-width:640px){ .eco-stats { grid-template-columns: repeat(2,1fr); } }
+    .eco-stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; }
+    .eco-stat-val { font-family: "JetBrains Mono", monospace; font-size: 24px; font-weight: 500; color: var(--text); letter-spacing: -0.5px; margin-bottom: 4px; }
+    .eco-stat-lbl { font-size: 12px; color: var(--muted); }
+
+    /* ── Filters ── */
+    .eco-filters { display: flex; gap: 7px; margin-bottom: 24px; flex-wrap: wrap; }
+    .eco-filter { font-size: 12.5px; font-weight: 500; padding: 6px 16px; border: 1px solid var(--border); border-radius: 100px; cursor: pointer; color: var(--muted); background: transparent; transition: all .15s; font-family: inherit; }
+    .eco-filter:hover { border-color: var(--border-med); color: var(--text); }
+    .eco-filter.active { background: var(--blue-dim); border-color: rgba(61,126,255,.4); color: var(--blue); }
+
+    /* ── Project grid ── */
+    .eco-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 16px; }
+    @media(max-width:900px){ .eco-grid { grid-template-columns: repeat(2,1fr); } }
+    @media(max-width:560px){ .eco-grid { grid-template-columns: 1fr; } }
+
+    .eco-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; transition: border-color .2s, transform .2s; display: flex; flex-direction: column; }
+    .eco-card:hover { border-color: var(--border-med); transform: translateY(-2px); }
+    .eco-card.featured { border-color: rgba(61,126,255,.4); background: linear-gradient(135deg,rgba(61,126,255,.05),rgba(0,212,170,.02)); }
+
+    .eco-card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .eco-card-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--bg-raised); border: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; overflow: hidden; }
+    .eco-card-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .eco-card-name { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
+    .eco-card-type { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+    .eco-featured-badge { display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg, var(--blue), var(--teal)); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 100px; margin-bottom: 10px; width: fit-content; }
+
+    .eco-card-desc { font-size: 13.5px; color: var(--muted); line-height: 1.7; flex: 1; margin-bottom: 14px; }
+    .eco-card-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 14px; }
+    .eco-tag { font-size: 10.5px; padding: 2px 8px; border-radius: var(--r-sm); background: var(--bg-raised); border: 1px solid var(--border); color: var(--muted); }
+
+    .eco-card-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--border); }
+    .eco-status-live { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--teal); font-weight: 600; }
+    .eco-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); animation: pulse 2s infinite; }
+    .eco-status-soon { font-size: 12px; color: var(--muted); }
+    .eco-status-mainnet { font-size: 12px; color: var(--blue); font-weight: 600; }
+    .eco-visit-btn { font-size: 12px; color: var(--blue); font-weight: 600; border: 1px solid rgba(61,126,255,.25); border-radius: var(--r-sm); padding: 5px 12px; transition: background .15s; }
+    .eco-visit-btn:hover { background: var(--blue-dim); }
+
+    /* Empty state */
+    .eco-empty { display: none; text-align: center; padding: 56px 28px; color: var(--muted); font-size: 14px; border: 1px dashed var(--border); border-radius: var(--r-lg); margin-bottom: 16px; }
+    .eco-empty a { color: var(--blue); }
+
+    /* ── CTA banner ── */
+    .submit-banner { background: var(--bg-card); border: 1px solid var(--border-med); border-radius: var(--r-lg); padding: 40px; display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; margin: 48px 0 80px; }
+    @media(max-width:640px){ .submit-banner { grid-template-columns: 1fr; } }
+    .submit-banner-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; letter-spacing: -0.3px; }
+    .submit-banner-sub { font-size: 14px; color: var(--muted); line-height: 1.7; }
+    .submit-banner-sub strong { color: var(--blue); }
+    .submit-banner-btns { display: flex; flex-direction: column; gap: 10px; }
+    .btn-primary { display: inline-block; text-align: center; padding: 13px 24px; background: var(--blue); color: #fff; border-radius: var(--r); font-size: 14px; font-weight: 600; white-space: nowrap; transition: background .15s; }
+    .btn-primary:hover { background: #2d6ee8; }
+    .btn-ghost { display: inline-block; text-align: center; padding: 12px 24px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: var(--r); font-size: 14px; font-weight: 500; white-space: nowrap; transition: all .15s; }
+    .btn-ghost:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* ── Footer ── */
+    footer { background: #060b18; border-top: 1px solid var(--border); padding: 48px 28px 32px; }
+    .footer-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 40px; }
+    @media(max-width:768px){ .footer-inner { grid-template-columns: 1fr 1fr; } }
+    .footer-brand { font-size: 13px; color: var(--muted); line-height: 1.7; margin-top: 10px; }
+    .footer-col-title { font-size: 11px; font-weight: 700; color: var(--border-med); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px; font-family: "JetBrains Mono", monospace; }
+    .footer-link { display: block; font-size: 13px; color: var(--muted); margin-bottom: 9px; transition: color .15s; }
+    .footer-link:hover { color: #94a3b8; }
+    .footer-bottom { max-width: 1100px; margin: 32px auto 0; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--border-med); flex-wrap: wrap; gap: 10px; }
+  </style>
+</head>
+<body>
+
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stats-bar-inner">
+      <div><span class="stats-bar-dot"></span><span class="stats-bar-label">Arc Testnet</span><span class="stats-bar-val">Live</span></div>
+      <span class="stats-bar-sep">|</span>
+      <div><span class="stats-bar-label">Projects on Arc</span><span class="stats-bar-val">7</span></div>
+      <span class="stats-bar-sep">|</span>
+      <div><span class="stats-bar-label">Arc raised</span><span class="stats-bar-val">$222M</span></div>
+      <span class="stats-bar-sep">|</span>
+      <div><span class="stats-bar-label">Network valuation</span><span class="stats-bar-val">$3B</span></div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav>
+    <a href="/" class="nav-logo">
+      <img src="/logo.png" alt="ArcFX" />
+      <span>ArcFX</span>
+    </a>
+    <div class="nav-center">
+      <a href="/" class="nav-link">Trade</a>
+      <div style="position:relative;" id="eco-tools-wrap">
+        <button onclick="var dd=document.getElementById('eco-tools-dd');dd.style.display=dd.style.display==='block'?'none':'block'"
+                style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;color:var(--muted);background:transparent;border:none;cursor:pointer;font-family:inherit;">
+          Tools <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="eco-tools-dd" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:210px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
+          <a href="/multisend" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Multisender</div><div style="font-size:11px;color:#64748b;">Batch transfers</div></div>
+          </a>
+          <a href="/pay" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Pay Links</div><div style="font-size:11px;color:#64748b;">Accept payments</div></div>
+          </a>
+          <a href="/invoice" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Invoices</div><div style="font-size:11px;color:#64748b;">PDF invoices + Pay Now</div></div>
+          </a>
+          <a href="/history" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">History</div><div style="font-size:11px;color:#64748b;">Transactions + CSV</div></div>
+          </a>
+          <a href="/docs" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">API Docs</div><div style="font-size:11px;color:#64748b;">Developer reference</div></div>
+          </a>
+        </div>
+      </div>
+      <a href="/analytics" class="nav-link">Analytics</a>
+      <a href="/pricing" class="nav-link">Pricing</a>
+      <a href="/ecosystem" class="nav-link active">Ecosystem</a>
+    </div>
+    <div class="nav-right">
+      <a href="/" style="padding:8px 18px;background:#3d7eff;color:#fff;border-radius:7px;font-size:13px;font-weight:600;transition:background .15s;" onmouseover="this.style.background='#2d6ee8'" onmouseout="this.style.background='#3d7eff'">Launch ArcFX →</a>
+    </div>
+  </nav>
+  <script>
+    document.addEventListener('click', function(e) {
+      var w = document.getElementById('eco-tools-wrap');
+      var dd = document.getElementById('eco-tools-dd');
+      if (w && dd && !w.contains(e.target)) dd.style.display = 'none';
+    });
+  </script>
+
+  <!-- Page content -->
+  <div class="container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="page-eyebrow">Arc Ecosystem</div>
+      <h1 class="page-title">Every project building on Arc.</h1>
+      <p class="page-sub">The go-to directory for builders, users, and investors discovering what's live, what's launching, and what's being built on Arc.</p>
+      <div class="page-intro">
+        ArcFX is proud to be one of the first live products on Arc Testnet. This directory exists to help the ecosystem grow — surfacing the builders, protocols, and tools shaping stablecoin finance on Arc. If you're building on Arc, you belong here.
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="eco-stats">
+      <div class="eco-stat">
+        <div class="eco-stat-val">7</div>
+        <div class="eco-stat-lbl">Projects building</div>
+      </div>
+      <div class="eco-stat">
+        <div class="eco-stat-val">$222M</div>
+        <div class="eco-stat-lbl">Arc raised</div>
+      </div>
+      <div class="eco-stat">
+        <div class="eco-stat-val">3</div>
+        <div class="eco-stat-lbl">Genesis partners</div>
+      </div>
+      <div class="eco-stat">
+        <div class="eco-stat-val">$3B</div>
+        <div class="eco-stat-lbl">Network valuation</div>
+      </div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="eco-filters">
+      <button class="eco-filter active" onclick="filterEco('all',this)">All</button>
+      <button class="eco-filter" onclick="filterEco('fx',this)">FX / Swap</button>
+      <button class="eco-filter" onclick="filterEco('lending',this)">Lending</button>
+      <button class="eco-filter" onclick="filterEco('payments',this)">Payments</button>
+      <button class="eco-filter" onclick="filterEco('agents',this)">Agents</button>
+      <button class="eco-filter" onclick="filterEco('infrastructure',this)">Infrastructure</button>
+    </div>
+
+    <!-- Empty state -->
+    <div class="eco-empty" id="eco-empty">
+      No projects in this category yet. Be the first to submit one. <a href="mailto:arcfxapp@gmail.com?subject=List my project on Arc Ecosystem">Get listed →</a>
+    </div>
+
+    <!-- Project cards -->
+    <div class="eco-grid" id="eco-grid">
+
+      <!-- ArcFX — Featured + Infrastructure -->
+      <div class="eco-card featured" data-cat="infrastructure">
+        <div class="eco-card-top">
+          <div class="eco-card-icon"><img src="/logo.png" alt="ArcFX" /></div>
+          <div><div class="eco-card-name">ArcFX</div><div class="eco-card-type">Business toolkit</div></div>
+        </div>
+        <div class="eco-featured-badge">✦ Featured</div>
+        <p class="eco-card-desc">The business layer on Arc. Swap, bridge, invoice, pay, batch-send and track stablecoins — 6 tools in one platform.</p>
+        <div class="eco-card-tags"><span class="eco-tag">USDC</span><span class="eco-tag">EURC</span><span class="eco-tag">Circle App Kit</span><span class="eco-tag">CCTP</span></div>
+        <div class="eco-card-footer">
+          <div class="eco-status-live"><div class="eco-status-dot"></div>Live on Testnet</div>
+          <a href="https://arcfx.app" class="eco-visit-btn" target="_blank" rel="noopener">Visit ↗</a>
+        </div>
+      </div>
+
+      <!-- Tower Exchange -->
+      <div class="eco-card" data-cat="fx">
+        <div class="eco-card-top">
+          <div class="eco-card-icon">🏰</div>
+          <div><div class="eco-card-name">Tower Exchange</div><div class="eco-card-type">DEX Aggregator</div></div>
+        </div>
+        <p class="eco-card-desc">AI-powered stablecoin DEX aggregator with portfolio management, recurring orders, yield, and liquidity pools.</p>
+        <div class="eco-card-tags"><span class="eco-tag">USDC</span><span class="eco-tag">EURC</span><span class="eco-tag">AI Agent</span></div>
+        <div class="eco-card-footer">
+          <div class="eco-status-live"><div class="eco-status-dot"></div>Live on Testnet</div>
+          <a href="https://tower.exchange" class="eco-visit-btn" target="_blank" rel="noopener">Visit ↗</a>
+        </div>
+      </div>
+
+      <!-- Morpho on Arc -->
+      <div class="eco-card" data-cat="lending">
+        <div class="eco-card-top">
+          <div class="eco-card-icon">🔷</div>
+          <div><div class="eco-card-name">Morpho on Arc</div><div class="eco-card-type">Lending &amp; Credit</div></div>
+        </div>
+        <p class="eco-card-desc">Composable borrowing and lending on Arc. Confirmed genesis partner, bringing onchain credit from day one of mainnet.</p>
+        <div class="eco-card-tags"><span class="eco-tag">Lending</span><span class="eco-tag">USDC</span><span class="eco-tag">Genesis</span></div>
+        <div class="eco-card-footer">
+          <div class="eco-status-mainnet">🔵 Mainnet Genesis</div>
+          <a href="https://morpho.org" class="eco-visit-btn" target="_blank" rel="noopener">Visit ↗</a>
+        </div>
+      </div>
+
+      <!-- Radius -->
+      <div class="eco-card" data-cat="payments">
+        <div class="eco-card-top">
+          <div class="eco-card-icon">📡</div>
+          <div><div class="eco-card-name">Radius</div><div class="eco-card-type">P2P Payments</div></div>
+        </div>
+        <p class="eco-card-desc">Peer-to-peer stablecoin payments on Arc Testnet. Social wallets, payment requests, contacts and history.</p>
+        <div class="eco-card-tags"><span class="eco-tag">P2P</span><span class="eco-tag">USDC</span><span class="eco-tag">Social</span></div>
+        <div class="eco-card-footer">
+          <div class="eco-status-live"><div class="eco-status-dot"></div>Live on Testnet</div>
+          <a href="https://radius-gules.vercel.app" class="eco-visit-btn" target="_blank" rel="noopener">Visit ↗</a>
+        </div>
+      </div>
+
+      <!-- Arcflow -->
+      <div class="eco-card" data-cat="payments">
+        <div class="eco-card-top">
+          <div class="eco-card-icon">💧</div>
+          <div><div class="eco-card-name">Arcflow</div><div class="eco-card-type">Payments App</div></div>
+        </div>
+        <p class="eco-card-desc">Full USDC payment app on Arc. Dashboard, transaction history, payment links, and real-time savings vs Western Union.</p>
+        <div class="eco-card-tags"><span class="eco-tag">Payments</span><span class="eco-tag">USDC</span></div>
+        <div class="eco-card-footer">
+          <div class="eco-status-live"><div class="eco-status-dot"></div>Live on Testnet</div>
+          <a href="https://arcflow.live" class="eco-visit-btn" target="_blank" rel="noopener">Visit ↗</a>
+        </div>
+      </div>
+
+      <!-- Your project placeholder -->
+      <div class="eco-card" data-cat="all" style="border:2px dashed rgba(61,126,255,.3);display:flex;align-items:center;justify-content:center;min-height:220px;text-align:center;background:rgba(61,126,255,.02);">
+        <div>
+          <div style="font-size:30px;margin-bottom:12px;color:var(--border-med);">+</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">Your project here</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px;">Get listed and reach the Arc community</div>
+          <a href="mailto:arcfxapp@gmail.com?subject=List my project on Arc Ecosystem" class="eco-visit-btn" style="display:inline-block;">Get listed →</a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Submit CTA banner -->
+    <div class="submit-banner">
+      <div>
+        <div class="submit-banner-title">Building on Arc? Get your project in front of the ecosystem.</div>
+        <div class="submit-banner-sub">
+          List your project to reach Arc builders, users, and investors. Basic listings are free.
+          Featured placement is available for projects that want additional visibility —
+          <strong>from $199/month.</strong>
+        </div>
+      </div>
+      <div class="submit-banner-btns">
+        <a href="mailto:arcfxapp@gmail.com?subject=List my project on Arc Ecosystem&amp;body=Project name:%0AWebsite:%0ADescription:%0ACategory:" class="btn-primary">Submit your project →</a>
+        <a href="/docs" class="btn-ghost">Read the docs</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <img src="/logo.png" alt="ArcFX" style="width:28px;height:28px;border-radius:50%;border:1px solid #1e293b;" />
+          <span style="font-size:15px;font-weight:600;color:#f1f5f9;">ArcFX</span>
+        </div>
+        <div class="footer-brand">The business layer on Arc.<br />Built with Circle App Kit.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Products</div>
+        <a href="/" class="footer-link">Swap</a>
+        <a href="/" class="footer-link">Bridge</a>
+        <a href="/multisend" class="footer-link">Multisender</a>
+        <a href="/pay" class="footer-link">Pay Links</a>
+        <a href="/invoice" class="footer-link">Invoices</a>
+        <a href="/docs" class="footer-link">API Docs</a>
+        <a href="/history" class="footer-link">History</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Ecosystem</div>
+        <a href="/ecosystem" class="footer-link">Arc directory</a>
+        <a href="/" class="footer-link">Compare rates</a>
+        <a href="https://arc.network" target="_blank" rel="noopener" class="footer-link">Arc Network</a>
+        <a href="https://testnet.arcscan.app" target="_blank" rel="noopener" class="footer-link">ArcScan</a>
+        <a href="https://faucet.arc.network" target="_blank" rel="noopener" class="footer-link">USDC Faucet</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Company</div>
+        <a href="/pricing" class="footer-link">Pricing</a>
+        <a href="/security" class="footer-link">Security</a>
+        <a href="https://twitter.com/arcfxapp" target="_blank" rel="noopener" class="footer-link">@arcfxapp</a>
+        <a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" class="footer-link">GitHub</a>
+        <a href="mailto:arcfxapp@gmail.com" class="footer-link">Contact</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 ArcFX · Arc Testnet · Non-custodial</span>
+      <span style="font-family:'JetBrains Mono',monospace;">ArcFX v1.0 · testnet</span>
+    </div>
+  </footer>
+
+  <script>
+    function filterEco(cat, btn) {
+      document.querySelectorAll('.eco-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      var cards = document.querySelectorAll('.eco-card');
+      var visible = 0;
+      cards.forEach(function(card) {
+        var cc = card.getAttribute('data-cat');
+        var show = cat === 'all' || cc === cat || cc === 'all';
+        card.style.display = show ? 'flex' : 'none';
+        if (show) visible++;
+      });
+
+      // Show empty state if no cards visible
+      var empty = document.getElementById('eco-empty');
+      if (empty) empty.style.display = visible === 0 ? 'block' : 'none';
+    }
+  </script>
+
+</body>
+</html>

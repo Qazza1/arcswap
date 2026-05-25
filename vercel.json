@@ -14,6 +14,12 @@
     { "src": "/analytics",  "dest": "/analytics.html" },
     { "src": "/analytics/", "dest": "/analytics.html" },
     { "src": "/docs",     "dest": "/docs.html" },
-    { "src": "/docs/",    "dest": "/docs.html" }
+    { "src": "/docs/",      "dest": "/docs.html" },
+    { "src": "/pricing",    "dest": "/pricing.html" },
+    { "src": "/pricing/",   "dest": "/pricing.html" },
+    { "src": "/security",   "dest": "/security.html" },
+    { "src": "/security/",   "dest": "/security.html" },
+    { "src": "/ecosystem",  "dest": "/ecosystem.html" },
+    { "src": "/ecosystem/", "dest": "/ecosystem.html" }
   ]
 }
