@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcFX Pricing — Simple, transparent stablecoin pricing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:"Inter",system-ui,sans-serif;background:#0a0f1e;color:#e2e8f0;line-height:1.6;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;}
+    nav{position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;}
+    .page{max-width:1000px;margin:0 auto;padding:64px 28px 100px;}
+    .eyebrow{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:0.14em;margin-bottom:14px;}
+    h1{font-size:clamp(32px,4vw,48px);font-weight:700;color:#f1f5f9;letter-spacing:-1px;line-height:1.15;margin-bottom:14px;}
+    .sub{font-size:16px;color:#475569;line-height:1.7;max-width:560px;margin-bottom:56px;}
+    /* Pricing cards */
+    .plans{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#1e293b;border:1px solid #1e293b;border-radius:12px;overflow:hidden;margin-bottom:64px;}
+    @media(max-width:768px){.plans{grid-template-columns:1fr;}}
+    .plan{background:#0f172a;padding:32px 28px;display:flex;flex-direction:column;}
+    .plan.featured{background:#0c1628;position:relative;}
+    .plan-label{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:16px;}
+    .plan-price{font-size:42px;font-weight:700;color:#f1f5f9;letter-spacing:-1.5px;margin-bottom:4px;font-family:"JetBrains Mono",monospace;}
+    .plan-price span{font-size:16px;color:#475569;font-weight:400;letter-spacing:0;}
+    .plan-desc{font-size:13.5px;color:#475569;line-height:1.7;margin-bottom:28px;flex:1;}
+    .plan-features{display:flex;flex-direction:column;gap:10px;margin-bottom:28px;}
+    .feature{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#94a3b8;}
+    .feature svg{flex-shrink:0;margin-top:2px;color:#10b981;}
+    .plan-cta{display:block;text-align:center;padding:12px;border-radius:7px;font-size:14px;font-weight:600;transition:all .15s;cursor:pointer;font-family:inherit;}
+    .cta-primary{background:#2563eb;color:#fff;border:none;}
+    .cta-primary:hover{background:#1d4ed8;}
+    .cta-ghost{background:transparent;color:#475569;border:1px solid #1e293b;}
+    .cta-ghost:hover{border-color:#2563eb;color:#2563eb;}
+    .featured-badge{position:absolute;top:0;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:3px 12px;border-radius:0 0 6px 6px;letter-spacing:0.06em;text-transform:uppercase;}
+    /* Fee calculator */
+    .calc{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:32px;margin-bottom:64px;}
+    .calc-title{font-size:17px;font-weight:600;color:#f1f5f9;margin-bottom:6px;}
+    .calc-sub{font-size:13px;color:#475569;margin-bottom:24px;}
+    .calc-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center;}
+    @media(max-width:600px){.calc-row{grid-template-columns:1fr;}}
+    .calc-input-wrap{background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:8px;}
+    .calc-input{background:transparent;border:none;outline:none;font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:500;color:#f1f5f9;width:100%;}
+    .calc-label{font-size:11px;color:#334155;font-family:"JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
+    .calc-result{background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:16px;}
+    .calc-result-val{font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:500;color:#10b981;}
+    .calc-result-label{font-size:11px;color:#334155;margin-top:4px;}
+    .calc-arrow{text-align:center;color:#334155;font-size:20px;}
+    /* FAQ */
+    .faq-title{font-size:22px;font-weight:700;color:#f1f5f9;letter-spacing:-0.5px;margin-bottom:24px;}
+    .faq-item{border-bottom:1px solid #1e293b;padding:20px 0;}
+    .faq-q{font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:8px;}
+    .faq-a{font-size:13.5px;color:#475569;line-height:1.7;}
+    /* Section divider */
+    .section-title{font-size:20px;font-weight:700;color:#f1f5f9;letter-spacing:-0.3px;margin-bottom:24px;}
+    /* Compare table */
+    .compare{width:100%;border-collapse:collapse;margin-bottom:64px;font-size:13.5px;}
+    .compare th{text-align:left;padding:12px 16px;font-size:10px;font-family:"JetBrains Mono",monospace;font-weight:600;color:#334155;text-transform:uppercase;letter-spacing:0.1em;background:#060b18;border-bottom:1px solid #1e293b;}
+    .compare td{padding:14px 16px;border-bottom:1px solid #0f172a;color:#94a3b8;vertical-align:top;}
+    .compare tr:hover td{background:#0d1525;}
+    .compare td:first-child{color:#f1f5f9;font-weight:500;}
+    .compare td.green{color:#10b981;font-weight:600;}
+    .compare td.muted{color:#334155;}
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <a href="/" style="display:flex;align-items:center;gap:10px;">
+      <img src="/logo.png" alt="ArcFX" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #334155;" />
+      <span style="font-size:15px;font-weight:600;color:#f1f5f9;">ArcFX</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:4px;">
+      <a href="/" style="color:#475569;font-size:13.5px;font-weight:500;padding:6px 14px;border-radius:6px;transition:all .15s;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#475569';this.style.background='transparent'">Trade</a>
+      <div style="position:relative;" id="p-tools-wrap">
+        <button onclick="var dd=document.getElementById('p-tools-dd');dd.style.display=dd.style.display==='block'?'none':'block'"
+                style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;color:#475569;background:transparent;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#475569'">
+          Tools <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="p-tools-dd" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:200px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
+          <a href="/multisend" style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">Multisender</a>
+          <a href="/pay"       style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">Pay Links</a>
+          <a href="/invoice"   style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">Invoices</a>
+          <a href="/history"   style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">History</a>
+          <a href="/docs"      style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">API Docs</a>
+        </div>
+      </div>
+      <a href="/analytics" style="color:#475569;font-size:13.5px;font-weight:500;padding:6px 14px;border-radius:6px;transition:all .15s;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#475569';this.style.background='transparent'">Analytics</a>
+      <a href="/pricing" style="color:#f1f5f9;font-size:13.5px;font-weight:500;padding:6px 14px;border-radius:6px;background:#1e293b;">Pricing</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <a href="#waitlist" style="padding:8px 18px;background:#2563eb;color:#fff;border-radius:7px;font-size:13px;font-weight:600;transition:background .15s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Get early access</a>
+    </div>
+  </nav>
+  <script>
+    document.addEventListener('click',function(e){
+      var w=document.getElementById('p-tools-wrap'),dd=document.getElementById('p-tools-dd');
+      if(w&&dd&&!w.contains(e.target))dd.style.display='none';
+    });
+  </script>
+
+  <div class="page">
+
+    <!-- Header -->
+    <div class="eyebrow">Pricing</div>
+    <h1>Simple, transparent pricing.<br>No surprises.</h1>
+    <p class="sub">A flat 0.15% protocol fee on payments processed. No monthly fees for the UI tools. Pay only for what you use — all settled in USDC on-chain.</p>
+
+    <!-- Plans -->
+    <div class="plans">
+
+      <!-- Free -->
+      <div class="plan">
+        <div class="plan-label">Free forever</div>
+        <div class="plan-price">$0<span>/month</span></div>
+        <p class="plan-desc">For individuals and small teams getting started with stablecoin payments on Arc.</p>
+        <div class="plan-features">
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Swap USDC ↔ EURC</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Bridge via Circle CCTP</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Pay Links &amp; Invoices</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Multisend up to 5 wallets (free)</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Transaction history + CSV export</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Address book</div>
+          <div class="feature" style="color:#334155;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>API access</div>
+          <div class="feature" style="color:#334155;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Webhooks</div>
+        </div>
+        <a href="/" class="plan-cta cta-ghost">Launch app →</a>
+      </div>
+
+      <!-- Pro -->
+      <div class="plan featured">
+        <div class="featured-badge">Most popular</div>
+        <div class="plan-label" style="margin-top:16px;">Pro</div>
+        <div class="plan-price" style="color:#2563eb;">0.15%<span> per payment</span></div>
+        <p class="plan-desc">For businesses that process regular USDC/EURC payments, payroll, or invoices. Pay only when you transact.</p>
+        <div class="plan-features">
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Free</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Multisend up to 500 wallets</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>0.15% fee on payments only</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Fee collected on-chain automatically</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>No monthly subscription</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Safe / Multi-sig compatible</div>
+          <div class="feature" style="color:#334155;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>API access</div>
+          <div class="feature" style="color:#334155;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Webhooks</div>
+        </div>
+        <a href="/" class="plan-cta cta-primary" style="background:#2563eb;color:#fff;border:none;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Start for free →</a>
+      </div>
+
+      <!-- API / Enterprise -->
+      <div class="plan">
+        <div class="plan-label">API &amp; Enterprise</div>
+        <div class="plan-price">$99<span>/month</span></div>
+        <p class="plan-desc">For teams that need programmatic access, webhooks, and enterprise-grade infrastructure.</p>
+        <div class="plan-features">
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Pro</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full REST API access</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Webhook delivery</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Programmatic invoice generation</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>100 API requests/minute</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Circle Wallets integration</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Priority support</div>
+          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Early access to new features</div>
+        </div>
+        <a href="mailto:arcfxapp@gmail.com" class="plan-cta cta-ghost">Request access →</a>
+      </div>
+
+    </div>
+
+    <!-- Fee calculator -->
+    <div class="calc">
+      <div class="calc-title">Fee calculator</div>
+      <div class="calc-sub">See exactly what you pay. The 0.15% fee only applies to payments — swaps, bridges, and history are always free.</div>
+      <div class="calc-row">
+        <div>
+          <div class="calc-label">You send</div>
+          <div class="calc-input-wrap">
+            <input class="calc-input" id="calc-amount" type="number" value="1000" min="0" oninput="calcFee()" />
+            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#334155;">USDC</span>
+          </div>
+        </div>
+        <div class="calc-arrow">→</div>
+        <div>
+          <div class="calc-label">Fee (0.15%)</div>
+          <div class="calc-result">
+            <div class="calc-result-val" id="calc-fee">1.50 USDC</div>
+            <div class="calc-result-label">Recipient receives <span id="calc-net" style="color:#f1f5f9;font-weight:600;">998.50 USDC</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compare -->
+    <div class="section-title">How ArcFX compares</div>
+    <table class="compare">
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Fee on $10,000 USDC</th>
+          <th>Settlement time</th>
+          <th>Reversible</th>
+          <th>24/7</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ArcFX</td>
+          <td class="green">$15.00 (0.15%)</td>
+          <td class="green">&lt; 1 second</td>
+          <td style="color:#ef4444;">No (final)</td>
+          <td class="green">Yes</td>
+        </tr>
+        <tr>
+          <td>Bank wire</td>
+          <td style="color:#f59e0b;">$25–$50 flat</td>
+          <td>1–5 business days</td>
+          <td>Possible</td>
+          <td style="color:#334155;">No</td>
+        </tr>
+        <tr>
+          <td>Wise</td>
+          <td style="color:#f59e0b;">$41 (~0.41%)</td>
+          <td>1–2 business days</td>
+          <td>Limited</td>
+          <td style="color:#334155;">No</td>
+        </tr>
+        <tr>
+          <td>Revolut Business</td>
+          <td style="color:#f59e0b;">$50+ (0.5%)</td>
+          <td>Instant (limits apply)</td>
+          <td>Limited</td>
+          <td>Yes</td>
+        </tr>
+        <tr>
+          <td>PayPal</td>
+          <td style="color:#ef4444;">$350 (3.5%)</td>
+          <td>Instant</td>
+          <td>Yes</td>
+          <td>Yes</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- FAQ -->
+    <div class="faq-title">Frequently asked questions</div>
+
+    <div class="faq-item">
+      <div class="faq-q">When is the fee charged?</div>
+      <div class="faq-a">Only when a payment is executed through the ArcFXPayments smart contract — i.e. when someone pays a Pay Link or Invoice. Swaps, bridges, and history are completely free. Multisend up to 5 recipients is also free.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">How is the fee collected?</div>
+      <div class="faq-a">Automatically on-chain. When a payment is made, the smart contract deducts 0.15% and routes it to the ArcFX treasury wallet. The recipient receives the remainder instantly. No invoicing, no manual billing.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Is there a minimum payment size?</div>
+      <div class="faq-a">No minimum. The 0.15% fee applies to any amount. On very small payments (under $0.67), the fee rounds to zero due to USDC's 6-decimal precision.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Does ArcFX hold my funds?</div>
+      <div class="faq-a">Never. ArcFX is entirely non-custodial. All transactions go directly wallet-to-wallet through smart contracts. ArcFX has no ability to freeze, pause, or access your funds at any point.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What tokens does ArcFX support?</div>
+      <div class="faq-a">USDC and EURC on Arc Testnet. Both are native Circle stablecoins — not wrapped versions. Mainnet support launches when Arc Mainnet goes live (Summer 2026).</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">When does API access launch?</div>
+      <div class="faq-a">The $99/month API tier is in development. Early access subscribers will be first in line. Email arcfxapp@gmail.com to join the waitlist.</div>
+    </div>
+
+    <!-- CTA -->
+    <div id="waitlist" style="margin-top:64px;background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:40px;text-align:center;">
+      <div style="font-size:22px;font-weight:700;color:#f1f5f9;margin-bottom:10px;">Ready to start?</div>
+      <div style="font-size:14px;color:#475569;margin-bottom:28px;">No account needed. Connect your wallet and start in under a minute.</div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <a href="/" style="padding:13px 28px;background:#2563eb;color:#fff;border-radius:7px;font-size:14px;font-weight:600;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Launch ArcFX →</a>
+        <a href="mailto:arcfxapp@gmail.com" style="padding:13px 28px;background:transparent;color:#475569;border:1px solid #1e293b;border-radius:7px;font-size:14px;font-weight:600;" onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'">Talk to us →</a>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function calcFee() {
+      var amt = parseFloat(document.getElementById('calc-amount').value) || 0;
+      var fee = (amt * 0.0015).toFixed(2);
+      var net = (amt - parseFloat(fee)).toFixed(2);
+      document.getElementById('calc-fee').textContent = fee + ' USDC';
+      document.getElementById('calc-net').textContent  = net + ' USDC';
+    }
+  </script>
+
+</body>
+</html>

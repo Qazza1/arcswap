@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcFX Security &amp; Compliance — Non-custodial stablecoin infrastructure</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:"Inter",system-ui,sans-serif;background:#0a0f1e;color:#e2e8f0;line-height:1.6;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;}
+    nav{position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;}
+    .page{max-width:860px;margin:0 auto;padding:64px 28px 100px;}
+    .eyebrow{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;color:#10b981;text-transform:uppercase;letter-spacing:0.14em;margin-bottom:14px;}
+    h1{font-size:clamp(32px,4vw,48px);font-weight:700;color:#f1f5f9;letter-spacing:-1px;line-height:1.15;margin-bottom:14px;}
+    .sub{font-size:16px;color:#475569;line-height:1.7;max-width:600px;margin-bottom:56px;}
+    /* Pillars */
+    .pillars{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:56px;}
+    @media(max-width:600px){.pillars{grid-template-columns:1fr;}}
+    .pillar{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:24px;}
+    .pillar-icon{width:40px;height:40px;border-radius:8px;background:#0a0f1e;border:1px solid #1e293b;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+    .pillar-title{font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:8px;}
+    .pillar-desc{font-size:13px;color:#475569;line-height:1.7;}
+    /* Section */
+    .section{margin-bottom:48px;}
+    .section-title{font-size:18px;font-weight:700;color:#f1f5f9;letter-spacing:-0.3px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #1e293b;}
+    .section-body{font-size:14px;color:#475569;line-height:1.8;}
+    .section-body p{margin-bottom:14px;}
+    .section-body p:last-child{margin-bottom:0;}
+    /* What we can / cannot */
+    .can-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:48px;}
+    @media(max-width:600px){.can-grid{grid-template-columns:1fr;}}
+    .can-card{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:24px;}
+    .can-card.cannot{border-color:rgba(239,68,68,0.15);}
+    .can-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;font-family:"JetBrains Mono",monospace;}
+    .can-title.green{color:#10b981;}
+    .can-title.red{color:#ef4444;}
+    .can-item{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.5;}
+    .can-item:last-child{margin-bottom:0;}
+    /* Contracts */
+    .contract-card{background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:20px;margin-bottom:12px;}
+    .contract-name{font-size:13px;font-weight:600;color:#f1f5f9;margin-bottom:4px;}
+    .contract-addr{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:#2563eb;margin-bottom:8px;word-break:break-all;}
+    .contract-desc{font-size:12.5px;color:#475569;line-height:1.6;}
+    /* Info box */
+    .info-box{border-radius:8px;padding:16px 18px;margin-bottom:20px;font-size:13.5px;line-height:1.7;}
+    .info-blue{background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);color:#93c5fd;}
+    .info-green{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:#6ee7b7;}
+    .info-amber{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);color:#fcd34d;}
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <a href="/" style="display:flex;align-items:center;gap:10px;">
+      <img src="/logo.png" alt="ArcFX" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #334155;" />
+      <span style="font-size:15px;font-weight:600;color:#f1f5f9;">ArcFX</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:4px;">
+      <a href="/" style="color:#475569;font-size:13.5px;font-weight:500;padding:6px 14px;border-radius:6px;transition:all .15s;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#475569';this.style.background='transparent'">Trade</a>
+      <div style="position:relative;" id="s-tools-wrap">
+        <button onclick="var dd=document.getElementById('s-tools-dd');dd.style.display=dd.style.display==='block'?'none':'block'"
+                style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;color:#475569;background:transparent;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#475569'">
+          Tools <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="s-tools-dd" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:200px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
+          <a href="/multisend" style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">Multisender</a>
+          <a href="/pay"       style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">Pay Links</a>
+          <a href="/invoice"   style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">Invoices</a>
+          <a href="/history"   style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">History</a>
+          <a href="/docs"      style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">API Docs</a>
+        </div>
+      </div>
+      <a href="/analytics" style="color:#475569;font-size:13.5px;font-weight:500;padding:6px 14px;border-radius:6px;transition:all .15s;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#475569';this.style.background='transparent'">Analytics</a>
+      <a href="/pricing" style="color:#475569;font-size:13.5px;font-weight:500;padding:6px 14px;border-radius:6px;transition:all .15s;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#475569';this.style.background='transparent'">Pricing</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <a href="mailto:arcfxapp@gmail.com" style="padding:8px 18px;background:#0f172a;color:#94a3b8;border:1px solid #1e293b;border-radius:7px;font-size:13px;font-weight:600;" onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.borderColor='#1e293b';this.style.color='#94a3b8'">Contact security team</a>
+    </div>
+  </nav>
+  <script>
+    document.addEventListener('click',function(e){
+      var w=document.getElementById('s-tools-wrap'),dd=document.getElementById('s-tools-dd');
+      if(w&&dd&&!w.contains(e.target))dd.style.display='none';
+    });
+  </script>
+
+  <div class="page">
+
+    <!-- Header -->
+    <div class="eyebrow">Security &amp; Compliance</div>
+    <h1>Built for businesses<br>that take security seriously.</h1>
+    <p class="sub">ArcFX is non-custodial by design. We never hold your funds, never store your private keys, and every transaction is verifiable on-chain. Here is exactly how it works.</p>
+
+    <!-- Four pillars -->
+    <div class="pillars">
+      <div class="pillar">
+        <div class="pillar-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="pillar-title">Non-custodial</div>
+        <div class="pillar-desc">ArcFX never holds, moves, or controls your funds. Every transaction is signed by your wallet and executed directly on Arc. We have no access to your assets at any point.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="pillar-title">On-chain verifiable</div>
+        <div class="pillar-desc">Every payment, batch transfer, and fee collection is recorded on Arc and verifiable on ArcScan. There is no off-chain ledger, no internal database of transactions.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <div class="pillar-title">No private key storage</div>
+        <div class="pillar-desc">ArcFX never requests, stores, or transmits private keys or seed phrases. Wallet connection uses MetaMask or WalletConnect — your keys stay in your browser.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+        </div>
+        <div class="pillar-title">Safe / Multi-sig compatible</div>
+        <div class="pillar-desc">ArcFX works with Safe (Gnosis Safe) multi-sig wallets. Corporate treasuries requiring multiple approvals can use all ArcFX tools without modification.</div>
+      </div>
+    </div>
+
+    <!-- Architecture -->
+    <div class="section">
+      <div class="section-title">How the architecture works</div>
+      <div class="section-body">
+        <p>ArcFX is a frontend interface that connects your wallet directly to two smart contracts on Arc. There is no ArcFX server involved in transaction execution. When you make a payment, the flow is:</p>
+        <p><strong style="color:#f1f5f9;">Your wallet → ArcFXPayments.sol → Recipient wallet</strong><br>The smart contract deducts 0.15% to the treasury address and forwards the remainder to the recipient — all in one atomic transaction. If any step fails, the entire transaction reverts. You cannot lose funds to a partial execution.</p>
+        <p>For batch transfers via Multisender: <strong style="color:#f1f5f9;">Your wallet → ArcFXMultisender.sol → Up to 500 recipient wallets</strong><br>Executed in a single on-chain transaction. The contract validates all recipients before execution begins.</p>
+      </div>
+    </div>
+
+    <!-- Deployed contracts -->
+    <div class="section">
+      <div class="section-title">Deployed contracts (Arc Testnet)</div>
+      <div class="info-amber">⚠ ArcFX is currently live on Arc Testnet only. Mainnet contracts will be deployed when Arc Mainnet launches. Testnet USDC has no real-world value.</div>
+      <div class="contract-card">
+        <div class="contract-name">ArcFXPayments.sol</div>
+        <div class="contract-addr">0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3</div>
+        <div class="contract-desc">Handles Pay Links and Invoice payments. Collects 0.15% protocol fee automatically. Emits PaymentExecuted event for every transaction. View on <a href="https://testnet.arcscan.app/address/0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3" target="_blank" rel="noopener" style="color:#2563eb;">ArcScan ↗</a></div>
+      </div>
+      <div class="contract-card">
+        <div class="contract-name">ArcFXMultisender.sol</div>
+        <div class="contract-addr">0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398</div>
+        <div class="contract-desc">Handles batch USDC/EURC transfers to up to 500 wallets in a single transaction. Free tier (≤5 recipients) and Pro tier (≤500). 0.15% fee on Pro batches. View on <a href="https://testnet.arcscan.app/address/0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398" target="_blank" rel="noopener" style="color:#2563eb;">ArcScan ↗</a></div>
+      </div>
+    </div>
+
+    <!-- What ArcFX can / cannot do -->
+    <div class="section">
+      <div class="section-title">What ArcFX can and cannot do</div>
+      <div class="can-grid">
+        <div class="can-card">
+          <div class="can-title green">✓ What ArcFX can do</div>
+          <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Collect 0.15% fee when a payment executes</div>
+          <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Read your wallet address and token balances</div>
+          <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Request transaction approvals from your wallet</div>
+          <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Display your on-chain transaction history</div>
+        </div>
+        <div class="can-card cannot">
+          <div class="can-title red">✗ What ArcFX cannot do</div>
+          <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Move your funds without your signature</div>
+          <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Access your private key or seed phrase</div>
+          <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Freeze or pause your wallet or funds</div>
+          <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Reverse or cancel a completed transaction</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data &amp; Privacy -->
+    <div class="section">
+      <div class="section-title">Data storage &amp; privacy</div>
+      <div class="section-body">
+        <p>ArcFX stores no personal data on any server. The address book is stored entirely in your browser's localStorage — it never leaves your device. Invoice PDFs are generated client-side and downloaded directly to your machine.</p>
+        <p>The only data ArcFX reads from external sources is your on-chain transaction history, fetched directly from Arc Testnet RPC and ArcScan. This is public blockchain data, the same data available to anyone with your wallet address.</p>
+        <p>ArcFX does not use cookies, tracking pixels, or analytics beyond what is strictly necessary for the application to function. There is no advertising, no user profiling, and no data sold to third parties.</p>
+      </div>
+    </div>
+
+    <!-- Audit status -->
+    <div class="section">
+      <div class="section-title">Smart contract audit status</div>
+      <div class="info-amber" style="margin-bottom:16px;">⚠ ArcFX smart contracts have not yet been formally audited by a third-party security firm. We are currently on Arc Testnet — mainnet deployment will follow a professional audit.</div>
+      <div class="section-body">
+        <p>Our contracts are open source and verifiable on ArcScan. We encourage security researchers to review the code. Responsible disclosure of any vulnerabilities should be sent to <a href="mailto:arcfxapp@gmail.com" style="color:#2563eb;">arcfxapp@gmail.com</a>.</p>
+        <p>A formal audit from a reputable security firm is planned prior to Arc Mainnet launch. Audit reports will be published publicly.</p>
+      </div>
+    </div>
+
+    <!-- Enterprise contact -->
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:36px;text-align:center;">
+      <div style="font-size:18px;font-weight:700;color:#f1f5f9;margin-bottom:8px;">Enterprise security review</div>
+      <div style="font-size:13.5px;color:#475569;margin-bottom:24px;line-height:1.7;">Need a security questionnaire completed, a custom compliance review, or have specific questions about ArcFX's architecture? We're happy to work with your security team directly.</div>
+      <a href="mailto:arcfxapp@gmail.com" style="display:inline-block;padding:12px 28px;background:#2563eb;color:#fff;border-radius:7px;font-size:13.5px;font-weight:600;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Contact security team →</a>
+    </div>
+
+  </div>
+
+</body>
+</html>

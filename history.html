@@ -6,7 +6,7 @@
   <title>ArcFX History — Your transaction history on Arc</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -237,7 +237,7 @@
 
   <div class="page-header">
     <div>
-      <div class="eyebrow">📋 Arc Testnet · USDC & EURC</div>
+      <div class="eyebrow">📋 Arc Testnet · USDC &amp; EURC</div>
       <h1>Payment <span class="gradient">history.</span></h1>
       <p class="sub">All your USDC and EURC transactions on Arc — swaps, bridges, sends and receives.</p>
     </div>
@@ -301,7 +301,7 @@
   </div>
 
   <div class="page-footer">
-    <span>Showing USDC & EURC transactions on Arc Testnet · Last 20,000 blocks (~2.8hrs)</span>
+    <span>Showing USDC &amp; EURC transactions on Arc Testnet · Last 20,000 blocks (~2.8hrs)</span>
     <div style="display:flex;gap:20px;">
       <a href="/invoice">Create invoice →</a>
       <a href="/pay">Pay link →</a>
@@ -393,7 +393,7 @@ async function loadHistory() {
     const fromBlock = Math.max(0, latest - 20000);
     const toBlock = latest;
 
-    setLoading("Loading your USDC & EURC history…");
+    setLoading("Loading your USDC &amp; EURC history…");
 
     const [usdcOut, usdcIn, eurcOut, eurcIn] = await Promise.all([
       getLogs({ fromBlock, toBlock, address: USDC, topics: [TRANSFER, padded, null] }),
