@@ -768,60 +768,6 @@
               </div>
             </div>
 
-            <!-- Privacy-Shielded Trade toggle -->
-            <div style="display:flex;align-items:center;justify-content:space-between;
-                        padding:12px 14px;background:#060b18;border:1px solid #1e293b;
-                        border-radius:8px;margin-bottom:16px;">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span style="font-size:13px;font-weight:500;color:#94a3b8;">Privacy-Shielded Trade</span>
-                <!-- Tooltip icon -->
-                <div style="position:relative;display:inline-flex;" id="privacy-tooltip-wrap">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                       stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                       style="cursor:help;"
-                       onmouseover="document.getElementById('privacy-tooltip').style.display='block'"
-                       onmouseout="document.getElementById('privacy-tooltip').style.display='none'">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="16" x2="12" y2="12"/>
-                    <line x1="12" y1="8" x2="12.01" y2="8"/>
-                  </svg>
-                  <div id="privacy-tooltip"
-                       style="display:none;position:absolute;bottom:calc(100% + 8px);left:50%;
-                              transform:translateX(-50%);width:220px;
-                              background:#1e293b;border:1px solid #334155;border-radius:8px;
-                              padding:10px 12px;font-size:11.5px;color:#94a3b8;line-height:1.6;
-                              z-index:99;pointer-events:none;">
-                    Uses zero-knowledge proofs to shield trade amounts and routes from on-chain observers while maintaining full settlement integrity.
-                  </div>
-                </div>
-              </div>
-
-              <!-- Preline UI toggle switch -->
-              <label class="relative inline-flex cursor-pointer items-center">
-                <input type="checkbox" id="privacy-shield-toggle" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0;" />
-                <div style="
-                  width:40px;height:22px;border-radius:11px;
-                  background:#1e293b;border:1px solid #334155;
-                  position:relative;cursor:pointer;transition:background .2s;
-                " id="toggle-track"
-                   onclick="
-                     const cb = document.getElementById('privacy-shield-toggle');
-                     cb.checked = !cb.checked;
-                     this.style.background = cb.checked ? '#2563eb' : '#1e293b';
-                     this.style.borderColor = cb.checked ? '#2563eb' : '#334155';
-                     document.getElementById('toggle-thumb').style.transform = cb.checked ? 'translateX(18px)' : 'translateX(2px)';
-                   ">
-                  <span id="toggle-thumb" style="
-                    position:absolute;top:2px;left:0;
-                    width:16px;height:16px;border-radius:50%;
-                    background:#fff;transition:transform .2s;
-                    transform:translateX(2px);
-                    box-shadow:0 1px 3px rgba(0,0,0,0.4);
-                  "></span>
-                </div>
-              </label>
-            </div>
-
             <!-- Hidden swap-btn for TS compatibility -->
             <button id="swap-btn" style="display:none;"></button>
             <!-- Status messages -->
