@@ -28,17 +28,18 @@
     body { font-family: "Inter", system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
     a { text-decoration: none; }
 
-    /* ── Stats bar ── */
-    .stats-bar { background: rgba(2,6,23,0.95); border-bottom: 1px solid var(--border); padding: 0 28px; height: 34px; display: flex; align-items: center; overflow: hidden; }
-    .stats-bar-inner { display: flex; align-items: center; gap: 20px; font-size: 11.5px; white-space: nowrap; }
-    .stats-bar-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
-    .stats-bar-label { color: var(--muted); margin-right: 4px; }
-    .stats-bar-val { color: var(--text); font-weight: 600; }
-    .stats-bar-sep { color: var(--border-med); }
+    /* ── Stats bar — canonical, matches index.html ── */
+    .stats-bar { background: #08090f; border-bottom: 1px solid var(--border); height: 36px; display: flex; align-items: center; }
+    .stats-bar-inner { display: flex; align-items: center; justify-content: center; gap: 0; width: 100%; padding: 0 24px; }
+    .stats-bar-item { display: flex; align-items: center; gap: 7px; white-space: nowrap; flex-shrink: 0; }
+    .stats-bar-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 5px var(--teal); animation: pulse 2s ease-in-out infinite; }
+    .stats-bar-label { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); }
+    .stats-bar-val { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 500; color: var(--text); }
+    .stats-bar-sep { width: 1px; height: 14px; background: var(--border); margin: 0 20px; flex-shrink: 0; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
     /* ── Nav ── */
-    nav { position: sticky; top: 0; z-index: 50; height: 64px; display: grid; grid-template-columns: 1fr auto auto; align-items: center; padding: 0 24px; background: rgba(2,6,23,0.97); border-bottom: 1px solid var(--border); }
+    nav { position: sticky; top: 0; z-index: 50; height: 64px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 24px; background: rgba(2,6,23,0.97); border-bottom: 1px solid var(--border); }
     .nav-logo { display: flex; align-items: center; gap: 10px; }
     .nav-logo img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-med); }
     .nav-logo span { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
@@ -46,7 +47,7 @@
     .nav-link { color: var(--muted); font-size: 13.5px; font-weight: 500; padding: 6px 14px; border-radius: 6px; transition: all .15s; }
     .nav-link:hover { color: var(--text); background: var(--border); }
     .nav-link.active { color: var(--text); }
-    .nav-right { display: flex; align-items: center; gap: 10px; }
+    .nav-right { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
 
     /* ── Page ── */
     .container { max-width: 1100px; margin: 0 auto; padding: 0 28px; }
@@ -129,69 +130,74 @@
 </head>
 <body>
 
-  <!-- Stats bar -->
+  <!-- Stats bar — canonical -->
   <div class="stats-bar">
     <div class="stats-bar-inner">
-      <div><span class="stats-bar-dot"></span><span class="stats-bar-label">Arc Testnet</span><span class="stats-bar-val">Live</span></div>
-      <span class="stats-bar-sep">|</span>
-      <div><span class="stats-bar-label">Projects on Arc</span><span class="stats-bar-val">7</span></div>
-      <span class="stats-bar-sep">|</span>
-      <div><span class="stats-bar-label">Arc raised</span><span class="stats-bar-val">$222M</span></div>
-      <span class="stats-bar-sep">|</span>
-      <div><span class="stats-bar-label">Network valuation</span><span class="stats-bar-val">$3B</span></div>
+      <div class="stats-bar-item"><span class="stats-bar-dot"></span><span class="stats-bar-label">Arc Testnet</span><span class="stats-bar-val">Live</span></div>
+      <div class="stats-bar-sep"></div>
+      <div class="stats-bar-item"><span class="stats-bar-label">Settlement</span><span class="stats-bar-val" style="color:var(--teal)">&lt; 1 second</span></div>
+      <div class="stats-bar-sep"></div>
+      <div class="stats-bar-item"><span class="stats-bar-label">Gas token</span><span class="stats-bar-val">USDC</span></div>
+      <div class="stats-bar-sep"></div>
+      <div class="stats-bar-item"><span class="stats-bar-label">Avg fee</span><span class="stats-bar-val" style="color:var(--teal)">$0.0002</span></div>
+      <div class="stats-bar-sep"></div>
+      <div class="stats-bar-item"><span class="stats-bar-label">Arc raised</span><span class="stats-bar-val">$222M at $3B</span></div>
+      <div class="stats-bar-sep"></div>
+      <div class="stats-bar-item"><span class="stats-bar-label">Tools</span><span class="stats-bar-val">6 live</span></div>
     </div>
   </div>
 
-  <!-- Nav -->
+  <!-- Universal nav -->
   <nav>
-    <a href="/" class="nav-logo">
-      <img src="/logo.png" alt="ArcFX" />
-      <span>ArcFX</span>
+    <!-- Left: Logo -->
+    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
+      <img src="/logo.png" alt="ArcFX" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #334155;" />
+      <span style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.3px;">ArcFX</span>
     </a>
-    <div class="nav-center">
-      <a href="/" class="nav-link">Trade</a>
-      <div style="position:relative;" id="eco-tools-wrap">
-        <button onclick="var dd=document.getElementById('eco-tools-dd');dd.style.display=dd.style.display==='block'?'none':'block'"
-                style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;color:var(--muted);background:transparent;border:none;cursor:pointer;font-family:inherit;">
-          Tools <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div id="eco-tools-dd" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:210px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
-          <a href="/multisend" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Multisender</div><div style="font-size:11px;color:#64748b;">Batch transfers</div></div>
-          </a>
-          <a href="/pay" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Pay Links</div><div style="font-size:11px;color:#64748b;">Accept payments</div></div>
-          </a>
-          <a href="/invoice" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Invoices</div><div style="font-size:11px;color:#64748b;">PDF invoices + Pay Now</div></div>
-          </a>
-          <a href="/history" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">History</div><div style="font-size:11px;color:#64748b;">Transactions + CSV</div></div>
-          </a>
-          <a href="/docs" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">API Docs</div><div style="font-size:11px;color:#64748b;">Developer reference</div></div>
-          </a>
+    <!-- Center: Nav links -->
+    <div style="display:flex;align-items:center;gap:2px;">
+      <a href="/" style="padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;text-decoration:none;transition:all .15s;color:#94a3b8;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#94a3b8';this.style.background='transparent'">Trade</a>
+      <div style="position:relative;" id="nav-tools-ecosystem">
+        <button onclick="(function(){var d=document.getElementById('nav-dd-ecosystem');d.style.display=d.style.display==='block'?'none':'block';})()" style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;border:0;outline:none;cursor:pointer;font-family:inherit;transition:all .15s;color:#94a3b8;background:transparent;-webkit-appearance:none;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#94a3b8';this.style.background='transparent'">Tools <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div id="nav-dd-ecosystem" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:220px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
+          <a href="/multisend" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;background:transparent;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Multisender</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Batch transfers</div></div></a>
+          <a href="/pay" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;background:transparent;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Pay Links</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Accept payments</div></div></a>
+          <a href="/invoice" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;background:transparent;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg><div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Invoices</div><div style="font-size:11px;color:#64748b;margin-top:1px;">PDF invoices + Pay Now</div></div></a>
+          <a href="/history" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;background:transparent;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">History</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Transactions + CSV</div></div></a>
+          <a href="/docs" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;background:transparent;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg><div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">API Docs</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Developer reference</div></div></a>
         </div>
       </div>
-      <a href="/analytics" class="nav-link">Analytics</a>
-      <a href="/pricing" class="nav-link">Pricing</a>
-      <a href="/ecosystem" class="nav-link active">Ecosystem</a>
+      <a href="/analytics" style="padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;text-decoration:none;transition:all .15s;color:#94a3b8;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#94a3b8';this.style.background='transparent'">Analytics</a>
+      <a href="/pricing"   style="padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;text-decoration:none;transition:all .15s;color:#94a3b8;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#94a3b8';this.style.background='transparent'">Pricing</a>
+      <a href="/ecosystem" style="padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;text-decoration:none;transition:all .15s;color:#f1f5f9;background:#1e293b;">Ecosystem</a>
     </div>
-    <div class="nav-right">
-      <a href="/" style="padding:8px 18px;background:#3d7eff;color:#fff;border-radius:7px;font-size:13px;font-weight:600;transition:background .15s;" onmouseover="this.style.background='#2d6ee8'" onmouseout="this.style.background='#3d7eff'">Launch ArcFX →</a>
+    <!-- Right: Testnet + Contacts + Connect -->
+    <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;border:1px solid #1e293b;background:#0f172a;">
+        <span style="width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.7);animation:pulse 2s ease-in-out infinite;display:inline-block;"></span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#64748b;">Testnet</span>
+      </div>
+      <button onclick="toggleUniversalContacts()" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;" onmouseover="this.style.borderColor='#2563eb';this.style.color='#94a3b8'" onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Contacts</button>
+      <button id="unav-connect-ecosystem" onclick="typeof connectWallet==='function'?connectWallet():null" style="padding:7px 16px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#94a3b8;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#1e293b'">Connect wallet</button>
     </div>
   </nav>
+
+  <!-- Contacts modal -->
+  <div id="unav-contacts-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;" onclick="if(event.target===this)toggleUniversalContacts()">
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;width:480px;max-width:calc(100vw - 32px);max-height:80vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #1e293b;"><div><div style="font-size:15px;font-weight:600;color:#f1f5f9;">Address Book</div><div style="font-size:11px;color:#475569;margin-top:2px;">Synced across all pages</div></div><button onclick="toggleUniversalContacts()" style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:20px;padding:4px;">×</button></div>
+      <div style="flex:1;overflow-y:auto;padding:12px 20px;" id="unav-contacts-list"></div>
+      <div style="padding:14px 20px;border-top:1px solid #1e293b;"><div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;"><input id="unav-c-name" type="text" placeholder="Contact name" style="background:#060b18;border:1px solid #1e293b;border-radius:6px;color:#f1f5f9;font-size:13px;font-family:inherit;padding:8px 11px;outline:none;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" /><input id="unav-c-addr" type="text" placeholder="0x..." style="background:#060b18;border:1px solid #1e293b;border-radius:6px;color:#f1f5f9;font-size:12px;font-family:'JetBrains Mono',monospace;padding:8px 11px;outline:none;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" /><button onclick="saveUniversalContact()" style="padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Save</button></div></div>
+    </div>
+  </div>
+
   <script>
-    document.addEventListener('click', function(e) {
-      var w = document.getElementById('eco-tools-wrap');
-      var dd = document.getElementById('eco-tools-dd');
-      if (w && dd && !w.contains(e.target)) dd.style.display = 'none';
-    });
+    document.addEventListener('click',function(e){var w=document.getElementById('nav-tools-ecosystem'),d=document.getElementById('nav-dd-ecosystem');if(w&&d&&!w.contains(e.target))d.style.display='none';});
+    function toggleUniversalContacts(){var m=document.getElementById('unav-contacts-modal');if(!m)return;m.style.display=m.style.display==='flex'?'none':'flex';if(m.style.display==='flex')renderUniversalContacts();}
+    function renderUniversalContacts(){var list=document.getElementById('unav-contacts-list');if(!list)return;var e=JSON.parse(localStorage.getItem('arcfx_address_book')||'[]');if(!e.length){list.innerHTML="<div style='text-align:center;padding:24px;color:#475569;font-size:13px;'>No contacts yet.</div>";return;}list.innerHTML=e.map(function(c,i){return "<div style='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;'><div style='width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;'>"+(c.name||'?').charAt(0).toUpperCase()+"</div><div style='flex:1;min-width:0;'><div style='font-size:13px;font-weight:600;color:#f1f5f9;'>"+(c.name||'')+"</div><div style='font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>"+(c.address||'')+"</div></div><button onclick='copyUC("+i+")' style='background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;'>Copy</button></div>";}).join('');}
+    function copyUC(i){var e=JSON.parse(localStorage.getItem('arcfx_address_book')||'[]');if(e[i])navigator.clipboard.writeText(e[i].address).catch(function(){});}
+    function saveUniversalContact(){var n=document.getElementById('unav-c-name').value.trim(),a=document.getElementById('unav-c-addr').value.trim();if(!n||!/^0x[0-9a-fA-F]{40}$/.test(a))return;var e=JSON.parse(localStorage.getItem('arcfx_address_book')||'[]');if(!e.some(function(x){return x.address.toLowerCase()===a.toLowerCase();})){e.push({name:n,address:a});localStorage.setItem('arcfx_address_book',JSON.stringify(e));}document.getElementById('unav-c-name').value='';document.getElementById('unav-c-addr').value='';renderUniversalContacts();}
+    if(window.ethereum){window.ethereum.request({method:'eth_accounts'}).then(function(ac){if(ac&&ac.length>0){var b=document.getElementById('unav-connect-ecosystem');if(b)b.textContent=ac[0].slice(0,6)+'...'+ac[0].slice(-4);}}).catch(function(){});}
   </script>
 
   <!-- Page content -->
@@ -403,7 +409,6 @@
         if (show) visible++;
       });
 
-      // Show empty state if no cards visible
       var empty = document.getElementById('eco-empty');
       if (empty) empty.style.display = visible === 0 ? 'block' : 'none';
     }
