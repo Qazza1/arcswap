@@ -49,42 +49,22 @@
     .info-blue{background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);color:#93c5fd;}
     .info-green{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:#6ee7b7;}
     .info-amber{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);color:#fcd34d;}
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   </style>
 </head>
 <body>
+  <!-- Header mount points — populated by /src/shared/header.ts -->
+  <div id="arcfx-stats-bar"></div>
+  <div id="arcfx-nav"></div>
 
-  <!-- Nav -->
-  <nav>
-    <a href="/" style="display:flex;align-items:center;gap:10px;">
-      <img src="/logo.png" alt="ArcFX" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #334155;" />
-      <span style="font-size:15px;font-weight:600;color:#f1f5f9;">ArcFX</span>
-    </a>
-    <div style="display:flex;align-items:center;gap:4px;">
-      <a href="/" style="color:#475569;font-size:13.5px;font-weight:500;padding:6px 14px;border-radius:6px;transition:all .15s;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#475569';this.style.background='transparent'">Trade</a>
-      <div style="position:relative;" id="s-tools-wrap">
-        <button onclick="var dd=document.getElementById('s-tools-dd');dd.style.display=dd.style.display==='block'?'none':'block'"
-                style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;color:#475569;background:transparent;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#475569'">
-          Tools <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div id="s-tools-dd" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:200px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
-          <a href="/multisend" style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">Multisender</a>
-          <a href="/pay"       style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">Pay Links</a>
-          <a href="/invoice"   style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">Invoices</a>
-          <a href="/history"   style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">History</a>
-          <a href="/docs"      style="display:block;padding:9px 12px;border-radius:6px;font-size:13px;color:#94a3b8;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">API Docs</a>
-        </div>
-      </div>
-      <a href="/analytics" style="color:#475569;font-size:13.5px;font-weight:500;padding:6px 14px;border-radius:6px;transition:all .15s;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#475569';this.style.background='transparent'">Analytics</a>
-      <a href="/pricing" style="color:#475569;font-size:13.5px;font-weight:500;padding:6px 14px;border-radius:6px;transition:all .15s;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#475569';this.style.background='transparent'">Pricing</a>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <a href="mailto:arcfxapp@gmail.com" style="padding:8px 18px;background:#0f172a;color:#94a3b8;border:1px solid #1e293b;border-radius:7px;font-size:13px;font-weight:600;" onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.borderColor='#1e293b';this.style.color='#94a3b8'">Contact security team</a>
-    </div>
-  </nav>
-  <script>
-    document.addEventListener('click',function(e){
-      var w=document.getElementById('s-tools-wrap'),dd=document.getElementById('s-tools-dd');
-      if(w&&dd&&!w.contains(e.target))dd.style.display='none';
+  <!-- Shared header module — single source of truth across all pages.
+       Edit /src/shared/header.ts to change the nav/stats-bar everywhere. -->
+  <script type="module">
+    import { arcfxMountHeader } from '/src/shared/header.ts';
+    arcfxMountHeader({
+      pageKey: 'security',
+      activeLink: 'security',
+      activeTool: null
     });
   </script>
 

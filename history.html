@@ -112,128 +112,26 @@
     .page-footer { margin-top: 32px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
     .page-footer a { color: var(--muted); }
     .page-footer a:hover { color: var(--blue); text-decoration: none; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   </style>
 </head>
 <body>
+  <!-- Header mount points — populated by /src/shared/header.ts -->
+  <div id="arcfx-stats-bar"></div>
+  <div id="arcfx-nav"></div>
 
-  <nav style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;">
-    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
-      <img src="/logo.png" alt="ArcFX" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #334155;" />
-      <span style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.3px;">ArcFX</span>
-    </a>
-    <div style="display:flex;align-items:center;gap:2px;">
-      <a href="/" style="color:#475569;font-size:13.5px;font-weight:500;padding:6px 14px;border-radius:6px;text-decoration:none;transition:all .15s;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#475569';this.style.background='transparent'">Trade</a>
-      <div style="position:relative;" id="nav-tools-wrap">
-        <button onclick="var dd=document.getElementById('nav-tools-dd');dd.style.display=dd.style.display==='block'?'none':'block'"
-                style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;color:#94a3b8;background:transparent;border:none;cursor:pointer;font-family:inherit;">
-          Tools
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div id="nav-tools-dd" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:220px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
-          <a href="/multisend" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background=''">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Multisender</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Batch transfers</div></div>
-          </a>          <a href="/pay" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background=''">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Pay Links</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Accept payments</div></div>
-          </a>          <a href="/invoice" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background=''">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">Invoices</div><div style="font-size:11px;color:#64748b;margin-top:1px;">PDF invoices + Pay Now</div></div>
-          </a>          <a href="/history" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;transition:background .15s;background:#1e293b;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#1e293b;'">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">History</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Transactions + CSV</div></div>
-          </a>          <a href="/docs" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background=''">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">API Docs</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Developer reference</div></div>
-          </a>        </div>
-      </div>
-      <a href="/analytics" style="color:#475569;font-size:13.5px;font-weight:500;padding:6px 14px;border-radius:6px;text-decoration:none;transition:all .15s;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#475569';this.style.background='transparent'">Analytics</a>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;" id="nav-right">
-      <button onclick="togglePageContacts()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-        Contacts
-      </button>
-      <button id="connect-btn" style="display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#94a3b8;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;" onclick="connectWallet()">Connect wallet</button>
-    </div>
-  </nav>
-
-  <!-- Close dropdown on outside click -->
-  <script>
-    document.addEventListener("click", function(e) {
-      var wrap = document.getElementById("nav-tools-wrap");
-      var dd   = document.getElementById("nav-tools-dd");
-      if (wrap && dd && !wrap.contains(e.target)) dd.style.display = "none";
+  <!-- Shared header module — single source of truth across all pages.
+       Edit /src/shared/header.ts to change the nav/stats-bar everywhere. -->
+  <script type="module">
+    import { arcfxMountHeader } from '/src/shared/header.ts';
+    arcfxMountHeader({
+      pageKey: 'history',
+      activeLink: 'tools',
+      activeTool: 'history'
     });
-    // Contacts modal
-    function togglePageContacts() {
-      var modal = document.getElementById("page-contacts-modal");
-      if (!modal) return;
-      modal.style.display = modal.style.display === "flex" ? "none" : "flex";
-      if (modal.style.display === "flex") renderPageContacts();
-    }
-    function renderPageContacts() {
-      var list = document.getElementById("page-contacts-list");
-      if (!list) return;
-      var entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
-      if (!entries.length) { list.innerHTML = "<div style='text-align:center;padding:24px;color:#475569;font-size:13px;'>No contacts saved yet.</div>"; return; }
-      list.innerHTML = entries.map(function(e,i) {
-        return "<div style='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;'>"
-          + "<div style='width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;'>" + (e.name||"?").charAt(0).toUpperCase() + "</div>"
-          + "<div style='flex:1;min-width:0;'><div style='font-size:13px;font-weight:600;color:#f1f5f9;'>" + (e.name||"") + "</div><div style='font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>" + (e.address||"") + "</div></div>"
-          + "<button onclick='copyContact(" + i + ")' style='background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;font-family:inherit;'>Copy</button>"
-          + "</div>";
-      }).join("");
-    }
-    // Auto-reconnect
-    if (window.ethereum) {
-      window.ethereum.request({method:"eth_accounts"}).then(function(accounts) {
-        if (accounts && accounts.length > 0) {
-          var btn = document.getElementById("connect-btn");
-          if (btn) btn.textContent = accounts[0].slice(0,6)+"..."+accounts[0].slice(-4);
-        }
-      }).catch(function(){});
-    }
   </script>
 
-  <!-- Contacts modal -->
-  <div id="page-contacts-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;" onclick="if(event.target===this)togglePageContacts()">
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;width:480px;max-width:calc(100vw - 32px);max-height:80vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #1e293b;">
-        <div><div style="font-size:15px;font-weight:600;color:#f1f5f9;">Address Book</div><div style="font-size:11px;color:#475569;margin-top:2px;font-family:'JetBrains Mono',monospace;">Saved contacts</div></div>
-        <button onclick="togglePageContacts()" style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:20px;padding:4px;">×</button>
-      </div>
-      <div style="flex:1;overflow-y:auto;padding:12px 20px;" id="page-contacts-list"></div>
-      <div style="padding:14px 20px;border-top:1px solid #1e293b;">
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;">
-          <input id="pc-name" type="text" placeholder="Contact name" style="background:#060b18;border:1px solid #1e293b;border-radius:6px;color:#f1f5f9;font-size:13px;font-family:inherit;padding:8px 11px;outline:none;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" />
-          <input id="pc-addr" type="text" placeholder="0x..." style="background:#060b18;border:1px solid #1e293b;border-radius:6px;color:#f1f5f9;font-size:12px;font-family:'JetBrains Mono',monospace;padding:8px 11px;outline:none;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" />
-          <button onclick="savePageContact()" style="padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Save</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script>
-    function copyContact(i) {
-      var entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
-      if (entries[i]) navigator.clipboard.writeText(entries[i].address).catch(function(){});
-    }
-    function savePageContact() {
-      var n = document.getElementById("pc-name").value.trim();
-      var a = document.getElementById("pc-addr").value.trim();
-      if (!n || !/^0x[0-9a-fA-F]{40}$/.test(a)) return;
-      var entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
-      if (!entries.some(function(e){return e.address.toLowerCase()===a.toLowerCase();})) {
-        entries.push({name:n,address:a});
-        localStorage.setItem("arcfx_address_book", JSON.stringify(entries));
-      }
-      document.getElementById("pc-name").value="";
-      document.getElementById("pc-addr").value="";
-      renderPageContacts();
-    }
-  </script>
-
-<div class="page">
+  <div class="page">
 
   <div class="page-header">
     <div>
