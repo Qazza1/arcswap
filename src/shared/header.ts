@@ -175,7 +175,7 @@ function buildNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: ActiveTo
       <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#64748b;">Testnet</span>
     </div>
     <button id="arcfx-contacts-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;" onmouseover="this.style.borderColor='#2563eb';this.style.color='#94a3b8'" onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Contacts</button>
-    <button id="arcfx-connect-${pageKey}" style="padding:7px 16px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#94a3b8;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#1e293b'">Connect wallet</button>
+    <button id="connect-btn" style="padding:7px 16px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#94a3b8;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#1e293b'">Connect wallet</button>
   </div>
 </nav>
 `;
@@ -239,8 +239,9 @@ function wireBehavior(pageKey: PageKey): void {
 
   // Connect wallet button — calls global connectWallet() if it exists,
   // otherwise does nothing. Page-specific TS modules (e.g. main.ts) expose
-  // connectWallet on window.
-  const connectBtn = document.getElementById(`arcfx-connect-${pageKey}`);
+  // connectWallet on window, OR pages define their own inline connectWallet()
+  // that queries this button by id='connect-btn' to update its text.
+  const connectBtn = document.getElementById('connect-btn');
   if (connectBtn) {
     connectBtn.addEventListener('click', () => {
       const fn = (window as any).connectWallet;
@@ -249,12 +250,14 @@ function wireBehavior(pageKey: PageKey): void {
   }
 
   // Auto-display connected wallet address (origin-scoped — only shows for
-  // users who have explicitly connected to arcfx.app before)
+  // users who have explicitly connected to arcfx.app before). NOTE: we don't
+  // set textContent here if a page-level script already auto-reconnects —
+  // the page's own connectWallet() will update the button text instead.
   const eth = (window as any).ethereum;
   if (eth && connectBtn) {
     eth.request({ method: 'eth_accounts' })
       .then((accounts: string[]) => {
-        if (accounts && accounts.length > 0) {
+        if (accounts && accounts.length > 0 && connectBtn.textContent === 'Connect wallet') {
           connectBtn.textContent = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
         }
       })
@@ -326,8 +329,12 @@ export function arcfxMountHeader(config: MountConfig): void {
   // Contacts modal — only mounted once even if mountHeader called multiple times
   if (!document.getElementById('arcfx-contacts-modal')) {
     const modalDiv = document.createElement('div');
-    modalDiv.innerHTML = CONTACTS_MODAL_HTML;
-    document.body.appendChild(modalDiv.firstElementChild!);
+    modalDiv.innerHTML = CONTACTS_MODAL_HTML.trim();
+    const modalEl = modalDiv.firstElementChild;
+    const target = document.body || document.documentElement;
+    if (modalEl && target) {
+      target.appendChild(modalEl);
+    }
   }
 
   // Wire behavior

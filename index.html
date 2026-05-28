@@ -468,6 +468,13 @@
          onmouseout="this.style.background='transparent';this.style.color='#94a3b8'">
         Ecosystem
       </a>
+      <a href="/security"
+         style="padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;
+                color:#94a3b8;text-decoration:none;transition:background .15s,color .15s;"
+         onmouseover="this.style.background='#1e293b';this.style.color='#f1f5f9'"
+         onmouseout="this.style.background='transparent';this.style.color='#94a3b8'">
+        Security
+      </a>
     </div>
 
     <!-- Right: Testnet badge + Connect Wallet -->
@@ -1916,13 +1923,13 @@
       if (countEl) countEl.textContent = entries.length + " contact" + (entries.length !== 1 ? "s" : "") + " saved";
 
       if (!entries.length) {
-        container.innerHTML = \`<div style="text-align:center;padding:32px 0;color:#334155;font-size:13px;">
+        container.innerHTML = `<div style="text-align:center;padding:32px 0;color:#334155;font-size:13px;">
           No contacts yet. Add a wallet address above.
-        </div>\`;
+        </div>`;
         return;
       }
 
-      container.innerHTML = entries.map((e, i) => \`
+      container.innerHTML = entries.map((e, i) => `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;
                     border-radius:7px;background:#0a0f1e;border:1px solid #1e293b;
                     margin-bottom:8px;">
@@ -1950,7 +1957,7 @@
                   onmouseover="this.style.color='#ef4444'"
                   onmouseout="this.style.color='#334155'">×</button>
         </div>
-      \`).join("");
+      `).join("");
     }
 
     function addAddressBookEntry() {
