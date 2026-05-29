@@ -3,6 +3,8 @@
     { "source": "/circle-proxy/:path*", "destination": "https://api.circle.com/:path*" }
   ],
   "routes": [
+    { "src": "/app",        "dest": "/app.html" },
+    { "src": "/app/",       "dest": "/app.html" },
     { "src": "/multisend",  "dest": "/multisend.html" },
     { "src": "/multisend/", "dest": "/multisend.html" },
     { "src": "/pay",        "dest": "/pay.html" },
