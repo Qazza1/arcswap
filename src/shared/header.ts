@@ -125,6 +125,20 @@ const CANONICAL_CSS = `
   .stats-bar-val { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500; color:#e2e8f0; }
   .stats-bar-sep { width:1px; height:14px; background:#1e293b; margin:0 20px; flex-shrink:0; }
   @keyframes arcfx-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Mobile (≤768px) ── */
+  @media (max-width: 768px) {
+    /* Stats bar: scroll horizontally instead of overflowing the viewport */
+    .stats-bar-inner { justify-content: flex-start; overflow-x: auto; padding: 0 16px; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; }
+    .stats-bar-inner::-webkit-scrollbar { display: none; }
+    .stats-bar-sep { margin: 0 14px; }
+
+    /* Nav: hide center links and the testnet pill; keep logo + primary action.
+       Marketing → Logo + Launch/Back-to-app.  Product → Logo + Contacts + Connect. */
+    .arcfx-nav { padding: 0 16px !important; }
+    .arcfx-nav-center { display: none !important; }
+    .arcfx-testnet-pill { display: none !important; }
+  }
 `;
 
 function ensureCss(): void {
@@ -185,12 +199,12 @@ function buildMarketingNav(activeLink: ActiveLink): string {
   const ctaLabel = isReturning ? 'Back to app' : 'Launch ArcFX';
 
   return `
-<nav style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;backdrop-filter:blur(12px);">
+<nav class="arcfx-nav" style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;backdrop-filter:blur(12px);">
   <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
     <img src="/logo.png" alt="ArcFX" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #334155;" />
     <span style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.3px;">ArcFX</span>
   </a>
-  <div style="display:flex;align-items:center;gap:2px;">
+  <div class="arcfx-nav-center" style="display:flex;align-items:center;gap:2px;">
     ${links}
   </div>
   <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">
@@ -217,12 +231,12 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
     .join('');
 
   return `
-<nav style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;">
+<nav class="arcfx-nav" style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;">
   <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
     <img src="/logo.png" alt="ArcFX" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #334155;" />
     <span style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.3px;">ArcFX</span>
   </a>
-  <div style="display:flex;align-items:center;gap:2px;">
+  <div class="arcfx-nav-center" style="display:flex;align-items:center;gap:2px;">
     ${tradeLink}
     <div style="position:relative;" id="arcfx-tools-wrap-${pageKey}">
       <button id="arcfx-tools-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;border:0;outline:none;cursor:pointer;font-family:inherit;transition:all .15s;color:${toolsBtnColor};background:${toolsBtnBg};-webkit-appearance:none;">Tools <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -233,7 +247,7 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
     ${otherLinks}
   </div>
   <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">
-    <div style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;border:1px solid #1e293b;background:#0f172a;">
+    <div class="arcfx-testnet-pill" style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;border:1px solid #1e293b;background:#0f172a;">
       <span style="width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.7);animation:arcfx-pulse 2s ease-in-out infinite;display:inline-block;"></span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#64748b;">Testnet</span>
     </div>
