@@ -31,19 +31,24 @@ export type PageKey =
   | 'analytics' | 'docs' | 'pricing' | 'ecosystem' | 'security';
 
 export type ActiveLink =
-  | 'trade' | 'tools' | 'analytics' | 'pricing' | 'ecosystem' | 'security' | null;
+  | 'trade' | 'tools' | 'analytics' | 'pricing' | 'ecosystem' | 'security'
+  | 'use-cases' | 'docs' | null;
 
 export type ActiveTool =
   | 'multisend' | 'pay' | 'invoice' | 'history' | 'docs' | null;
+
+export type Mode = 'product' | 'marketing';
 
 interface MountConfig {
   pageKey: PageKey;
   activeLink?: ActiveLink;
   activeTool?: ActiveTool;
+  mode?: Mode;
 }
 
-// ── Single source of truth: stats bar items ────────────────────────────────
-const STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boolean; valueColor?: string }> = [
+// ── Stats bar items ────────────────────────────────────────────────────────
+// PRODUCT mode: leads with environment status, has pulsing dot
+const PRODUCT_STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boolean; valueColor?: string }> = [
   { label: 'Arc Testnet', value: 'Live',         dot: true },
   { label: 'Settlement',  value: '&lt; 1 second', valueColor: '#00d4aa' },
   { label: 'Gas token',   value: 'USDC' },
@@ -52,12 +57,31 @@ const STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boolean; valu
   { label: 'Tools',       value: '6 live' },
 ];
 
-// ── Single source of truth: top-level nav links ────────────────────────────
+// MARKETING mode: leads with business trust facts, testnet status moved to end (no dot)
+const MARKETING_STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boolean; valueColor?: string }> = [
+  { label: 'Backed by Kraken', value: '$222M at $3B' },
+  { label: 'Settlement',       value: '&lt; 1 second', valueColor: '#00d4aa' },
+  { label: 'Avg fee',          value: '$0.0002',       valueColor: '#00d4aa' },
+  { label: 'Gas token',        value: 'USDC' },
+  { label: 'Tools',            value: '6 live' },
+  { label: 'Arc Testnet',      value: 'Live' },
+];
+
+// ── PRODUCT nav links (default — used on app pages) ─────────────────────────
 const TOP_LEVEL_LINKS: Array<{ href: string; label: string; key: ActiveLink }> = [
-  { href: '/',            label: 'Trade',     key: 'trade' },
+  { href: '/app',         label: 'Trade',     key: 'trade' },
   // 'tools' is special — rendered as a dropdown button, not a plain link
   { href: '/analytics',   label: 'Analytics', key: 'analytics' },
   { href: '/pricing',     label: 'Pricing',   key: 'pricing' },
+  { href: '/ecosystem',   label: 'Ecosystem', key: 'ecosystem' },
+  { href: '/security',    label: 'Security',  key: 'security' },
+];
+
+// ── MARKETING nav links (used on /, /pricing, /ecosystem, /docs, /security) ──
+const MARKETING_NAV_LINKS: Array<{ href: string; label: string; key: ActiveLink }> = [
+  { href: '/#use-cases',  label: 'Use cases', key: 'use-cases' },
+  { href: '/pricing',     label: 'Pricing',   key: 'pricing' },
+  { href: '/docs',        label: 'Docs',      key: 'docs' },
   { href: '/ecosystem',   label: 'Ecosystem', key: 'ecosystem' },
   { href: '/security',    label: 'Security',  key: 'security' },
 ];
@@ -112,14 +136,15 @@ function ensureCss(): void {
 }
 
 // ── Stats bar HTML builder ─────────────────────────────────────────────────
-function buildStatsBar(): string {
-  const items = STATS_BAR_ITEMS.map((item, i) => {
+function buildStatsBar(mode: Mode): string {
+  const items = mode === 'marketing' ? MARKETING_STATS_BAR_ITEMS : PRODUCT_STATS_BAR_ITEMS;
+  const cells = items.map((item, i) => {
     const dot = item.dot ? '<span class="stats-bar-dot"></span>' : '';
     const valStyle = item.valueColor ? ` style="color:${item.valueColor}"` : '';
-    const sep = i < STATS_BAR_ITEMS.length - 1 ? '<div class="stats-bar-sep"></div>' : '';
+    const sep = i < items.length - 1 ? '<div class="stats-bar-sep"></div>' : '';
     return `<div class="stats-bar-item">${dot}<span class="stats-bar-label">${item.label}</span><span class="stats-bar-val"${valStyle}>${item.value}</span></div>${sep}`;
   }).join('');
-  return `<div class="stats-bar"><div class="stats-bar-inner">${items}</div></div>`;
+  return `<div class="stats-bar"><div class="stats-bar-inner">${cells}</div></div>`;
 }
 
 // ── Nav link builder ───────────────────────────────────────────────────────
@@ -136,8 +161,46 @@ function buildDropdownItem(href: string, name: string, sub: string, svg: string,
   return `<a href="${href}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;background:${bg};transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='${hoverOut}'">${svg}<div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">${name}</div><div style="font-size:11px;color:#64748b;margin-top:1px;">${sub}</div></div></a>`;
 }
 
-// ── Nav HTML builder ───────────────────────────────────────────────────────
-function buildNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: ActiveTool): string {
+// ── Nav HTML builder (dispatches by mode) ──────────────────────────────────
+function buildNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: ActiveTool, mode: Mode): string {
+  if (mode === 'marketing') {
+    return buildMarketingNav(activeLink);
+  }
+  return buildProductNav(pageKey, activeLink, activeTool);
+}
+
+function buildMarketingNav(activeLink: ActiveLink): string {
+  const links = MARKETING_NAV_LINKS
+    .map(l => buildLink(l.href, l.label, l.key === activeLink))
+    .join('');
+
+  // Returning users (who've connected a wallet on a product page before) see
+  // "Back to app"; first-time visitors see the conversion-focused "Launch ArcFX".
+  // Both link to /app — only the label differs. The flag is written in
+  // product mode when a connected wallet is detected (see wireBehavior).
+  let isReturning = false;
+  try {
+    isReturning = localStorage.getItem('arcfx_returning') === '1';
+  } catch (e) { /* localStorage unavailable (private mode / blocked) */ }
+  const ctaLabel = isReturning ? 'Back to app' : 'Launch ArcFX';
+
+  return `
+<nav style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;backdrop-filter:blur(12px);">
+  <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
+    <img src="/logo.png" alt="ArcFX" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #334155;" />
+    <span style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.3px;">ArcFX</span>
+  </a>
+  <div style="display:flex;align-items:center;gap:2px;">
+    ${links}
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">
+    <a href="/app" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:7px;background:#2563eb;color:#fff;font-size:13.5px;font-weight:600;text-decoration:none;transition:background .15s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">${ctaLabel} <span style="font-size:14px;">&rarr;</span></a>
+  </div>
+</nav>
+`;
+}
+
+function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: ActiveTool): string {
   const isToolsActive = activeLink === 'tools';
   const toolsBtnColor = isToolsActive ? '#f1f5f9' : '#94a3b8';
   const toolsBtnBg    = isToolsActive ? '#1e293b' : 'transparent';
@@ -147,7 +210,7 @@ function buildNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: ActiveTo
   ).join('');
 
   // Build top-level links — Trade comes first, then Tools dropdown, then the rest
-  const tradeLink = buildLink('/', 'Trade', activeLink === 'trade');
+  const tradeLink = buildLink('/app', 'Trade', activeLink === 'trade');
   const otherLinks = TOP_LEVEL_LINKS
     .filter(l => l.key !== 'trade')
     .map(l => buildLink(l.href, l.label, l.key === activeLink))
@@ -205,7 +268,10 @@ const CONTACTS_MODAL_HTML = `
 `;
 
 // ── Behavior wiring ────────────────────────────────────────────────────────
-function wireBehavior(pageKey: PageKey): void {
+function wireBehavior(pageKey: PageKey, mode: Mode): void {
+  // Marketing mode has none of these elements — bail early.
+  if (mode === 'marketing') return;
+
   // Tools dropdown toggle
   const toolsBtn = document.getElementById(`arcfx-tools-btn-${pageKey}`);
   const toolsDd  = document.getElementById(`arcfx-tools-dd-${pageKey}`);
@@ -257,8 +323,13 @@ function wireBehavior(pageKey: PageKey): void {
   if (eth && connectBtn) {
     eth.request({ method: 'eth_accounts' })
       .then((accounts: string[]) => {
-        if (accounts && accounts.length > 0 && connectBtn.textContent === 'Connect wallet') {
-          connectBtn.textContent = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+        if (accounts && accounts.length > 0) {
+          // Remember that this user has connected before — the marketing nav
+          // reads this to show "Back to app" instead of "Launch ArcFX".
+          try { localStorage.setItem('arcfx_returning', '1'); } catch (e) { /* blocked */ }
+          if (connectBtn.textContent === 'Connect wallet') {
+            connectBtn.textContent = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+          }
         }
       })
       .catch(() => { /* no-op */ });
@@ -314,20 +385,21 @@ function saveContact(): void {
 
 // ── Public mount function ──────────────────────────────────────────────────
 export function arcfxMountHeader(config: MountConfig): void {
-  const { pageKey, activeLink = null, activeTool = null } = config;
+  const { pageKey, activeLink = null, activeTool = null, mode = 'product' } = config;
 
   ensureCss();
 
   // Stats bar
   const statsBarMount = document.getElementById('arcfx-stats-bar');
-  if (statsBarMount) statsBarMount.innerHTML = buildStatsBar();
+  if (statsBarMount) statsBarMount.innerHTML = buildStatsBar(mode);
 
   // Nav
   const navMount = document.getElementById('arcfx-nav');
-  if (navMount) navMount.innerHTML = buildNav(pageKey, activeLink, activeTool);
+  if (navMount) navMount.innerHTML = buildNav(pageKey, activeLink, activeTool, mode);
 
-  // Contacts modal — only mounted once even if mountHeader called multiple times
-  if (!document.getElementById('arcfx-contacts-modal')) {
+  // Contacts modal — only mounted in product mode, and only once even if
+  // mountHeader is called multiple times.
+  if (mode === 'product' && !document.getElementById('arcfx-contacts-modal')) {
     const modalDiv = document.createElement('div');
     modalDiv.innerHTML = CONTACTS_MODAL_HTML.trim();
     const modalEl = modalDiv.firstElementChild;
@@ -338,7 +410,7 @@ export function arcfxMountHeader(config: MountConfig): void {
   }
 
   // Wire behavior
-  wireBehavior(pageKey);
+  wireBehavior(pageKey, mode);
 }
 
 // Expose globally so plain (non-module) scripts can call it
