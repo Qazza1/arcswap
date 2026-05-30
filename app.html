@@ -71,7 +71,7 @@
     #hero::before { display:none; }
     #hero::after  { display:none; }
     .hero-inner { max-width:1200px; margin:0 auto; position:relative; z-index:10; display:grid; grid-template-columns:1fr 460px; gap:64px; align-items:center; }
-    @media(max-width:1080px){ .hero-inner{grid-template-columns:1fr;gap:48px;} .app-sticky{position:static!important;} }
+    @media(max-width:1080px){ .hero-inner{grid-template-columns:1fr;gap:48px;} .hero-inner>*{min-width:0;} .app-sticky{position:static!important;} }
     .hero-eyebrow { display:inline-flex; align-items:center; gap:8px; background:var(--bg-card); border:1px solid var(--border-med); color:var(--muted); font-size:12px; font-weight:500; padding:5px 14px; border-radius:100px; margin-bottom:36px; }
     .eyebrow-dot { width:5px; height:5px; border-radius:50%; background:var(--teal); box-shadow:0 0 5px var(--teal); animation:pulse 2s infinite; }
     h1 { font-size:clamp(48px,5.5vw,76px); font-weight:700; letter-spacing:-2.5px; line-height:1.05; margin-bottom:28px; }
@@ -79,6 +79,8 @@
     .hero-sub { font-size:18px; color:#64748b; margin-bottom:40px; font-weight:400; line-height:1.75; max-width:480px; }
     .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:32px; }
     @media(max-width:600px){ .stats-grid{grid-template-columns:repeat(2,1fr);} }
+    @media(max-width:768px){ #hero{padding:56px 20px 64px;} #hero h1{font-size:clamp(30px,7vw,46px)!important;letter-spacing:-1.5px!important;} .hero-sub{font-size:16px;margin-bottom:32px;} }
+    @media(max-width:480px){ #hero h1{font-size:30px!important;letter-spacing:-1px!important;} .stat-val{font-size:19px;} }
     .stat-cell { background:var(--bg-card); padding:16px 18px; transition:background .2s; }
     .stat-cell:hover { background:var(--bg-raised); }
     .stat-val { font-family:"JetBrains Mono",monospace; font-size:22px; font-weight:500; color:var(--text); letter-spacing:-.5px; margin-bottom:3px; }
