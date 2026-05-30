@@ -223,10 +223,16 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
     buildDropdownItem(t.href, t.name, t.sub, t.svg, t.key === activeTool)
   ).join('');
 
-  // Build top-level links — Trade comes first, then Tools dropdown, then the rest
+  // Build top-level links in two groups, separated by a divider:
+  //   Product group:  Trade · Tools ▾ · Analytics   (things users DO)
+  //   Info group:     Pricing · Ecosystem · Security (things users READ)
   const tradeLink = buildLink('/app', 'Trade', activeLink === 'trade');
-  const otherLinks = TOP_LEVEL_LINKS
-    .filter(l => l.key !== 'trade')
+  const productLinks = TOP_LEVEL_LINKS
+    .filter(l => l.key === 'analytics')
+    .map(l => buildLink(l.href, l.label, l.key === activeLink))
+    .join('');
+  const infoLinks = TOP_LEVEL_LINKS
+    .filter(l => l.key === 'pricing' || l.key === 'ecosystem' || l.key === 'security')
     .map(l => buildLink(l.href, l.label, l.key === activeLink))
     .join('');
 
@@ -244,7 +250,9 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
         ${dropdownItems}
       </div>
     </div>
-    ${otherLinks}
+    ${productLinks}
+    <div class="arcfx-nav-divider" style="width:1px;height:20px;background:#334155;margin:0 12px;flex-shrink:0;"></div>
+    ${infoLinks}
   </div>
   <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">
     <div class="arcfx-testnet-pill" style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;border:1px solid #1e293b;background:#0f172a;">
