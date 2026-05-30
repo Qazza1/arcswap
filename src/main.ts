@@ -157,7 +157,7 @@ async function estimateSwap(amountIn: string): Promise<void> {
   setText("estimate-output", "loading…");
   removeClass("estimate-row", "hidden");
   try {
-    const adapter = await createViemAdapterFromProvider({ provider: window.ethereum });
+    const adapter = await createViemAdapterFromProvider({ provider: window.ethereum as any });
     const est = await kit.estimateSwap({
       from: { adapter, chain: "Arc_Testnet" },
       tokenIn, tokenOut, amountIn: amount,
@@ -195,7 +195,7 @@ async function executeSwap(): Promise<void> {
   showStatus("Confirm in MetaMask…", "info");
 
   try {
-    const adapter = await createViemAdapterFromProvider({ provider: window.ethereum });
+    const adapter = await createViemAdapterFromProvider({ provider: window.ethereum as any });
     const result = await kit.swap({
       from: { adapter, chain: "Arc_Testnet" },
       tokenIn, tokenOut, amountIn: amount,
@@ -365,7 +365,7 @@ async function executeBridge(): Promise<void> {
     }
 
     showBridgeStatus("Confirm the transaction in MetaMask…","info");
-    const adapter = await createViemAdapterFromProvider({ provider: window.ethereum });
+    const adapter = await createViemAdapterFromProvider({ provider: window.ethereum as any });
     setBridgeStep("bstep-approve","active");
 
     const result = await (kit as any).bridge({
@@ -641,7 +641,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ethersProvider = new BrowserProvider(window.ethereum!);
         ethersSigner   = await ethersProvider.getSigner();
         userAddress    = await ethersSigner.getAddress();
-        await updateBalances();
+        await loadBalances();
         showStatus("Reconnected to Arc Testnet ✓", "success");
       } catch { window.location.reload(); }
     } else {
