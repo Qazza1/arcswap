@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcFX — The business layer on Arc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #060810;
+      --bg-card:  #0b0f1a;
+      --bg-raised:#101420;
+      --border:   #1a2035;
+      --border-med:#252d45;
+      --text:     #e8edf8;
+      --muted:    #4a5578;
+      --subtle:   #2a3350;
+      --blue:     #3d7eff;
+      --blue-dim: rgba(61,126,255,0.1);
+      --teal:     #00d4aa;
+      --teal-dim: rgba(0,212,170,0.08);
+      --orange:   #ff6b35;
+      --red:      #ff4d6a;
+      --r:        10px;
+      --r-sm:     6px;
+      --r-lg:     14px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family:"Inter",system-ui,sans-serif; background:#0a0f1e; color:#e2e8f0; line-height:1.6; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+    a { color:var(--blue); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .hidden { display:none !important; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    @keyframes blink  { 0%,100%{opacity:1} 50%{opacity:.2} }
+    @keyframes spin   { to{transform:rotate(360deg)} }
+
+    /* ── Stats bar ── */
+    .stats-bar { background:#08090f; border-bottom:1px solid var(--border); height:36px; display:flex; align-items:center; }
+    .stats-bar-inner { display:flex; align-items:center; justify-content:center; gap:0; width:100%; padding:0 24px; }
+    .stats-bar-item  { display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
+    .stats-bar-dot   { width:5px; height:5px; border-radius:50%; background:var(--teal); box-shadow:0 0 5px var(--teal); animation:pulse 2s ease-in-out infinite; }
+    .stats-bar-label { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted); }
+    .stats-bar-val   { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500; color:var(--text); }
+    .stats-bar-sep   { width:1px; height:14px; background:var(--border); margin:0 20px; flex-shrink:0; }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      padding: 0 24px;
+      background: rgba(2, 6, 23, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #1e293b;
+    }
+    nav img { width: 32px !important; height: 32px !important; border-radius: 50%; object-fit: cover; }
+    nav a, nav button { text-decoration: none; }
+    .btn-ghost.connected { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--muted); }
+
+    /* ── Nav dropdown — handled by Tailwind ── */
+
+    /* ── Hero ── */
+    #hero { padding:80px 28px 80px; }
+    #hero::before { display:none; }
+    #hero::after  { display:none; }
+    .hero-inner { max-width:1200px; margin:0 auto; position:relative; z-index:10; display:grid; grid-template-columns:1fr 460px; gap:64px; align-items:center; }
+    @media(max-width:1080px){ .hero-inner{grid-template-columns:1fr;gap:48px;} .hero-inner>*{min-width:0;} .app-sticky{position:static!important;} }
+    .hero-eyebrow { display:inline-flex; align-items:center; gap:8px; background:var(--bg-card); border:1px solid var(--border-med); color:var(--muted); font-size:12px; font-weight:500; padding:5px 14px; border-radius:100px; margin-bottom:36px; }
+    .eyebrow-dot { width:5px; height:5px; border-radius:50%; background:var(--teal); box-shadow:0 0 5px var(--teal); animation:pulse 2s infinite; }
+    h1 { font-size:clamp(48px,5.5vw,76px); font-weight:700; letter-spacing:-2.5px; line-height:1.05; margin-bottom:28px; }
+    .gradient-text { color:#2563eb; }
+    .hero-sub { font-size:18px; color:#64748b; margin-bottom:40px; font-weight:400; line-height:1.75; max-width:480px; }
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:32px; }
+    @media(max-width:600px){ .stats-grid{grid-template-columns:repeat(2,1fr);} }
+    @media(max-width:768px){ #hero{padding:56px 20px 64px;} #hero h1{font-size:clamp(30px,7vw,46px)!important;letter-spacing:-1.5px!important;} .hero-sub{font-size:16px;margin-bottom:32px;} }
+    @media(max-width:480px){ #hero h1{font-size:30px!important;letter-spacing:-1px!important;} .stat-val{font-size:19px;} }
+    .stat-cell { background:var(--bg-card); padding:16px 18px; transition:background .2s; }
+    .stat-cell:hover { background:var(--bg-raised); }
+    .stat-val { font-family:"JetBrains Mono",monospace; font-size:22px; font-weight:500; color:var(--text); letter-spacing:-.5px; margin-bottom:3px; }
+    .stat-lbl { font-size:11.5px; color:var(--muted); }
+    .hero-powered { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--muted); }
+    .hero-powered span { color:var(--text); font-weight:600; }
+    .hero-powered-dot { color:var(--border); }
+
+    /* ── App widget ── */
+    .app-sticky { position:sticky; top:76px; }
+    .app-tabs { display:flex; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-lg) var(--r-lg) 0 0; border-bottom:none; overflow:hidden; }
+    .app-tab { flex:1; padding:14px 12px; font-size:13.5px; font-weight:600; font-family:"Space Grotesk",sans-serif; border:none; cursor:pointer; transition:all .15s; background:var(--bg-card); color:var(--muted); border-bottom:2px solid transparent; }
+    .app-tab.active { background:var(--bg); color:var(--text); border-bottom:2px solid var(--blue); }
+    .app-tab.active.bridge-tab { border-bottom-color:var(--teal); }
+    .app-panel { background:transparent; border:none; padding:0; }
+    .connect-card-inner { text-align:left; padding:16px 0 8px; }
+    .connect-card-inner img { width:32px; height:32px; border-radius:50%; object-fit:cover; margin-bottom:0; }
+    .connect-card-inner h3 { font-size:17px; font-weight:700; margin-bottom:8px; letter-spacing:-.3px; }
+    .connect-card-inner p { color:var(--muted); font-size:13.5px; margin-bottom:22px; font-weight:400; }
+    .btn-connect-full { display:block; width:100%; background:var(--blue); color:#fff; border:none; border-radius:var(--r); padding:14px; font-size:14.5px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; transition:background .15s; }
+    .btn-connect-full:hover { background:#2d6ee8; }
+    .widget-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+    .widget-title { font-size:14px; font-weight:700; letter-spacing:-.2px; }
+    .widget-badge { font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--teal); background:var(--teal-dim); border:1px solid rgba(0,212,170,.2); padding:3px 8px; border-radius:100px; }
+    .token-block { background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r); padding:13px 15px; transition:border-color .2s; }
+    .token-block:focus-within { border-color:var(--border-med); }
+    .token-block-label { font-size:10.5px; color:var(--muted); font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin-bottom:10px; }
+    .token-row { display:flex; align-items:center; gap:10px; }
+    .token-pill { display:flex; align-items:center; gap:7px; background:var(--bg-card); border:1px solid var(--border-med); border-radius:100px; padding:6px 12px 6px 7px; white-space:nowrap; }
+    .token-logo { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; font-weight:700; }
+    .logo-usdc { background:#2775ca; color:#fff; }
+    .logo-eurc { background:#1a3ca8; color:#fff; }
+    .token-name { font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:500; color:var(--text); }
+    .amount-input { flex:1; background:transparent; border:none; outline:none; font-family:"JetBrains Mono",monospace; font-size:26px; font-weight:500; color:var(--text); text-align:right; min-width:0; letter-spacing:-.5px; }
+    .amount-input::placeholder { color:var(--subtle); }
+    .balance-row { display:flex; justify-content:space-between; align-items:center; margin-top:7px; }
+    .balance-label { font-size:11px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
+    #max-btn { font-size:10.5px; font-weight:700; color:var(--blue); background:transparent; border:none; cursor:pointer; padding:0; font-family:"Space Grotesk",sans-serif; letter-spacing:.05em; }
+    .flip-wrap { display:flex; justify-content:center; margin:9px 0; }
+    #flip-btn { width:32px; height:32px; background:var(--bg-raised); border:1px solid var(--border-med); border-radius:var(--r-sm); color:var(--muted); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:border-color .15s,color .15s,transform .2s; }
+    #flip-btn:hover { border-color:var(--blue); color:var(--blue); transform:rotate(180deg); }
+    .output-block { background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r); padding:13px 15px; }
+    .output-row { display:flex; align-items:center; gap:10px; }
+    .estimate-amount { flex:1; text-align:right; font-family:"JetBrains Mono",monospace; font-size:26px; font-weight:500; color:var(--muted); letter-spacing:-.5px; }
+    #estimate-row { display:flex; justify-content:space-between; margin-top:7px; font-size:11px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
+    #swap-btn { display:block; width:100%; margin-top:13px; background:var(--blue); color:#fff; border:none; border-radius:var(--r); padding:14px; font-size:15px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; transition:background .15s; }
+    #swap-btn:hover { background:#2d6ee8; }
+    #swap-btn:disabled { opacity:.4; cursor:not-allowed; }
+    #global-status,#swap-status,#bridge-status { margin-top:11px; }
+    .status { border-radius:var(--r-sm); padding:11px 13px; font-size:13px; line-height:1.6; }
+    .status.info    { background:var(--blue-dim); border:1px solid rgba(61,126,255,.25); color:#7eb3ff; }
+    .status.success { background:var(--teal-dim); border:1px solid rgba(0,212,170,.25); color:var(--teal); }
+    .status.error   { background:rgba(255,77,106,.07); border:1px solid rgba(255,77,106,.25); color:var(--red); }
+    .status-title   { font-weight:700; margin-bottom:5px; }
+    .status-row     { display:flex; align-items:center; gap:8px; margin-bottom:4px; font-family:"JetBrains Mono",monospace; font-size:12px; }
+    .status-row .arrow { color:var(--muted); }
+    .explorer-link  { display:inline-block; margin-top:5px; color:var(--blue); font-size:12px; font-family:"JetBrains Mono",monospace; }
+    .widget-footer  { margin-top:13px; padding-top:13px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-size:11px; color:var(--muted); }
+    .widget-footer a { color:var(--muted); }
+    .widget-footer a:hover { color:var(--blue); text-decoration:none; }
+
+    /* ── Bridge ── */
+    .bridge-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+    .bridge-title  { font-size:14px; font-weight:700; }
+    .bridge-badge  { font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--teal); background:var(--teal-dim); border:1px solid rgba(0,212,170,.2); padding:3px 8px; border-radius:100px; }
+    .chain-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+    .chain-pill { flex:1; background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r); padding:11px 14px; }
+    .chain-pill-label { font-size:10.5px; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+    .chain-pill-name { display:flex; align-items:center; gap:7px; font-size:13.5px; font-weight:600; color:var(--text); }
+    .chain-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .bridge-amount-wrap { background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r); padding:13px 15px; margin-bottom:13px; transition:border-color .2s; }
+    .bridge-amount-wrap:focus-within { border-color:var(--border-med); }
+    .bridge-amount-label { font-size:10.5px; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+    .bridge-amount-row { display:flex; align-items:center; gap:10px; }
+    .bridge-amount-input { flex:1; background:transparent; border:none; outline:none; font-family:"JetBrains Mono",monospace; font-size:26px; font-weight:500; color:var(--text); min-width:0; letter-spacing:-.5px; }
+    .bridge-amount-input::placeholder { color:var(--subtle); }
+    .bridge-token-badge { display:flex; align-items:center; gap:6px; background:var(--bg-card); border:1px solid var(--border-med); border-radius:100px; padding:6px 12px; font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:500; color:var(--text); }
+    .bridge-info { background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r-sm); padding:11px 13px; margin-bottom:13px; font-size:12px; color:var(--muted); line-height:1.9; }
+    .bridge-info-row { display:flex; justify-content:space-between; }
+    .bridge-info-val { color:var(--text); font-family:"JetBrains Mono",monospace; }
+    #bridge-btn { display:block; width:100%; background:var(--blue); color:#fff; border:none; border-radius:var(--r); padding:14px; font-size:15px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; transition:background .15s; }
+    #bridge-btn:hover { background:#2d6ee8; }
+    #bridge-btn:disabled { opacity:.4; cursor:not-allowed; }
+    /* bridge-steps — JS adds/removes visible class */
+    #bridge-steps.visible { display:flex !important; }
+    /* bridge-step states — JS adds done/active classes */
+    .bridge-step.done  { color:#10b981; }
+    .bridge-step.active { color:#f1f5f9; }
+    .bridge-step.done  .bridge-step-dot { background:#10b981 !important; }
+    .bridge-step.active .bridge-step-dot { background:#2563eb !important; animation:blink 1s infinite; }
+    #bridge-flip-btn { background:var(--bg-raised); border:1px solid var(--border-med); border-radius:var(--r-sm); width:34px; height:34px; color:var(--muted); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:border-color .15s,color .15s,transform .2s; flex-shrink:0; }
+    #bridge-flip-btn:hover { border-color:var(--teal); color:var(--teal); transform:rotate(180deg); }
+
+    /* ── History ── */
+    .tx-row { display:flex; align-items:center; gap:11px; padding:11px 0; border-bottom:1px solid var(--border); font-size:13px; }
+    .tx-row:last-child { border-bottom:none; }
+    .tx-icon { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+    .tx-icon-swap { background:rgba(61,126,255,.1); }
+    .tx-icon-in   { background:rgba(0,212,170,.1); }
+    .tx-icon-out  { background:rgba(255,77,106,.08); }
+    .tx-info { flex:1; min-width:0; }
+    .tx-type { font-weight:600; color:var(--text); margin-bottom:1px; }
+    .tx-time { font-size:11px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
+    .tx-amount { text-align:right; flex-shrink:0; }
+    .tx-amount-val { font-family:"JetBrains Mono",monospace; font-weight:500; color:var(--text); font-size:12.5px; }
+    .tx-amount-token { font-size:10.5px; color:var(--muted); margin-top:1px; }
+    .tx-in  { color:var(--teal); }
+    .tx-out { color:var(--red); }
+    .tx-link { color:var(--blue); font-size:11px; text-decoration:none; border:1px solid rgba(61,126,255,.2); border-radius:var(--r-sm); padding:2px 7px; flex-shrink:0; white-space:nowrap; font-family:"JetBrains Mono",monospace; }
+    .tx-link:hover { background:var(--blue-dim); text-decoration:none; }
+    .history-loading { text-align:center; padding:26px 0; color:var(--muted); font-size:13px; }
+    .history-loading::after { content:''; display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--blue); border-radius:50%; animation:spin .8s linear infinite; vertical-align:middle; margin-left:8px; }
+
+    /* ── Sections ── */
+    section { padding:80px 28px; }
+    .container { max-width:1200px; margin:0 auto; }
+    .section-label { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:.14em; color:var(--blue); margin-bottom:14px; }
+    .section-title { font-size:clamp(26px,3.5vw,38px); font-weight:700; letter-spacing:-.8px; line-height:1.15; margin-bottom:12px; }
+    .section-sub   { color:var(--muted); font-size:15px; font-weight:400; max-width:460px; line-height:1.75; }
+
+    /* ── Products section ── */
+    #products { background:var(--bg-card); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+    .products-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:stretch; }
+    @media(max-width:900px){ .products-grid{grid-template-columns:repeat(2,1fr);} }
+    @media(max-width:560px){ .products-grid{grid-template-columns:1fr;} }
+    .product-card { background:var(--bg); border:1px solid var(--border); border-radius:var(--r-lg); padding:24px; transition:border-color .2s,transform .2s; display:flex; flex-direction:column; text-decoration:none; color:inherit; min-height:220px; }
+    .product-card:hover { border-color:var(--border-med); transform:translateY(-2px); text-decoration:none; }
+    .product-card-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; }
+    .product-card-icon svg { width:22px; height:22px; stroke:currentColor; fill:none; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
+    .product-card-name { font-size:15px; font-weight:700; color:var(--text); margin-bottom:6px; letter-spacing:-.2px; }
+    .product-card-desc { font-size:13px; color:var(--muted); line-height:1.7; flex:1; margin-bottom:16px; font-weight:400; }
+    .product-card-link { font-size:12.5px; color:var(--blue); font-weight:600; display:flex; align-items:center; gap:4px; }
+    .product-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; padding:2px 8px; border-radius:100px; margin-bottom:10px; width:fit-content; }
+    .badge-live { background:var(--teal-dim); border:1px solid rgba(0,212,170,.2); color:var(--teal); }
+    .badge-new  { background:var(--blue-dim); border:1px solid rgba(61,126,255,.2); color:var(--blue); }
+
+    /* ── Ecosystem ── */
+    #ecosystem { background:var(--bg-card); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+    .eco-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:28px; flex-wrap:wrap; gap:20px; }
+    .eco-stats  { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
+    @media(max-width:700px){ .eco-stats{grid-template-columns:repeat(2,1fr);} }
+    .eco-stat { background:var(--bg); border:1px solid var(--border); border-radius:var(--r); padding:14px 18px; }
+    .eco-stat-val { font-family:"JetBrains Mono",monospace; font-size:22px; font-weight:500; color:var(--text); letter-spacing:-.5px; margin-bottom:3px; }
+    .eco-stat-lbl { font-size:11.5px; color:var(--muted); }
+    .eco-filters  { display:flex; gap:7px; margin-bottom:22px; flex-wrap:wrap; }
+    .eco-filter   { font-size:12px; font-weight:600; padding:5px 14px; border:1px solid var(--border); border-radius:100px; cursor:pointer; color:var(--muted); background:transparent; transition:all .15s; font-family:"Space Grotesk",sans-serif; }
+    .eco-filter:hover { border-color:var(--border-med); color:var(--text); }
+    .eco-filter.active { background:var(--blue-dim); border-color:rgba(61,126,255,.4); color:var(--blue); }
+    .eco-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+    @media(max-width:900px){ .eco-grid{grid-template-columns:repeat(2,1fr);} }
+    @media(max-width:560px){ .eco-grid{grid-template-columns:1fr;} }
+    .eco-card { background:var(--bg); border:1px solid var(--border); border-radius:var(--r-lg); padding:18px; transition:border-color .2s,transform .2s; display:flex; flex-direction:column; }
+    .eco-card:hover { border-color:var(--border-med); transform:translateY(-2px); }
+    .eco-card.featured { border-color:rgba(61,126,255,.35); background:linear-gradient(135deg,rgba(61,126,255,.04),rgba(0,212,170,.02)); }
+    .eco-card-top { display:flex; align-items:center; gap:11px; margin-bottom:11px; }
+    .eco-card-icon { width:38px; height:38px; border-radius:9px; background:var(--bg-raised); border:1px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:19px; overflow:hidden; }
+    .eco-card-icon img { width:100%; height:100%; object-fit:cover; }
+    .eco-card-name { font-size:14.5px; font-weight:700; color:var(--text); letter-spacing:-.2px; }
+    .eco-card-type { font-size:11px; color:var(--muted); margin-top:1px; }
+    .eco-featured-badge { display:inline-flex; align-items:center; gap:3px; background:linear-gradient(135deg,var(--blue),var(--teal)); color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:100px; margin-bottom:9px; width:fit-content; }
+    .eco-card-desc { font-size:13px; color:var(--muted); line-height:1.7; flex:1; margin-bottom:13px; }
+    .eco-card-tags { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:13px; }
+    .eco-tag { font-size:10px; padding:2px 7px; border-radius:var(--r-sm); background:var(--bg-raised); border:1px solid var(--border); color:var(--muted); }
+    .eco-card-footer { display:flex; justify-content:space-between; align-items:center; padding-top:11px; border-top:1px solid var(--border); }
+    .eco-status-live { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--teal); font-weight:600; }
+    .eco-status-dot  { width:5px; height:5px; border-radius:50%; background:var(--teal); animation:pulse 2s infinite; }
+    .eco-status-soon { font-size:12px; color:var(--muted); }
+    .eco-status-mainnet { font-size:12px; color:var(--blue); }
+    .eco-visit-btn { font-size:12px; color:var(--blue); font-weight:600; text-decoration:none; border:1px solid rgba(61,126,255,.25); border-radius:var(--r-sm); padding:4px 10px; transition:background .15s; }
+    .eco-visit-btn:hover { background:var(--blue-dim); text-decoration:none; }
+    .eco-submit-bar { background:var(--bg); border:1px solid var(--border-med); border-radius:var(--r-lg); padding:20px 24px; display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; }
+    .eco-submit-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:4px; }
+    .eco-submit-sub   { font-size:13px; color:var(--muted); }
+    .eco-submit-sub strong { color:var(--blue); }
+    .eco-submit-btn { background:var(--blue); color:#fff; border:none; border-radius:var(--r); padding:11px 22px; font-size:14px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; white-space:nowrap; text-decoration:none; display:inline-block; transition:background .15s; }
+    .eco-submit-btn:hover { background:#2d6ee8; text-decoration:none; }
+
+    /* ── Compare ── */
+    /* ── Compare section ── */
+    #compare { background:#060b18; border-top:1px solid #1e293b; border-bottom:1px solid #1e293b; }
+
+    /* JS-injected row classes — must keep these */
+    .compare-row { transition:background .15s; }
+    .compare-row:hover { background:rgba(30,41,59,0.4); }
+    .compare-row.best-row td:first-child { border-left:2px solid #2563eb; }
+    .compare-table td { padding:14px 20px; font-size:13.5px; border-bottom:1px solid #1e293b; }
+    .compare-table td:last-child { text-align:right; }
+    .compare-table tr:last-child td { border-bottom:none; }
+    .provider-cell { display:flex; align-items:center; gap:12px; }
+    .provider-icon { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; border:1px solid #1e293b; }
+    .provider-name { font-weight:600; color:#f1f5f9; font-size:13.5px; }
+    .provider-type { font-size:11px; color:#475569; margin-top:2px; }
+    .amount-received { font-family:"JetBrains Mono",monospace; font-size:16px; font-weight:500; color:#f1f5f9; display:block; }
+    .amount-received-sub { font-family:"JetBrains Mono",monospace; font-size:11px; color:#475569; margin-top:2px; display:block; }
+    .best-row .amount-received { color:#10b981; }
+    .fee-cell { font-family:"JetBrains Mono",monospace; font-size:12.5px; color:#475569; }
+    .fee-cell .fee-val { color:#94a3b8; display:block; }
+    .speed-cell { font-size:12px; color:#475569; white-space:nowrap; }
+    .savings-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); color:#10b981; font-size:12px; font-weight:600; padding:3px 10px; border-radius:4px; white-space:nowrap; font-family:"JetBrains Mono",monospace; }
+    .best-badge { display:inline-flex; align-items:center; gap:3px; background:#2563eb; color:#fff; font-size:10px; font-weight:700; padding:3px 10px; border-radius:4px; letter-spacing:0.05em; text-transform:uppercase; }
+    .baseline-pill { display:inline-flex; align-items:center; background:#0f172a; border:1px solid #1e293b; color:#475569; font-size:11px; font-weight:500; padding:3px 10px; border-radius:4px; white-space:nowrap; letter-spacing:0.05em; text-transform:uppercase; }
+    @media(max-width:700px){ .hide-mobile{display:none;} }
+
+    /* ── Waitlist ── */
+    #waitlist { background:var(--bg-card); border-top:1px solid var(--border); position:relative; overflow:hidden; }
+    #waitlist::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,var(--border) 1px,transparent 1px); background-size:30px 30px; opacity:.35; pointer-events:none; }
+    .waitlist-inner { position:relative; z-index:1; max-width:580px; margin:0 auto; text-align:center; }
+    .waitlist-inner .section-title { font-size:clamp(26px,4vw,44px); }
+    .waitlist-inner .section-sub { max-width:100%; margin:0 auto 40px; }
+    .waitlist-form { background:var(--bg); border:1px solid var(--border-med); border-radius:var(--r-lg); padding:28px; display:flex; flex-direction:column; gap:12px; text-align:left; }
+    .form-row { display:flex; gap:12px; }
+    @media(max-width:560px){ .form-row{flex-direction:column;} }
+    .form-field { flex:1; display:flex; flex-direction:column; gap:5px; }
+    .form-field label { font-size:11px; font-weight:600; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; }
+    .form-field input,.form-field select { width:100%; background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--r-sm); color:var(--text); font-size:14px; font-family:"Space Grotesk",sans-serif; padding:10px 13px; outline:none; transition:border-color .15s; -webkit-appearance:none; }
+    .form-field input:focus,.form-field select:focus { border-color:var(--blue); }
+    .form-field input::placeholder { color:var(--subtle); }
+    .form-field select option { background:#0b0f1a; color:var(--text); }
+    .submit-btn { width:100%; background:var(--blue); color:#fff; border:none; border-radius:var(--r); padding:13px; font-size:14.5px; font-weight:600; cursor:pointer; font-family:"Space Grotesk",sans-serif; transition:background .15s; }
+    .submit-btn:hover { background:#2d6ee8; }
+    .submit-btn:disabled { opacity:.5; cursor:not-allowed; }
+    .form-note { text-align:center; font-size:11.5px; color:var(--muted); }
+    .form-success { display:none; background:var(--teal-dim); border:1px solid rgba(0,212,170,.25); color:var(--teal); border-radius:var(--r); padding:18px; font-size:14px; text-align:center; margin-top:14px; }
+
+    /* ── Footer ── */
+    footer { border-top:1px solid var(--border); padding:48px 28px 36px; }
+    .footer-inner { max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; gap:48px; flex-wrap:wrap; }
+    .footer-logo { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:700; color:var(--text); margin-bottom:10px; }
+    .footer-logo img { width:28px; height:28px; border-radius:50%; object-fit:cover; }
+    .footer-col-title { font-size:10.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:14px; }
+    .footer-link { font-size:13px; color:var(--muted); transition:color .15s; text-decoration:none; display:block; margin-bottom:9px; }
+    .footer-link:hover { color:var(--text); text-decoration:none; }
+    .footer-bottom { max-width:1200px; margin:28px auto 0; padding-top:24px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+    .footer-bottom span { font-size:11.5px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
+
+    /* ── Balances hidden ── */
+    .balances-hidden { display:none; }
+
+    /* ── Reveal animation ── */
+    .reveal { opacity:0; transform:translateY(16px); transition:opacity .5s ease,transform .5s ease; }
+    .reveal.visible { opacity:1; transform:translateY(0); }
+
+    /* Hero content always visible — no reveal animation in hero */
+    #hero .reveal,
+    #hero h1,
+    #hero .hero-sub,
+    #hero .hero-eyebrow,
+    #hero .stats-grid,
+    #hero .hero-powered {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    /* Prevent any link colour flashing */
+    a, a:link, a:visited, a:hover, a:active, a:focus {
+      text-decoration: none;
+    }
+    nav a, nav a:link, nav a:visited, nav a:hover, nav a:active {
+      color: inherit !important;
+      text-decoration: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="balances-hidden">
+    <span id="balance-USDC">—</span>
+    <span id="balance-EURC">—</span>
+  </div>
+
+  <!-- Circle API proxy -->
+  <script>
+    (function(){
+      var _f=window.fetch.bind(window);
+      window.fetch=function(input,init){
+        if(typeof input==="string"&&input.includes("api.circle.com"))
+          input=input.replace("https://api.circle.com","/circle-proxy");
+        else if(input instanceof Request&&input.url.includes("api.circle.com"))
+          input=new Request(input.url.replace("https://api.circle.com","/circle-proxy"),input);
+        return _f(input,init);
+      };
+    })();
+  </script>
+
+  <!-- ── Shared header (stats bar + product nav) — same as every app page ── -->
+  <div id="arcfx-stats-bar"></div>
+  <div id="arcfx-nav"></div>
+
+  <script type="module">
+    import { arcfxMountHeader } from '/src/shared/header.ts';
+    // Mounts BEFORE main.ts (later in the document) so #connect-btn exists for it.
+    arcfxMountHeader({ pageKey: 'trade', activeLink: 'trade', activeTool: null });
+  </script>
+
+  <script>
+    // Address book toggle — defined early so nav button can call it immediately
+    function toggleAddressBook() {
+      const modal = document.getElementById("address-book-modal");
+      if (!modal) return;
+      const isOpen = modal.style.display === "flex";
+      modal.style.display = isOpen ? "none" : "flex";
+      if (!isOpen) {
+        // render entries
+        const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+        const container = document.getElementById("ab-entries");
+        const countEl   = document.getElementById("ab-count");
+        if (countEl) countEl.textContent = entries.length + " contact" + (entries.length !== 1 ? "s" : "") + " saved";
+        if (container) {
+          if (!entries.length) {
+            container.innerHTML = '<div style="text-align:center;padding:32px 0;color:#334155;font-size:13px;">No contacts yet. Add a wallet address above.</div>';
+          } else {
+            container.innerHTML = entries.map((e, i) => `
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:7px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;">
+                <div style="width:34px;height:34px;border-radius:50%;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#2563eb;flex-shrink:0;">${e.name.charAt(0).toUpperCase()}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:13px;font-weight:600;color:#f1f5f9;">${e.name}</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.address}</div>
+                </div>
+                <button onclick="navigator.clipboard.writeText('${e.address}')" style="background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;font-family:inherit;">Copy</button>
+                <button onclick="removeABEntry(${i})" style="background:transparent;border:none;color:#334155;cursor:pointer;font-size:16px;padding:0 4px;">×</button>
+              </div>`).join("");
+          }
+        }
+      }
+    }
+    function removeABEntry(i) {
+      const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+      entries.splice(i, 1);
+      localStorage.setItem("arcfx_address_book", JSON.stringify(entries));
+      toggleAddressBook(); toggleAddressBook();
+    }
+
+    function addAddressBookEntry() {
+      const nameEl  = document.getElementById("ab-name");
+      const addrEl  = document.getElementById("ab-address");
+      const errEl   = document.getElementById("ab-error");
+      const name    = nameEl ? nameEl.value.trim() : "";
+      const address = addrEl ? addrEl.value.trim() : "";
+      if (!name) { if(errEl){errEl.textContent="Enter a label.";errEl.style.display="block";} return; }
+      if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
+        if(errEl){errEl.textContent="Enter a valid 0x wallet address.";errEl.style.display="block";} return;
+      }
+      if(errEl) errEl.style.display="none";
+      const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+      if (entries.some(e => e.address.toLowerCase() === address.toLowerCase())) {
+        if(errEl){errEl.textContent="Address already saved.";errEl.style.display="block";} return;
+      }
+      entries.push({ name, address });
+      localStorage.setItem("arcfx_address_book", JSON.stringify(entries));
+      if(nameEl) nameEl.value = "";
+      if(addrEl) addrEl.value = "";
+      // Refresh the list
+      toggleAddressBook(); toggleAddressBook();
+    }
+
+    function copyAddressBookToMultisend() {
+      const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
+      if (!entries.length) return;
+      sessionStorage.setItem("arcfx_ab_import", JSON.stringify(entries));
+      toggleAddressBook();
+      window.location.href = "/multisend";
+    }
+
+    function toggleTools() {
+      const dd = document.getElementById('tools-dropdown');
+      dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+    }
+    document.addEventListener('click', function(e) {
+      const wrap = document.getElementById('tools-wrap');
+      if (wrap && !wrap.contains(e.target)) {
+        const dd = document.getElementById('tools-dropdown');
+        if (dd) dd.style.display = 'none';
+      }
+    });
+  </script>
+
+  <!-- Hero -->
+  <section id="hero">
+    <div class="hero-inner">
+      <div>
+        <div class="hero-eyebrow">
+          <span class="eyebrow-dot"></span>
+          Swap &amp; Bridge · Arc Testnet
+        </div>
+        <h1 style="font-size:clamp(40px,5vw,64px);font-weight:700;letter-spacing:-2px;line-height:1.06;margin-bottom:22px;color:#f1f5f9;">Trade stablecoins<br><span class="gradient-text">on Arc.</span></h1>
+        <p class="hero-sub">Swap USDC and EURC, or bridge in from another chain. Sub-second settlement, gas paid in USDC &mdash; no ETH required.</p>
+      </div>
+
+      <!-- App widget -->
+      <div class="app-sticky" id="app">
+        <div class="app-tabs">
+          <button id="tab-swap"    class="app-tab active"      onclick="switchAppTab('swap')">⇄ Swap</button>
+          <button id="tab-bridge"  class="app-tab bridge-tab"  onclick="switchAppTab('bridge')">⇅ Bridge</button>
+          <button id="tab-history" class="app-tab history-tab" onclick="switchAppTab('history')">📋 History</button>
+        </div>
+
+        <!-- Swap -->
+        <div id="panel-swap" class="app-panel">
+          <div id="global-status" style="display:none;"></div>
+          <div id="connect-card" style="background:#0f172a;border:1px solid #1e293b;border-radius:0 0 10px 10px;padding:20px;">
+            <!-- Header row matching swap card -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+              <div>
+                <div style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.2px;">Swap</div>
+                <div style="font-size:11px;color:#475569;margin-top:2px;font-family:'JetBrains Mono',monospace;">Arc Testnet · Circle App Kit</div>
+                <div style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:2px 8px;border-radius:4px;background:#0a0f1e;border:1px solid #1e293b;">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#475569;letter-spacing:0.04em;">Safe Compatible</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:9999px;background:#0a0f1e;border:1px solid #1e293b;">
+                <span style="width:16px;height:16px;border-radius:50%;background:#2775ca;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;">$</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#94a3b8;">USDC</span>
+                <span style="color:#334155;margin:0 1px;">→</span>
+                <span style="width:16px;height:16px;border-radius:50%;background:#1a3ca8;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;">€</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#94a3b8;">EURC</span>
+              </div>
+            </div>
+            <!-- Connect prompt -->
+            <div style="text-align:center;padding:24px 0 28px;">
+              <div style="width:44px;height:44px;border-radius:50%;border:1px solid #1e293b;background:#0a0f1e;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+                </svg>
+              </div>
+              <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:6px;">Connect your wallet</div>
+              <div style="font-size:12.5px;color:#475569;margin-bottom:20px;line-height:1.6;">Connect MetaMask to swap USDC ↔ EURC<br>with sub-second settlement on Arc.</div>
+              <button id="big-connect-btn"
+                      style="display:block;width:100%;padding:13px;background:#2563eb;color:#fff;
+                             border:none;border-radius:8px;font-size:14px;font-weight:600;
+                             cursor:pointer;font-family:inherit;transition:background .15s;"
+                      onmouseover="this.style.background='#1d4ed8'"
+                      onmouseout="this.style.background='#2563eb'">
+                Connect MetaMask
+              </button>
+            </div>
+          </div>
+          <!-- ── Swap Card — Enterprise redesign ── -->
+          <div class="hidden" id="swap-card" style="background:#0f172a;border:1px solid #1e293b;border-radius:0 0 10px 10px;padding:20px;">
+
+            <!-- Card header -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+              <div>
+                <div style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.2px;">Swap</div>
+                <div style="font-size:11px;color:#475569;margin-top:2px;font-family:'JetBrains Mono',monospace;">Arc Testnet · Circle App Kit</div>
+                <div style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:2px 8px;border-radius:4px;background:#0a0f1e;border:1px solid #1e293b;">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#475569;letter-spacing:0.04em;">Safe Compatible</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:9999px;background:#0a0f1e;border:1px solid #1e293b;">
+                <span id="token-in-flag" style="width:16px;height:16px;border-radius:50%;background:#2775ca;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;">$</span>
+                <span id="token-in-symbol" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#94a3b8;">USDC</span>
+                <span style="color:#334155;margin:0 1px;">→</span>
+                <span id="token-out-flag" style="width:16px;height:16px;border-radius:50%;background:#1a3ca8;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;">€</span>
+                <span id="token-out-symbol" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#94a3b8;">EURC</span>
+              </div>
+            </div>
+
+            <!-- You Pay input -->
+            <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:14px 16px;margin-bottom:4px;transition:border-color .15s;"
+                 onfocusin="this.style.borderColor='#2563eb'" onfocusout="this.style.borderColor='#1e293b'">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <span style="font-size:10px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.1em;">You Pay</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span id="balance-in-label" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569;">Balance: — USDC</span>
+                  <button id="max-btn" style="font-size:10px;font-weight:700;color:#2563eb;background:transparent;border:none;cursor:pointer;padding:0;font-family:inherit;letter-spacing:0.05em;">MAX</button>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="display:flex;align-items:center;gap:7px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:7px 12px;flex-shrink:0;">
+                  <div id="pay-in-logo" style="width:22px;height:22px;border-radius:50%;background:#2775ca;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;">$</div>
+                  <span id="pay-in-name" style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#e2e8f0;">USDC</span>
+                </div>
+                <input
+                  id="amount-input"
+                  type="number" min="0" step="any"
+                  placeholder="0.00"
+                  autocomplete="off"
+                  style="flex:1;background:transparent;border:none;outline:none;
+                         font-family:'JetBrains Mono',monospace;font-size:28px;
+                         font-weight:500;color:#f1f5f9;text-align:right;
+                         letter-spacing:-0.5px;min-width:0;"
+                />
+              </div>
+            </div>
+
+            <!-- Flip button -->
+            <div style="display:flex;justify-content:center;margin:2px 0;">
+              <button id="flip-btn" title="Flip tokens"
+                      style="width:30px;height:30px;border-radius:6px;
+                             background:#0f172a;border:1px solid #1e293b;
+                             color:#475569;font-size:15px;cursor:pointer;
+                             display:flex;align-items:center;justify-content:center;
+                             transition:border-color .15s,color .15s;"
+                      onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'"
+                      onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'">
+                ⇅
+              </button>
+            </div>
+
+            <!-- You Receive output -->
+            <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <span style="font-size:10px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.1em;">You Receive</span>
+                <div id="estimate-row" class="hidden" style="display:flex;gap:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569;">
+                  <span id="estimate-fee"></span>
+                  <span>Arc Testnet</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="display:flex;align-items:center;gap:7px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:7px 12px;flex-shrink:0;">
+                  <div id="pay-out-logo" style="width:22px;height:22px;border-radius:50%;background:#1a3ca8;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;">€</div>
+                  <span id="pay-out-name" style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#e2e8f0;">EURC</span>
+                </div>
+                <div id="estimate-output"
+                     style="flex:1;text-align:right;font-family:'JetBrains Mono',monospace;
+                            font-size:28px;font-weight:500;color:#475569;letter-spacing:-0.5px;">
+                  —
+                </div>
+              </div>
+            </div>
+
+            <!-- Hidden swap-btn for TS compatibility -->
+            <button id="swap-btn" style="display:none;"></button>
+            <!-- Status messages -->
+            <div id="swap-status" style="margin-bottom:12px;"></div>
+
+            <!-- Execute Swap button -->
+            <button
+              id="execute-swap-btn"
+              style="display:block;width:100%;padding:14px;
+                     background:#2563eb;color:#fff;border:none;
+                     border-radius:8px;font-size:15px;font-weight:600;
+                     cursor:pointer;font-family:inherit;letter-spacing:-0.1px;
+                     transition:background .15s;"
+              onmouseover="this.style.background='#1d4ed8'"
+              onmouseout="this.style.background='#2563eb'">
+              Swap USDC → EURC
+            </button>
+
+            <!-- Footer -->
+            <div style="display:flex;justify-content:space-between;margin-top:14px;
+                        padding-top:13px;border-top:1px solid #1e293b;
+                        font-size:11px;color:#334155;">
+              <a href="https://faucet.circle.com" target="_blank" rel="noopener"
+                 style="color:#334155;text-decoration:none;transition:color .15s;"
+                 onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#334155'">
+                Get testnet tokens →
+              </a>
+              <a href="https://testnet.arcscan.app" target="_blank" rel="noopener"
+                 style="color:#334155;text-decoration:none;transition:color .15s;"
+                 onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#334155'">
+                ArcScan ↗
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bridge — Enterprise redesign -->
+        <div id="panel-bridge" style="display:none;background:#0f172a;border:1px solid #1e293b;border-radius:0 0 10px 10px;padding:20px;">
+
+          <!-- Status -->
+          <div id="bridge-global-status"></div>
+
+          <!-- Header -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div>
+              <div style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.2px;">Bridge</div>
+              <div style="font-size:11px;color:#475569;margin-top:2px;font-family:'JetBrains Mono',monospace;">Circle CCTP v2 · Native USDC</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:4px;
+                        background:#0a0f1e;border:1px solid #1e293b;">
+              <span style="width:6px;height:6px;border-radius:50%;background:#10b981;
+                           box-shadow:0 0 5px rgba(16,185,129,0.6);display:inline-block;"></span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;
+                           font-weight:600;color:#334155;text-transform:uppercase;
+                           letter-spacing:0.08em;">CCTP Live</span>
+            </div>
+          </div>
+
+          <!-- Network selectors -->
+          <div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:8px;align-items:center;margin-bottom:16px;">
+
+            <!-- From network -->
+            <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:12px 14px;">
+              <div style="font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+                          letter-spacing:0.1em;margin-bottom:8px;">From network</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:8px;height:8px;border-radius:50%;background:#627eea;flex-shrink:0;"></div>
+                <span id="bridge-from-label"
+                      style="font-size:13px;font-weight:600;color:#f1f5f9;">
+                  Ethereum Sepolia
+                </span>
+              </div>
+              <div style="font-size:10px;color:#334155;margin-top:4px;font-family:'JetBrains Mono',monospace;">
+                EIP-155 · Chain 11155111
+              </div>
+            </div>
+
+            <!-- Flip button -->
+            <div style="display:flex;justify-content:center;">
+              <button id="bridge-flip-btn"
+                      onclick="flipBridgeDirection()"
+                      style="width:34px;height:34px;border-radius:6px;background:#0f172a;
+                             border:1px solid #1e293b;color:#475569;font-size:14px;
+                             cursor:pointer;display:flex;align-items:center;justify-content:center;
+                             transition:border-color .15s,color .15s;"
+                      onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'"
+                      onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'">
+                ⇄
+              </button>
+            </div>
+
+            <!-- To network -->
+            <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:12px 14px;">
+              <div style="font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+                          letter-spacing:0.1em;margin-bottom:8px;">To network</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div id="bridge-to-dot"
+                     style="width:8px;height:8px;border-radius:50%;background:#2563eb;flex-shrink:0;"></div>
+                <span id="bridge-to-label"
+                      style="font-size:13px;font-weight:600;color:#f1f5f9;">
+                  Arc Testnet
+                </span>
+              </div>
+              <div style="font-size:10px;color:#334155;margin-top:4px;font-family:'JetBrains Mono',monospace;">
+                EVM · Chain 5042002
+              </div>
+            </div>
+          </div>
+
+          <!-- Amount input -->
+          <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;
+                      padding:14px 16px;margin-bottom:12px;transition:border-color .15s;"
+               onfocusin="this.style.borderColor='#2563eb'"
+               onfocusout="this.style.borderColor='#1e293b'">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span style="font-size:10px;font-weight:600;color:#334155;
+                           text-transform:uppercase;letter-spacing:0.1em;">Amount to bridge</span>
+              <span id="bridge-receive-label"
+                    style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#334155;">
+                You receive on Arc
+              </span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="display:flex;align-items:center;gap:7px;background:#0f172a;
+                          border:1px solid #1e293b;border-radius:6px;padding:7px 12px;flex-shrink:0;">
+                <div style="width:22px;height:22px;border-radius:50%;background:#2775ca;
+                            display:flex;align-items:center;justify-content:center;
+                            font-size:11px;font-weight:700;color:#fff;">$</div>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
+                             font-weight:500;color:#e2e8f0;">USDC</span>
+              </div>
+              <input
+                id="bridge-amount-input"
+                type="number" min="0" step="any"
+                placeholder="0.00"
+                autocomplete="off"
+                style="flex:1;background:transparent;border:none;outline:none;
+                       font-family:'JetBrains Mono',monospace;font-size:28px;
+                       font-weight:500;color:#f1f5f9;text-align:right;
+                       min-width:0;letter-spacing:-0.5px;"
+              />
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
+                           font-weight:500;color:#10b981;" id="bridge-receive-amt">—</span>
+            </div>
+          </div>
+
+          <!-- Info grid -->
+          <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;
+                      padding:12px 14px;margin-bottom:16px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <div style="font-size:10px;font-weight:600;color:#334155;
+                            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Protocol</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
+                            font-weight:500;color:#94a3b8;">Circle CCTP v2</div>
+              </div>
+              <div>
+                <div style="font-size:10px;font-weight:600;color:#334155;
+                            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Bridge fee</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
+                            font-weight:500;color:#10b981;">~$0.00 testnet</div>
+              </div>
+              <div>
+                <div style="font-size:10px;font-weight:600;color:#334155;
+                            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Token</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
+                            font-weight:500;color:#94a3b8;">Native USDC</div>
+              </div>
+              <div>
+                <div style="font-size:10px;font-weight:600;color:#334155;
+                            text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Est. time</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
+                            font-weight:500;color:#94a3b8;">~30 seconds</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress steps (hidden until bridging) -->
+          <div id="bridge-steps" style="display:none;flex-direction:column;gap:8px;
+                                        margin-bottom:14px;padding:12px 14px;
+                                        background:#060b18;border:1px solid #1e293b;border-radius:8px;">
+            <div id="bstep-approve" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+              <span id="bstep-approve-label">Approve USDC spending</span>
+            </div>
+            <div id="bstep-burn" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+              <span id="bstep-burn-label">Burn USDC on Sepolia</span>
+            </div>
+            <div id="bstep-attest" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+              <span>Circle attestation</span>
+            </div>
+            <div id="bstep-mint" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+              <span id="bstep-mint-label">Mint USDC on Arc</span>
+            </div>
+          </div>
+
+          <!-- Status messages -->
+          <div id="bridge-status" style="margin-bottom:12px;"></div>
+
+          <!-- Action button -->
+          <button id="bridge-btn"
+                  style="display:block;width:100%;padding:14px;background:#2563eb;
+                         color:#fff;border:none;border-radius:8px;font-size:15px;
+                         font-weight:600;cursor:pointer;font-family:inherit;
+                         letter-spacing:-0.1px;transition:background .15s;"
+                  onmouseover="this.style.background='#1d4ed8'"
+                  onmouseout="this.style.background='#2563eb'">
+            Bridge to Arc →
+          </button>
+
+          <!-- Footer -->
+          <div style="display:flex;justify-content:space-between;margin-top:14px;
+                      padding-top:13px;border-top:1px solid #1e293b;font-size:11px;">
+            <a href="https://faucet.circle.com" target="_blank" rel="noopener"
+               style="color:#334155;text-decoration:none;transition:color .15s;"
+               onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#334155'">
+              Get testnet USDC →
+            </a>
+            <a href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noopener"
+               style="color:#334155;text-decoration:none;transition:color .15s;"
+               onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#334155'">
+              Get Sepolia ETH →
+            </a>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div id="panel-history" class="app-panel" style="display:none;min-height:180px;max-height:480px;overflow-y:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <span style="font-size:14px;font-weight:700;">Transaction history</span>
+            <button onclick="loadHistory()" style="font-size:11px;color:var(--blue);background:transparent;border:1px solid rgba(61,126,255,.25);border-radius:var(--r-sm);padding:4px 10px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">↻ Refresh</button>
+          </div>
+          <div id="history-content">
+            <div style="text-align:center;padding:28px 0;color:var(--muted);font-size:13px;">Connect your wallet to view history</div>
+          </div>
+          <div style="text-align:center;margin-top:14px;">
+            <a href="/docs" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;transition:background .15s;"
+             onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">API Docs</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Developer reference</div></div>
+          </a>
+          <a href="/history" style="font-size:12px;color:var(--blue);">View full history + CSV export →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Trust bar ── -->
+  <section style="background:#060b18;border-top:1px solid #1e293b;border-bottom:1px solid #1e293b;padding:20px 28px;">
+    <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:32px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span style="font-size:12.5px;color:#475569;font-weight:500;">Non-custodial</span>
+        <span style="font-size:11px;color:#1e293b;">—</span>
+        <span style="font-size:11.5px;color:#334155;">Your keys, your funds. ArcFX never holds assets.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span style="font-size:12.5px;color:#475569;font-weight:500;">Auditable on-chain</span>
+        <span style="font-size:11px;color:#1e293b;">—</span>
+        <span style="font-size:11.5px;color:#334155;">Every transaction verifiable on ArcScan.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        <span style="font-size:12.5px;color:#475569;font-weight:500;">Sub-second settlement</span>
+        <span style="font-size:11px;color:#1e293b;">—</span>
+        <span style="font-size:11.5px;color:#334155;">Payments confirmed in under 1 second on Arc.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        <span style="font-size:12.5px;color:#475569;font-weight:500;">Safe compatible</span>
+        <span style="font-size:11px;color:#1e293b;">—</span>
+        <span style="font-size:11.5px;color:#334155;">Works with multi-sig corporate wallets.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+        <span style="font-size:12.5px;color:#475569;font-weight:500;">Open source</span>
+        <span style="font-size:11px;color:#1e293b;">—</span>
+        <a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" style="font-size:11.5px;color:#2563eb;text-decoration:none;">View on GitHub →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer style="background:#060b18;border-top:1px solid #1e293b;padding:56px 28px 36px;">
+    <div style="max-width:1100px;margin:0 auto;">
+
+      <!-- Top row: brand + link columns -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px;">
+
+        <!-- Brand -->
+        <div>
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;">
+            <img src="/logo.png" alt="ArcFX"
+                 style="width:26px;height:26px;border-radius:50%;object-fit:cover;
+                        border:1px solid #1e293b;" />
+            <span style="font-size:14px;font-weight:600;color:#f1f5f9;">ArcFX</span>
+          </div>
+          <p style="font-size:12px;color:#334155;line-height:1.8;">
+            The business layer on Arc.<br>
+            Built with Circle App Kit.
+          </p>
+        </div>
+
+        <!-- Products -->
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+                      color:#334155;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:14px;">
+            Products
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <a href="#app"       style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Swap</a>
+            <a href="#app"       style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Bridge</a>
+            <a href="/multisend" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Multisender</a>
+            <a href="/pay"       style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Pay links</a>
+            <a href="/invoice"   style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Invoices</a>
+            <a href="/docs" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">API Docs</a>
+
+
+
+
+          <a href="/history"   style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">History</a>
+          </div>
+        </div>
+
+        <!-- Ecosystem -->
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+                      color:#334155;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:14px;">
+            Ecosystem
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <a href="/ecosystem" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Arc directory</a>
+            <a href="#compare"                                                 style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Compare rates</a>
+            <a href="https://arc.network"         target="_blank" rel="noopener" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Arc Network</a>
+            <a href="https://testnet.arcscan.app" target="_blank" rel="noopener" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">ArcScan</a>
+            <a href="https://faucet.circle.com"   target="_blank" rel="noopener" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">USDC Faucet</a>
+          </div>
+        </div>
+
+        <!-- Company -->
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+                      color:#334155;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:14px;">
+            Company
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <a href="#waitlist"   style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Early access</a>
+            <a href="/pricing"    style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Pricing</a>
+            <a href="/security"   style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Security</a>
+            <a href="/ecosystem"  style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Ecosystem</a>
+            <a href="https://x.com/arcfxapp" target="_blank" rel="noopener" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">@arcfxapp</a>
+            <a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">GitHub</a>
+            <a href="mailto:arcfxapp@gmail.com" style="font-size:13px;color:#475569;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Contact</a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom bar -->
+      <div style="padding-top:24px;border-top:1px solid #1e293b;display:flex;
+                  justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#334155;">
+          © 2026 ArcFX · Arc Testnet · Non-custodial
+        </span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#1e293b;">
+          0xF7aeb369...e71398
+        </span>
+      </div>
+
+    </div>
+  </footer>
+
+  <script type="module" src="/src/main.ts"></script>
+
+  <!-- Compare widget -->
+  <script>
+    const PROVIDERS=[
+      {name:"ArcFX",type:"Onchain · Arc Testnet",icon:"/logo.png",isLogo:true,bgColor:"#0A1525",feeFixed:0.0002,feePercent:0,spreadOffset:0,speed:"< 1 second",speedColor:"var(--teal)",isArcFX:true},
+      {name:"Wise",type:"Bank transfer",icon:"💚",bgColor:"#1a3a1a",feeFixed:0,feePercent:0.41,spreadOffset:0.002,speed:"1–2 business days",speedColor:"var(--muted)"},
+      {name:"Revolut",type:"Fintech app",icon:"🖤",bgColor:"#1a1a2e",feeFixed:0,feePercent:0.5,spreadOffset:0.004,speed:"Instant (limits apply)",speedColor:"var(--muted)"},
+      {name:"PayPal",type:"Digital wallet",icon:"🔵",bgColor:"#0a1a3a",feeFixed:0,feePercent:3.5,spreadOffset:0.02,speed:"Instant",speedColor:"var(--muted)"},
+      {name:"Western Union",type:"Money transfer",icon:"🟡",bgColor:"#2a1f00",feeFixed:4.99,feePercent:2.0,spreadOffset:0.025,speed:"Minutes–3 days",speedColor:"var(--muted)"},
+      {name:"Bank wire",type:"Traditional bank",icon:"🏦",bgColor:"#1a1a1a",feeFixed:15,feePercent:1.5,spreadOffset:0.03,speed:"1–5 business days",speedColor:"var(--muted)"},
+    ];
+    let MID_RATE=0.9047;
+    function calcReceived(p,amt){const fee=p.feeFixed+(amt*p.feePercent/100);const net=amt-fee;const rate=MID_RATE-p.spreadOffset;return{received:Math.max(0,net*rate),fee,rate};}
+    function fmtEUR(n){return"€"+n.toFixed(2);}
+    function renderTable(amount){
+      if(!amount||amount<=0)amount=1000;
+      const results=PROVIDERS.map(p=>({provider:p,...calcReceived(p,amount)}));
+      results.sort((a,b)=>b.received-a.received);
+      const tbody=document.getElementById("compare-body");
+      if(!tbody)return;
+      tbody.innerHTML=results.map((r,idx)=>{
+        const p=r.provider;
+        const isBest=idx===0;
+        const isWorst=idx===results.length-1;
+        const savings=r.received-results[results.length-1].received;
+        const iconHtml=p.isLogo?`<img src="${p.icon}" alt="ArcFX" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" />`:`<div class="provider-icon" style="background:${p.bgColor}">${p.icon}</div>`;
+        const feeAmt=p.feeFixed+(parseFloat(String(amount))*p.feePercent/100);
+        const feeDisplay=p.isArcFX?"$0.0002":`$${feeAmt.toFixed(2)}`;
+        const savingsHtml=isBest?`<span class="best-badge">✦ Best rate</span>`:isWorst?`<span class="baseline-pill">Baseline</span>`:savings>0?`<span class="savings-badge">+${fmtEUR(savings)}</span>`:`<span style="color:var(--muted)">—</span>`;
+        return`<tr class="compare-row${isBest?" best-row":""}"><td><div class="provider-cell">${iconHtml}<div><div class="provider-name">${p.name}</div><div class="provider-type">${p.type}</div></div></div></td><td><div class="amount-received">${fmtEUR(r.received)}</div><div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;">rate: ${r.rate.toFixed(4)}</div></td><td class="fee-cell hide-mobile"><span class="fee-val">${feeDisplay}</span></td><td class="speed-cell hide-mobile" style="color:${p.speedColor}">${p.speed}</td><td>${savingsHtml}</td></tr>`;
+      }).join("");
+    }
+    function debounce(fn,ms){let t;return function(...a){clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
+    document.addEventListener("DOMContentLoaded",function(){
+      renderTable(1000);
+      const inp=document.getElementById("compare-amount");
+      if(inp)inp.addEventListener("input",debounce(function(e){renderTable(parseFloat(e.target.value));},300));
+    });
+    window.updateCompareRate=function(rate){if(rate>0){MID_RATE=rate;const inp=document.getElementById("compare-amount");renderTable(inp?parseFloat(inp.value)||1000:1000);}};
+  </script>
+
+  <!-- Ecosystem filter -->
+  <script>
+    function filterEco(cat,btn){
+      document.querySelectorAll(".eco-filter").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".eco-card").forEach(card=>{
+        const cc=card.getAttribute("data-cat");
+        card.style.display=(cat==="all"||cc===cat||cc==="all")?"flex":"none";
+      });
+    }
+  </script>
+
+  <!-- Tab switcher + reveal + waitlist -->
+  <script>
+    function switchAppTab(tab){
+      ["swap","bridge","history"].forEach(t=>{
+        const panel=document.getElementById("panel-"+t);
+        const btn=document.getElementById("tab-"+t);
+        if(!panel||!btn)return;
+        if(t===tab){panel.style.display="block";btn.classList.add("active");}
+        else{panel.style.display="none";btn.classList.remove("active");}
+      });
+      if(tab==="history"&&typeof window.loadHistory==="function")window.loadHistory();
+    }
+
+    // Reveal on scroll
+    const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");obs.unobserve(e.target);}});},{threshold:0.1});
+    document.querySelectorAll(".reveal").forEach(el=>obs.observe(el));
+
+    // Waitlist form
+    const wlForm=document.getElementById("waitlist-form");
+    const wlSuccess=document.getElementById("form-success");
+    const wlBtn=document.getElementById("waitlist-submit");
+    if(wlForm){
+      wlForm.addEventListener("submit",async function(e){
+        e.preventDefault();
+        wlBtn.disabled=true;wlBtn.textContent="Submitting…";
+        try{
+          const res=await fetch(wlForm.action,{method:"POST",body:new FormData(wlForm),headers:{Accept:"application/json"}});
+          if(res.ok){wlForm.style.display="none";wlSuccess.style.display="block";}
+          else{wlBtn.disabled=false;wlBtn.textContent="Request early access →";alert("Try again.");}
+        }catch{wlBtn.disabled=false;wlBtn.textContent="Request early access →";}
+      });
+    }
+  </script>
+
+
+  <!-- execute-swap-btn wired directly in main.ts -->
+
+
+  <!-- ── Address Book Modal ── -->
+  <div id="address-book-modal"
+       style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);
+              backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;
+                width:480px;max-width:calc(100vw - 32px);max-height:80vh;
+                display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.8);">
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:18px 20px;border-bottom:1px solid #1e293b;">
+        <div>
+          <div style="font-size:15px;font-weight:600;color:#f1f5f9;">Address Book</div>
+          <div style="font-size:11px;color:#475569;margin-top:2px;font-family:'JetBrains Mono',monospace;">
+            Save wallet addresses with friendly names
+          </div>
+        </div>
+        <button onclick="toggleAddressBook()"
+                style="background:transparent;border:none;color:#475569;cursor:pointer;
+                       font-size:20px;padding:4px;line-height:1;">×</button>
+      </div>
+
+      <!-- Add new entry -->
+      <div style="padding:16px 20px;border-bottom:1px solid #1e293b;">
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
+          <div>
+            <label style="display:block;font-size:10px;font-weight:600;color:#334155;
+                          text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;
+                          font-family:'JetBrains Mono',monospace;">Label</label>
+            <input id="ab-name" type="text" placeholder="e.g. Marketing Agency"
+                   style="width:100%;background:#060b18;border:1px solid #1e293b;border-radius:6px;
+                          color:#f1f5f9;font-size:13px;font-family:inherit;padding:9px 11px;
+                          outline:none;transition:border-color .15s;"
+                   onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" />
+          </div>
+          <div>
+            <label style="display:block;font-size:10px;font-weight:600;color:#334155;
+                          text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;
+                          font-family:'JetBrains Mono',monospace;">Wallet address</label>
+            <input id="ab-address" type="text" placeholder="0x..."
+                   style="width:100%;background:#060b18;border:1px solid #1e293b;border-radius:6px;
+                          color:#f1f5f9;font-size:12px;font-family:'JetBrains Mono',monospace;
+                          padding:9px 11px;outline:none;transition:border-color .15s;"
+                   onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#1e293b'" />
+          </div>
+          <button onclick="addAddressBookEntry()"
+                  style="padding:9px 14px;background:#2563eb;color:#fff;border:none;
+                         border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;
+                         font-family:inherit;transition:background .15s;white-space:nowrap;"
+                  onmouseover="this.style.background='#1d4ed8'"
+                  onmouseout="this.style.background='#2563eb'">+ Add</button>
+        </div>
+        <div id="ab-error" style="display:none;font-size:11px;color:#ef4444;margin-top:6px;"></div>
+      </div>
+
+      <!-- Entries list -->
+      <div style="flex:1;overflow-y:auto;padding:12px 20px;" id="ab-entries">
+        <!-- populated by JS -->
+      </div>
+
+      <!-- Footer -->
+      <div style="padding:14px 20px;border-top:1px solid #1e293b;
+                  display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:#334155;font-family:'JetBrains Mono',monospace;"
+              id="ab-count">0 contacts saved</span>
+        <button onclick="copyAddressBookToMultisend()"
+                style="font-size:12px;color:#475569;background:transparent;border:1px solid #1e293b;
+                       border-radius:5px;padding:5px 12px;cursor:pointer;font-family:inherit;
+                       transition:all .15s;"
+                onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'"
+                onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'">
+          Open in Multisender →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Address Book (localStorage) ────────────────────────────────────────
+    const AB_KEY = "arcfx_address_book";
+
+    function getAddressBook() {
+      try { return JSON.parse(localStorage.getItem(AB_KEY) || "[]"); } catch { return []; }
+    }
+    function saveAddressBook(entries) {
+      localStorage.setItem(AB_KEY, JSON.stringify(entries));
+    }
+
+    function toggleAddressBook() {
+      const modal = document.getElementById("address-book-modal");
+      if (!modal) return;
+      const isOpen = modal.style.display === "flex";
+      modal.style.display = isOpen ? "none" : "flex";
+      if (!isOpen) renderAddressBook();
+    }
+
+    // Close on backdrop click — use DOMContentLoaded to be safe
+    document.addEventListener("DOMContentLoaded", function() {
+      const modal = document.getElementById("address-book-modal");
+      if (modal) modal.addEventListener("click", function(e) {
+        if (e.target === this) toggleAddressBook();
+      });
+    });
+
+    function renderAddressBook() {
+      const entries = getAddressBook();
+      const container = document.getElementById("ab-entries");
+      const countEl   = document.getElementById("ab-count");
+      if (countEl) countEl.textContent = entries.length + " contact" + (entries.length !== 1 ? "s" : "") + " saved";
+
+      if (!entries.length) {
+        container.innerHTML = `<div style="text-align:center;padding:32px 0;color:#334155;font-size:13px;">
+          No contacts yet. Add a wallet address above.
+        </div>`;
+        return;
+      }
+
+      container.innerHTML = entries.map((e, i) => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;
+                    border-radius:7px;background:#0a0f1e;border:1px solid #1e293b;
+                    margin-bottom:8px;">
+          <div style="width:34px;height:34px;border-radius:50%;background:rgba(37,99,235,0.15);
+                      border:1px solid rgba(37,99,235,0.2);display:flex;align-items:center;
+                      justify-content:center;font-size:13px;font-weight:600;color:#2563eb;flex-shrink:0;">
+            \${e.name.charAt(0).toUpperCase()}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:#f1f5f9;">\${e.name}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569;
+                        overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              \${e.address}
+            </div>
+          </div>
+          <button onclick="copyAddress('\${e.address}')"
+                  style="background:transparent;border:1px solid #1e293b;border-radius:5px;
+                         color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;
+                         font-family:inherit;transition:all .15s;flex-shrink:0;"
+                  onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'"
+                  onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'">Copy</button>
+          <button onclick="removeAddressBookEntry(\${i})"
+                  style="background:transparent;border:none;color:#334155;cursor:pointer;
+                         font-size:16px;padding:0 4px;line-height:1;flex-shrink:0;"
+                  onmouseover="this.style.color='#ef4444'"
+                  onmouseout="this.style.color='#334155'">×</button>
+        </div>
+      `).join("");
+    }
+
+    function addAddressBookEntry() {
+      const name    = document.getElementById("ab-name").value.trim();
+      const address = document.getElementById("ab-address").value.trim();
+      const errEl   = document.getElementById("ab-error");
+
+      if (!name) { errEl.textContent = "Enter a label."; errEl.style.display="block"; return; }
+      if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
+        errEl.textContent = "Enter a valid 0x wallet address.";
+        errEl.style.display = "block"; return;
+      }
+      errEl.style.display = "none";
+
+      const entries = getAddressBook();
+      if (entries.some(e => e.address.toLowerCase() === address.toLowerCase())) {
+        errEl.textContent = "Address already saved."; errEl.style.display="block"; return;
+      }
+      entries.push({ name, address });
+      saveAddressBook(entries);
+
+      document.getElementById("ab-name").value    = "";
+      document.getElementById("ab-address").value = "";
+      renderAddressBook();
+    }
+
+    function removeAddressBookEntry(i) {
+      const entries = getAddressBook();
+      entries.splice(i, 1);
+      saveAddressBook(entries);
+      renderAddressBook();
+    }
+
+    function copyAddress(addr) {
+      navigator.clipboard.writeText(addr).catch(() => {});
+    }
+
+    function copyAddressBookToMultisend() {
+      const entries = getAddressBook();
+      if (!entries.length) return;
+      // Store for multisend to pick up
+      sessionStorage.setItem("arcfx_ab_import", JSON.stringify(entries));
+      toggleAddressBook();
+      window.location.href = "/multisend";
+    }
+
+    // Expose globally
+    window.toggleAddressBook    = toggleAddressBook;
+    window.addAddressBookEntry  = addAddressBookEntry;
+    window.removeAddressBookEntry = removeAddressBookEntry;
+    window.copyAddress          = copyAddress;
+    window.copyAddressBookToMultisend = copyAddressBookToMultisend;
+    window.getAddressBook       = getAddressBook;
+  </script>
+
+  <script>
+    // Returning-user flag for the marketing nav ("Back to app" vs "Launch ArcFX").
+    // /app uses a legacy inline nav (not the shared header), so we set the flag here,
+    // mirroring the shared header's behavior on the other product pages. Read-only
+    // wallet checks + a listener — does not touch the swap/connect flow.
+    (function () {
+      function mark() { try { localStorage.setItem('arcfx_returning', '1'); } catch (e) {} }
+      try {
+        var eth = window.ethereum;
+        if (!eth) return;
+        if (eth.request) {
+          eth.request({ method: 'eth_accounts' })
+             .then(function (a) { if (a && a.length) mark(); })
+             .catch(function () {});
+        }
+        if (eth.on) { eth.on('accountsChanged', function (a) { if (a && a.length) mark(); }); }
+      } catch (e) {}
+    })();
+  </script>
+
+</body>
+</html>

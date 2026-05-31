@@ -27,11 +27,11 @@
  */
 
 export type PageKey =
-  | 'index' | 'app' | 'multisend' | 'pay' | 'invoice' | 'history'
+  | 'index' | 'app' | 'trade' | 'multisend' | 'pay' | 'invoice' | 'history'
   | 'analytics' | 'docs' | 'pricing' | 'ecosystem' | 'security';
 
 export type ActiveLink =
-  | 'trade' | 'tools' | 'analytics' | 'pricing' | 'ecosystem' | 'security'
+  | 'trade' | 'tools' | 'analytics' | 'history' | 'pricing' | 'ecosystem' | 'security'
   | 'use-cases' | 'docs' | null;
 
 export type ActiveTool =
@@ -72,9 +72,18 @@ const TOP_LEVEL_LINKS: Array<{ href: string; label: string; key: ActiveLink }> =
   { href: '/app',         label: 'Trade',     key: 'trade' },
   // 'tools' is special — rendered as a dropdown button, not a plain link
   { href: '/analytics',   label: 'Analytics', key: 'analytics' },
+  { href: '/history',     label: 'History',   key: 'history' },
+  { href: '/docs',        label: 'Docs',      key: 'docs' },
   { href: '/pricing',     label: 'Pricing',   key: 'pricing' },
   { href: '/ecosystem',   label: 'Ecosystem', key: 'ecosystem' },
   { href: '/security',    label: 'Security',  key: 'security' },
+];
+
+// ── Info pages, shown in the product nav's "More" dropdown ─────────────────
+const MORE_LINKS: Array<{ href: string; label: string; key: ActiveLink }> = [
+  { href: '/pricing',   label: 'Pricing',   key: 'pricing' },
+  { href: '/ecosystem', label: 'Ecosystem', key: 'ecosystem' },
+  { href: '/security',  label: 'Security',  key: 'security' },
 ];
 
 // ── MARKETING nav links (used on /, /pricing, /ecosystem, /docs, /security) ──
@@ -101,16 +110,6 @@ const TOOLS: Array<{ href: string; key: ActiveTool; name: string; sub: string; s
   {
     href: '/invoice', key: 'invoice',
     name: 'Invoices', sub: 'PDF invoices + Pay Now',
-    svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>',
-  },
-  {
-    href: '/history', key: 'history',
-    name: 'History', sub: 'Transactions + CSV',
-    svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-  },
-  {
-    href: '/docs', key: 'docs',
-    name: 'API Docs', sub: 'Developer reference',
     svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>',
   },
 ];
@@ -223,22 +222,30 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
     buildDropdownItem(t.href, t.name, t.sub, t.svg, t.key === activeTool)
   ).join('');
 
-  // Build top-level links in two groups, separated by a divider:
-  //   Product group:  Trade · Tools ▾ · Analytics   (things users DO)
-  //   Info group:     Pricing · Ecosystem · Security (things users READ)
-  const tradeLink = buildLink('/app', 'Trade', activeLink === 'trade');
+  // Top-level app links — one clean group (Trade is built separately above the
+  // Tools dropdown). Pricing/Ecosystem/Security are marketing pages and are
+  // intentionally NOT in the app nav.
+  const tradeLink = buildLink('/trade', 'Trade', activeLink === 'trade');
   const productLinks = TOP_LEVEL_LINKS
-    .filter(l => l.key === 'analytics')
-    .map(l => buildLink(l.href, l.label, l.key === activeLink))
-    .join('');
-  const infoLinks = TOP_LEVEL_LINKS
-    .filter(l => l.key === 'pricing' || l.key === 'ecosystem' || l.key === 'security')
+    .filter(l => l.key === 'analytics' || l.key === 'history' || l.key === 'docs')
     .map(l => buildLink(l.href, l.label, l.key === activeLink))
     .join('');
 
+  // "More" dropdown — info pages (Pricing/Ecosystem/Security), reachable from
+  // anywhere in the app but tucked away to keep the nav clean.
+  const moreActive   = activeLink === 'pricing' || activeLink === 'ecosystem' || activeLink === 'security';
+  const moreBtnColor = moreActive ? '#f1f5f9' : '#94a3b8';
+  const moreBtnBg    = moreActive ? '#1e293b' : 'transparent';
+  const moreItems = MORE_LINKS.map(l => {
+    const active = l.key === activeLink;
+    const bg  = active ? '#1e293b' : 'transparent';
+    const col = active ? '#f1f5f9' : '#94a3b8';
+    return `<a href="${l.href}" style="display:block;padding:9px 12px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;color:${col};background:${bg};transition:all .15s;" onmouseover="this.style.background='#1e293b';this.style.color='#f1f5f9'" onmouseout="this.style.background='${bg}';this.style.color='${col}'">${l.label}</a>`;
+  }).join('');
+
   return `
 <nav class="arcfx-nav" style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;">
-  <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
+  <a href="/app" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
     <img src="/logo.png" alt="ArcFX" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #334155;" />
     <span style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.3px;">ArcFX</span>
   </a>
@@ -251,8 +258,12 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
       </div>
     </div>
     ${productLinks}
-    <div class="arcfx-nav-divider" style="width:1px;height:20px;background:#334155;margin:0 12px;flex-shrink:0;"></div>
-    ${infoLinks}
+    <div style="position:relative;" id="arcfx-more-wrap-${pageKey}">
+      <button id="arcfx-more-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;border:0;outline:none;cursor:pointer;font-family:inherit;transition:all .15s;color:${moreBtnColor};background:${moreBtnBg};-webkit-appearance:none;">More <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <div id="arcfx-more-dd-${pageKey}" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:160px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
+        ${moreItems}
+      </div>
+    </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">
     <div class="arcfx-testnet-pill" style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;border:1px solid #1e293b;background:#0f172a;">
@@ -308,6 +319,20 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
     });
   }
 
+  // More dropdown toggle (info pages)
+  const moreBtn  = document.getElementById(`arcfx-more-btn-${pageKey}`);
+  const moreDd   = document.getElementById(`arcfx-more-dd-${pageKey}`);
+  const moreWrap = document.getElementById(`arcfx-more-wrap-${pageKey}`);
+  if (moreBtn && moreDd && moreWrap) {
+    moreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      moreDd.style.display = moreDd.style.display === 'block' ? 'none' : 'block';
+    });
+    document.addEventListener('click', (e) => {
+      if (!moreWrap.contains(e.target as Node)) moreDd.style.display = 'none';
+    });
+  }
+
   // Contacts modal
   const contactsBtn   = document.getElementById(`arcfx-contacts-btn-${pageKey}`);
   const modal         = document.getElementById('arcfx-contacts-modal');
@@ -333,7 +358,20 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
   if (connectBtn) {
     connectBtn.addEventListener('click', () => {
       const fn = (window as any).connectWallet;
-      if (typeof fn === 'function') fn();
+      if (typeof fn === 'function') { fn(); return; }
+      // Fallback: pages without page-specific wallet logic (info pages, dashboard)
+      // still get a basic connect so the button is never a dead end.
+      const eth = (window as any).ethereum;
+      if (eth) {
+        eth.request({ method: 'eth_requestAccounts' })
+          .then((a: string[]) => {
+            if (a && a.length) {
+              try { localStorage.setItem('arcfx_returning', '1'); } catch (e) { /* blocked */ }
+              connectBtn.textContent = `${a[0].slice(0, 6)}...${a[0].slice(-4)}`;
+            }
+          })
+          .catch(() => {});
+      }
     });
   }
 

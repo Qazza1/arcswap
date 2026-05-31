@@ -175,8 +175,9 @@ async function estimateSwap(amountIn: string): Promise<void> {
         (window as any).updateCompareRate(liveRate);
       }
     }
-  } catch {
-    setText("estimate-output", "Rate unavailable");
+  } catch (e: any) {
+    const noRoute = /no route|route or resource not found|route not found/i.test(String(e?.message ?? e ?? ""));
+    setText("estimate-output", noRoute ? "No route on testnet" : "Rate unavailable");
     setText("estimate-fee", "");
   }
 }
@@ -217,7 +218,14 @@ async function executeSwap(): Promise<void> {
     addClass("estimate-row", "hidden");
     await loadBalances();
   } catch (err: any) {
-    showStatus(err.code === 4001 ? "Transaction rejected." : `Swap failed: ${err.message ?? "Unknown error"}`, "error");
+    const msg = String(err?.message ?? "");
+    if (err?.code === 4001) {
+      showStatus("Transaction rejected.", "error");
+    } else if (/no route|route or resource not found|route not found/i.test(msg)) {
+      showStatus(`${tokenIn} \u2192 ${tokenOut} isn't routable on Arc Testnet yet \u2014 Circle hasn't provisioned this swap direction. ${tokenOut} \u2192 ${tokenIn} works today, and you can also use the Bridge tab.`, "error");
+    } else {
+      showStatus(`Swap failed: ${msg || "Unknown error"}`, "error");
+    }
   } finally {
     isSwapping = false;
     const execBtn = el("execute-swap-btn");
@@ -619,8 +627,10 @@ async function loadHistory(): Promise<void> {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Nav + connect card wallet buttons
-  el("connect-btn")?.addEventListener("click", connectWallet);
+  // The nav's connect button is rendered by the shared header, which calls
+  // window.connectWallet on click — expose it here (avoids a duplicate listener).
+  (window as any).connectWallet = connectWallet;
+  // The big connect button in the swap card is page-local — wire it directly.
   el("big-connect-btn")?.addEventListener("click", connectWallet);
 
   // Swap widget controls

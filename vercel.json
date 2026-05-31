@@ -5,6 +5,8 @@
   "routes": [
     { "src": "/app",        "dest": "/app.html" },
     { "src": "/app/",       "dest": "/app.html" },
+    { "src": "/trade",      "dest": "/trade.html" },
+    { "src": "/trade/",     "dest": "/trade.html" },
     { "src": "/multisend",  "dest": "/multisend.html" },
     { "src": "/multisend/", "dest": "/multisend.html" },
     { "src": "/pay",        "dest": "/pay.html" },
