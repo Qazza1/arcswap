@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ArcFX Developer Docs — API reference for building on Arc</title>
-  <meta name="description" content="Developer reference for ArcFX. Smart contracts deployed and verifiable on Arc via ArcScan. REST API and webhooks coming with the Enterprise tier." />
+  <title>ArcFX Documentation — stablecoin tools on Arc</title>
+  <meta name="description" content="How ArcFX works: a non-custodial stablecoin toolkit on Arc — swap & bridge, multisend, pay links, and invoices. Includes live contract addresses and a getting-started guide." />
   <link rel="canonical" href="https://arcfx.app/docs" />
 
   <!-- OpenGraph -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="ArcFX" />
   <meta property="og:url" content="https://arcfx.app/docs" />
-  <meta property="og:title" content="ArcFX Developer Docs — API reference for building on Arc" />
-  <meta property="og:description" content="Developer reference for ArcFX. Smart contracts deployed and verifiable on Arc via ArcScan. REST API and webhooks coming with the Enterprise tier." />
+  <meta property="og:title" content="ArcFX Documentation — stablecoin tools on Arc" />
+  <meta property="og:description" content="How ArcFX works: a non-custodial stablecoin toolkit on Arc — swap & bridge, multisend, pay links, and invoices. Includes live contract addresses and a getting-started guide." />
   <meta property="og:image" content="https://arcfx.app/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -20,8 +20,8 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:site" content="@arcfxapp" />
-  <meta name="twitter:title" content="ArcFX Developer Docs — API reference for building on Arc" />
-  <meta name="twitter:description" content="Developer reference for ArcFX. Smart contracts deployed and verifiable on Arc via ArcScan. REST API and webhooks coming with the Enterprise tier." />
+  <meta name="twitter:title" content="ArcFX Documentation — stablecoin tools on Arc" />
+  <meta name="twitter:description" content="How ArcFX works: a non-custodial stablecoin toolkit on Arc — swap & bridge, multisend, pay links, and invoices. Includes live contract addresses and a getting-started guide." />
   <meta name="twitter:image" content="https://arcfx.app/og-image.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -173,332 +173,171 @@
     });
   </script>
 
-  <div class="docs-layout">
+<div class="docs-layout">
 
     <!-- ── Sidebar ── -->
     <aside class="sidebar">
       <div class="sidebar-logo">
         <img src="/logo.png" alt="ArcFX" />
         <span>ArcFX</span>
-        <span class="version">v1</span>
+        <span class="version">Docs</span>
       </div>
 
       <div class="nav-section">
-        <div class="nav-section-title">Getting started</div>
-        <a href="#overview"       class="nav-link active">Overview</a>
-        <a href="#authentication" class="nav-link">Authentication</a>
-        <a href="#errors"         class="nav-link">Errors</a>
-        <a href="#pricing"        class="nav-link">Pricing</a>
+        <div class="nav-section-title">Introduction</div>
+        <a href="#overview"     class="nav-link active">What is ArcFX</a>
+        <a href="#how-it-works" class="nav-link">How it works</a>
+        <a href="#network"      class="nav-link">Network &amp; contracts</a>
       </div>
 
       <div class="nav-section">
-        <div class="nav-section-title">Payments</div>
-        <a href="#create-payment" class="nav-link"><span class="method-badge method-post">POST</span>Create payment</a>
-        <a href="#get-payment"    class="nav-link"><span class="method-badge method-get">GET</span>Get payment</a>
-        <a href="#list-payments"  class="nav-link"><span class="method-badge method-get">GET</span>List payments</a>
+        <div class="nav-section-title">Tools</div>
+        <a href="#swap"      class="nav-link">Swap &amp; Bridge</a>
+        <a href="#multisend" class="nav-link">Multisend</a>
+        <a href="#pay"       class="nav-link">Pay Links</a>
+        <a href="#invoices"  class="nav-link">Invoices</a>
       </div>
 
       <div class="nav-section">
-        <div class="nav-section-title">Multisend</div>
-        <a href="#multisend"        class="nav-link"><span class="method-badge method-post">POST</span>Create batch</a>
-        <a href="#multisend-status" class="nav-link"><span class="method-badge method-get">GET</span>Batch status</a>
-      </div>
-
-      <div class="nav-section">
-        <div class="nav-section-title">Invoices</div>
-        <a href="#create-invoice" class="nav-link"><span class="method-badge method-post">POST</span>Create invoice</a>
-        <a href="#invoice-status" class="nav-link"><span class="method-badge method-get">GET</span>Invoice status</a>
-      </div>
-
-      <div class="nav-section">
-        <div class="nav-section-title">Webhooks</div>
-        <a href="#webhooks" class="nav-link"><span class="method-badge method-post">POST</span>Register webhook</a>
-      </div>
-
-      <div class="nav-section">
-        <div class="nav-section-title">Analytics</div>
-        <a href="#analytics-volume"  class="nav-link"><span class="method-badge method-get">GET</span>Volume</a>
-        <a href="#analytics-wallets" class="nav-link"><span class="method-badge method-get">GET</span>Wallets</a>
+        <div class="nav-section-title">Resources</div>
+        <a href="#getting-started" class="nav-link">Getting started</a>
+        <a href="#api"             class="nav-link">Developer API</a>
       </div>
     </aside>
 
     <!-- ── Main ── -->
     <div class="main">
-
-
-      <!-- ── API Doc Content ── -->
       <div class="content">
 
         <!-- ── Overview ── -->
         <div class="section" id="overview">
-          <div class="section-eyebrow">API Reference</div>
-          <h1 class="section-title">ArcFX Developer API</h1>
-          <p class="section-sub">Programmatically create payments, send batch transfers, generate invoices, and query analytics on Arc. Built for businesses that need stablecoin infrastructure, not just a UI.</p>
-
-          <div class="info-green" style="margin-top:24px;">
-            <strong>Base URL:</strong> <code style="font-family:'JetBrains Mono',monospace;">https://api.arcfx.app/v1</code>
-            &nbsp;·&nbsp; All requests over HTTPS &nbsp;·&nbsp; Responses in JSON
-          </div>
-
-          <div class="code-label" style="margin-top:24px;">Quick example</div>
-          <pre><span class="c"># Create a payment link and get back a shareable URL</span>
-<span class="k">curl</span> -X POST https://api.arcfx.app/v1/payments/create \
-  -H <span class="s">"Authorization: Bearer YOUR_API_KEY"</span> \
-  -H <span class="s">"Content-Type: application/json"</span> \
-  -d <span class="s">'{
-    "recipient": "0x4F81E3939232815e3C98B124A17BaC75304C82D8",
-    "amount": "250.00",
-    "token": "USDC",
-    "note": "Invoice #INV-2026-041"
-  }'</span>
-
-<span class="c"># Response</span>
-<span class="p">{</span>
-  <span class="key">"id"</span><span class="p">:</span> <span class="s">"pay_3k9xmT2qR8Lv"</span><span class="p">,</span>
-  <span class="key">"url"</span><span class="p">:</span> <span class="s">"https://arcfx.app/pay?to=0x4F81...&amp;amount=250&amp;token=USDC"</span><span class="p">,</span>
-  <span class="key">"status"</span><span class="p">:</span> <span class="s">"pending"</span><span class="p">,</span>
-  <span class="key">"created_at"</span><span class="p">:</span> <span class="s">"2026-05-23T09:41:00Z"</span>
-<span class="p">}</span></pre>
+          <div class="section-eyebrow">Documentation</div>
+          <h1 class="section-title">What is ArcFX</h1>
+          <p class="section-sub">ArcFX is a non-custodial stablecoin toolkit for teams, built on <strong>Arc</strong> &mdash; Circle&rsquo;s Layer-1 blockchain for stablecoin finance. Swap and bridge stablecoins, pay up to 500 wallets at once, and send payment links and invoices that settle on-chain &mdash; all from your own wallet.</p>
+          <div class="info-box info-amber" style="margin-top:24px;">&#9888; ArcFX is currently live on <strong>Arc Testnet</strong>. Testnet USDC and EURC have no real-world value. Mainnet support will follow Arc&rsquo;s mainnet launch.</div>
+          <div class="info-box info-green">Non-custodial by design: ArcFX never holds your funds. Every action is a transaction you sign in your own wallet.</div>
         </div>
 
-        <hr class="divider">
+        <hr class="divider" />
 
-        <!-- ── Authentication ── -->
-        <div class="section" id="authentication">
-          <div class="section-eyebrow">Authentication</div>
-          <h2 class="section-title">API Keys</h2>
-          <p class="section-sub">All API requests require a Bearer token in the Authorization header. Generate your API key from the ArcFX dashboard after subscribing.</p>
-
-          <div class="info-amber" style="margin-top:20px;">
-            Keep your API key secret. Never expose it in client-side code or public repositories.
+        <!-- ── How it works ── -->
+        <div class="section" id="how-it-works">
+          <h2 class="section-title">How it works</h2>
+          <p class="section-sub">ArcFX runs entirely in your browser. There are no accounts, no deposits, and no custody &mdash; the app prepares transactions that your wallet signs and broadcasts directly to Arc.</p>
+          <div style="margin-top:24px;display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;gap:14px;align-items:flex-start;"><span style="font-family:'JetBrains Mono',monospace;color:var(--blue);font-size:13px;flex-shrink:0;">01</span><div><div style="color:var(--white);font-weight:600;font-size:14px;">You stay in control</div><div style="color:var(--muted);font-size:13.5px;">Funds move directly between your wallet and the recipient or smart contract. ArcFX has no ability to move, freeze, or access your tokens.</div></div></div>
+            <div style="display:flex;gap:14px;align-items:flex-start;"><span style="font-family:'JetBrains Mono',monospace;color:var(--blue);font-size:13px;flex-shrink:0;">02</span><div><div style="color:var(--white);font-weight:600;font-size:14px;">Gas is paid in USDC</div><div style="color:var(--muted);font-size:13.5px;">Arc uses USDC as its native gas token, so you don&rsquo;t need ETH or a separate gas asset. Fees are predictable and dollar-denominated.</div></div></div>
+            <div style="display:flex;gap:14px;align-items:flex-start;"><span style="font-family:'JetBrains Mono',monospace;color:var(--blue);font-size:13px;flex-shrink:0;">03</span><div><div style="color:var(--white);font-weight:600;font-size:14px;">Sub-second settlement</div><div style="color:var(--muted);font-size:13.5px;">Arc&rsquo;s consensus delivers near-instant finality, so payments and swaps confirm in well under a second.</div></div></div>
+            <div style="display:flex;gap:14px;align-items:flex-start;"><span style="font-family:'JetBrains Mono',monospace;color:var(--blue);font-size:13px;flex-shrink:0;">04</span><div><div style="color:var(--white);font-weight:600;font-size:14px;">Swaps via Circle</div><div style="color:var(--muted);font-size:13.5px;">Currency swaps and bridging are powered by Circle&rsquo;s stablecoin infrastructure (App Kit). ArcFX surfaces it with a clean interface.</div></div></div>
           </div>
+        </div>
 
-          <div class="code-label">Authorization header</div>
-          <pre>Authorization: Bearer <span class="s">arcfx_live_sk_xxxxxxxxxxxxxxxxxxxx</span></pre>
+        <hr class="divider" />
 
-          <table class="params-table" style="margin-top:8px;">
-            <thead><tr><th>Key prefix</th><th>Environment</th><th>Description</th></tr></thead>
-            <tbody>
-              <tr><td><span class="param-name">arcfx_live_sk_</span></td><td><span class="param-type">production</span></td><td class="param-desc">Real USDC on Arc Mainnet</td></tr>
-              <tr><td><span class="param-name">arcfx_test_sk_</span></td><td><span class="param-type">testnet</span></td><td class="param-desc">Test USDC on Arc Testnet</td></tr>
-            </tbody>
+        <!-- ── Network & contracts ── -->
+        <div class="section" id="network">
+          <h2 class="section-title">Network &amp; contracts</h2>
+          <p class="section-sub">ArcFX is deployed on Arc Testnet. The network details and on-chain contracts below are public and verifiable on ArcScan.</p>
+
+          <div class="code-label" style="margin-top:24px;">Network</div>
+          <table class="params-table" style="margin-bottom:24px;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+            <tr><td class="param-name">Network</td><td class="param-desc">Arc Testnet</td></tr>
+            <tr><td class="param-name">Chain ID</td><td class="param-desc">5042002 <span class="param-type">(0x4CEF52)</span></td></tr>
+            <tr><td class="param-name">RPC URL</td><td class="param-desc">https://rpc.testnet.arc.network</td></tr>
+            <tr><td class="param-name">Explorer</td><td class="param-desc"><a href="https://testnet.arcscan.app" target="_blank" rel="noopener" style="color:var(--blue);">testnet.arcscan.app</a></td></tr>
+            <tr><td class="param-name">Gas token</td><td class="param-desc">USDC (native)</td></tr>
           </table>
+
+          <div class="code-label">Tokens</div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span style="font-size:14px;font-weight:600;color:var(--white);">USDC <span style="font-weight:400;color:var(--muted);font-size:12px;">&middot; 6 decimals</span></span><a href="https://testnet.arcscan.app/address/0x3600000000000000000000000000000000000000" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;">ArcScan &#8599;</a></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#94a3b8;margin-top:8px;word-break:break-all;">0x3600000000000000000000000000000000000000</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span style="font-size:14px;font-weight:600;color:var(--white);">EURC <span style="font-weight:400;color:var(--muted);font-size:12px;">&middot; 6 decimals</span></span><a href="https://testnet.arcscan.app/address/0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;">ArcScan &#8599;</a></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#94a3b8;margin-top:8px;word-break:break-all;">0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a</div>
+          </div>
+
+          <div class="code-label">ArcFX contracts</div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span style="font-size:14px;font-weight:600;color:var(--white);">ArcFXPayments</span><a href="https://testnet.arcscan.app/address/0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;">ArcScan &#8599;</a></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#94a3b8;margin-top:8px;word-break:break-all;">0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3</div>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:8px;">Powers Pay Links and Invoice payments. Emits an on-chain event for every payment.</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span style="font-size:14px;font-weight:600;color:var(--white);">ArcFXMultisender</span><a href="https://testnet.arcscan.app/address/0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;">ArcScan &#8599;</a></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#94a3b8;margin-top:8px;word-break:break-all;">0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398</div>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:8px;">Batches USDC/EURC transfers to up to 500 wallets in a single transaction.</div>
+          </div>
+          <div class="info-box info-blue">Source code is open: <a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" style="color:#93c5fd;">github.com/Qazza1/arcswap</a></div>
         </div>
 
-        <hr class="divider">
+        <hr class="divider" />
 
-        <!-- ── Payments ── -->
-        <div class="section" id="create-payment">
-          <div class="section-eyebrow">Payments</div>
-          <h2 class="section-title">Create a payment</h2>
-          <p class="section-sub">Generate a shareable pay link. The recipient receives net amount after the 0.15% protocol fee.</p>
-
-          <div class="endpoint">
-            <div class="endpoint-header">
-              <span class="endpoint-method method-post" style="background:rgba(37,99,235,0.15);color:#3b82f6;">POST</span>
-              <span class="endpoint-path">/v1/payments/create</span>
-            </div>
-            <div class="endpoint-body">
-              <div class="code-label">Request body</div>
-              <table class="params-table" style="margin-bottom:20px;">
-                <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
-                <tbody>
-                  <tr><td><span class="param-name">recipient</span></td><td><span class="param-type">string</span></td><td><span class="param-req">required</span></td><td class="param-desc">Wallet address that receives payment</td></tr>
-                  <tr><td><span class="param-name">amount</span></td><td><span class="param-type">string</span></td><td><span class="param-req">required</span></td><td class="param-desc">Amount in token units (e.g. "250.00")</td></tr>
-                  <tr><td><span class="param-name">token</span></td><td><span class="param-type">string</span></td><td><span class="param-req">required</span></td><td class="param-desc">"USDC" or "EURC"</td></tr>
-                  <tr><td><span class="param-name">note</span></td><td><span class="param-type">string</span></td><td><span class="param-type">optional</span></td><td class="param-desc">Reference note shown to payer</td></tr>
-                  <tr><td><span class="param-name">webhook_url</span></td><td><span class="param-type">string</span></td><td><span class="param-type">optional</span></td><td class="param-desc">POST endpoint for payment confirmation</td></tr>
-                </tbody>
-              </table>
-
-              <div class="code-label">Response</div>
-              <pre><span class="p">{</span>
-  <span class="key">"id"</span><span class="p">:</span>          <span class="s">"pay_3k9xmT2qR8Lv"</span><span class="p">,</span>
-  <span class="key">"url"</span><span class="p">:</span>         <span class="s">"https://arcfx.app/pay?to=0x4F81...&amp;amount=250&amp;token=USDC&amp;note=INV-041"</span><span class="p">,</span>
-  <span class="key">"recipient"</span><span class="p">:</span>   <span class="s">"0x4F81E3939232815e3C98B124A17BaC75304C82D8"</span><span class="p">,</span>
-  <span class="key">"amount"</span><span class="p">:</span>      <span class="s">"250.00"</span><span class="p">,</span>
-  <span class="key">"fee"</span><span class="p">:</span>         <span class="s">"0.375"</span><span class="p">,</span>      <span class="c">// 0.15% of 250</span>
-  <span class="key">"net"</span><span class="p">:</span>         <span class="s">"249.625"</span><span class="p">,</span>
-  <span class="key">"token"</span><span class="p">:</span>       <span class="s">"USDC"</span><span class="p">,</span>
-  <span class="key">"status"</span><span class="p">:</span>      <span class="s">"pending"</span><span class="p">,</span>    <span class="c">// pending | paid | expired</span>
-  <span class="key">"created_at"</span><span class="p">:</span>  <span class="s">"2026-05-23T09:41:00Z"</span>
-<span class="p">}</span></pre>
-            </div>
-          </div>
+        <!-- ── Swap & Bridge ── -->
+        <div class="section" id="swap">
+          <div class="section-eyebrow">Tools</div>
+          <h2 class="section-title">Swap &amp; Bridge</h2>
+          <p class="section-sub">Swap between USDC and EURC on Arc, or bridge stablecoins in from another chain. Settlement is sub-second and gas is paid in USDC. Routing is powered by Circle&rsquo;s stablecoin infrastructure.</p>
+          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/trade" style="color:#93c5fd;">arcfx.app/trade</a> &mdash; connect your wallet, choose your tokens and amount, and confirm.</div>
+          <div class="info-box info-amber">On testnet, not every swap direction is routable yet &mdash; Circle provisions routes over time, so a given pair may be temporarily unavailable. If a direction returns &ldquo;no route,&rdquo; try the reverse or use Bridge.</div>
         </div>
 
-        <!-- GET payment -->
-        <div class="endpoint" id="get-payment">
-          <div class="endpoint-header">
-            <span class="endpoint-method method-get" style="background:rgba(16,185,129,0.15);color:#10b981;">GET</span>
-            <span class="endpoint-path">/v1/payments/<span style="color:#f59e0b;">{id}</span></span>
-            <span class="endpoint-desc">Retrieve a payment by ID</span>
-          </div>
-          <div class="endpoint-body">
-            <div class="code-label">Example</div>
-            <pre><span class="k">curl</span> https://api.arcfx.app/v1/payments/pay_3k9xmT2qR8Lv \
-  -H <span class="s">"Authorization: Bearer YOUR_API_KEY"</span></pre>
-          </div>
-        </div>
-
-        <hr class="divider">
+        <hr class="divider" />
 
         <!-- ── Multisend ── -->
         <div class="section" id="multisend">
-          <div class="section-eyebrow">Multisend</div>
-          <h2 class="section-title">Batch transfers</h2>
-          <p class="section-sub">Send USDC or EURC to up to 500 wallets in a single on-chain transaction. Ideal for payroll, DAO distributions, and airdrops.</p>
-
-          <div class="endpoint">
-            <div class="endpoint-header">
-              <span class="endpoint-method method-post" style="background:rgba(37,99,235,0.15);color:#3b82f6;">POST</span>
-              <span class="endpoint-path">/v1/multisend</span>
-            </div>
-            <div class="endpoint-body">
-              <div class="code-label">Request body</div>
-              <pre><span class="p">{</span>
-  <span class="key">"token"</span><span class="p">:</span>      <span class="s">"USDC"</span><span class="p">,</span>
-  <span class="key">"recipients"</span><span class="p">: [</span>
-    <span class="p">{</span> <span class="key">"address"</span><span class="p">:</span> <span class="s">"0xABC..."</span><span class="p">,</span> <span class="key">"amount"</span><span class="p">:</span> <span class="s">"500.00"</span> <span class="p">},</span>
-    <span class="p">{</span> <span class="key">"address"</span><span class="p">:</span> <span class="s">"0xDEF..."</span><span class="p">,</span> <span class="key">"amount"</span><span class="p">:</span> <span class="s">"1250.00"</span> <span class="p">},</span>
-    <span class="p">{</span> <span class="key">"address"</span><span class="p">:</span> <span class="s">"0x123..."</span><span class="p">,</span> <span class="key">"amount"</span><span class="p">:</span> <span class="s">"750.00"</span> <span class="p">}</span>
-  <span class="p">],</span>
-  <span class="key">"memo"</span><span class="p">:</span>       <span class="s">"May 2026 payroll"</span>  <span class="c">// optional</span>
-<span class="p">}</span></pre>
-
-              <div class="code-label">Response</div>
-              <pre><span class="p">{</span>
-  <span class="key">"batch_id"</span><span class="p">:</span>     <span class="s">"batch_7mNpQx9R"</span><span class="p">,</span>
-  <span class="key">"tx_hash"</span><span class="p">:</span>      <span class="s">"0x02ab...17b4"</span><span class="p">,</span>
-  <span class="key">"recipients"</span><span class="p">:</span>   <span class="n">3</span><span class="p">,</span>
-  <span class="key">"total_amount"</span><span class="p">:</span> <span class="s">"2500.00"</span><span class="p">,</span>
-  <span class="key">"fee"</span><span class="p">:</span>          <span class="s">"3.75"</span><span class="p">,</span>           <span class="c">// 0.15% of total</span>
-  <span class="key">"status"</span><span class="p">:</span>       <span class="s">"confirmed"</span><span class="p">,</span>
-  <span class="key">"explorer"</span><span class="p">:</span>     <span class="s">"https://testnet.arcscan.app/tx/0x02ab...17b4"</span>
-<span class="p">}</span></pre>
-            </div>
+          <h2 class="section-title">Multisend</h2>
+          <p class="section-sub">Send USDC or EURC to many recipients in a single transaction &mdash; payroll, vendor runs, airdrops, or DAO payouts. Up to 500 recipients per batch via the ArcFXMultisender contract.</p>
+          <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;">
+            <div class="pricing-feature" style="color:var(--muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Free tier: up to 5 recipients per batch</div>
+            <div class="pricing-feature" style="color:var(--muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Pro tier: up to 500 recipients, 0.15% fee on the batch</div>
+            <div class="pricing-feature" style="color:var(--muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> One transaction, one signature</div>
           </div>
+          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/multisend" style="color:#93c5fd;">arcfx.app/multisend</a>.</div>
         </div>
 
-        <hr class="divider">
+        <hr class="divider" />
+
+        <!-- ── Pay Links ── -->
+        <div class="section" id="pay">
+          <h2 class="section-title">Pay Links</h2>
+          <p class="section-sub">Create a shareable link that requests a stablecoin payment. The payer opens the link, connects their wallet, and pays in one click &mdash; no invoice or account required. Payments settle through the ArcFXPayments contract.</p>
+          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/pay" style="color:#93c5fd;">arcfx.app/pay</a>. A 0.15% protocol fee applies to completed payments.</div>
+        </div>
+
+        <hr class="divider" />
 
         <!-- ── Invoices ── -->
-        <div class="section" id="create-invoice">
-          <div class="section-eyebrow">Invoices</div>
-          <h2 class="section-title">Generate invoices</h2>
-          <p class="section-sub">Programmatically create professional PDF invoices with an embedded Pay Now link. Returns a hosted PDF URL and a payment link.</p>
+        <div class="section" id="invoices">
+          <h2 class="section-title">Invoices</h2>
+          <p class="section-sub">Generate a professional invoice your client can pay on-chain in one click. Built on the same ArcFXPayments contract, with the payment recorded on-chain for reconciliation.</p>
+          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/invoice" style="color:#93c5fd;">arcfx.app/invoice</a>. A 0.15% protocol fee applies to completed payments.</div>
+        </div>
 
-          <div class="endpoint">
-            <div class="endpoint-header">
-              <span class="endpoint-method method-post" style="background:rgba(37,99,235,0.15);color:#3b82f6;">POST</span>
-              <span class="endpoint-path">/v1/invoices/create</span>
-            </div>
-            <div class="endpoint-body">
-              <div class="code-label">Request body</div>
-              <pre><span class="p">{</span>
-  <span class="key">"from"</span><span class="p">:</span> <span class="p">{</span> <span class="key">"name"</span><span class="p">:</span> <span class="s">"ArcFX Ltd"</span><span class="p">,</span> <span class="key">"wallet"</span><span class="p">:</span> <span class="s">"0x4F81..."</span> <span class="p">},</span>
-  <span class="key">"to"</span><span class="p">:</span>   <span class="p">{</span> <span class="key">"name"</span><span class="p">:</span> <span class="s">"Client Corp"</span><span class="p">,</span> <span class="key">"email"</span><span class="p">:</span> <span class="s">"ap@client.com"</span> <span class="p">},</span>
-  <span class="key">"token"</span><span class="p">:</span> <span class="s">"USDC"</span><span class="p">,</span>
-  <span class="key">"items"</span><span class="p">: [</span>
-    <span class="p">{</span> <span class="key">"description"</span><span class="p">:</span> <span class="s">"Smart contract audit"</span><span class="p">,</span> <span class="key">"qty"</span><span class="p">:</span> <span class="n">1</span><span class="p">,</span> <span class="key">"unit_price"</span><span class="p">:</span> <span class="n">2500</span> <span class="p">},</span>
-    <span class="p">{</span> <span class="key">"description"</span><span class="p">:</span> <span class="s">"Integration support"</span><span class="p">,</span>  <span class="key">"qty"</span><span class="p">:</span> <span class="n">4</span><span class="p">,</span> <span class="key">"unit_price"</span><span class="p">:</span> <span class="n">150</span>  <span class="p">}</span>
-  <span class="p">],</span>
-  <span class="key">"due_date"</span><span class="p">:</span> <span class="s">"2026-06-01"</span>
-<span class="p">}</span></pre>
+        <hr class="divider" />
 
-              <div class="code-label">Response</div>
-              <pre><span class="p">{</span>
-  <span class="key">"invoice_id"</span><span class="p">:</span>  <span class="s">"inv_9bKpRm3xQ"</span><span class="p">,</span>
-  <span class="key">"pdf_url"</span><span class="p">:</span>     <span class="s">"https://api.arcfx.app/v1/invoices/inv_9bKpRm3xQ/pdf"</span><span class="p">,</span>
-  <span class="key">"pay_url"</span><span class="p">:</span>     <span class="s">"https://arcfx.app/pay?to=0x4F81...&amp;amount=3100&amp;token=USDC"</span><span class="p">,</span>
-  <span class="key">"total"</span><span class="p">:</span>       <span class="s">"3100.00"</span><span class="p">,</span>
-  <span class="key">"status"</span><span class="p">:</span>      <span class="s">"unpaid"</span>   <span class="c">// unpaid | paid | overdue</span>
-<span class="p">}</span></pre>
-            </div>
+        <!-- ── Getting started ── -->
+        <div class="section" id="getting-started">
+          <div class="section-eyebrow">Resources</div>
+          <h2 class="section-title">Getting started</h2>
+          <p class="section-sub">You only need an EVM wallet and a little testnet stablecoin to try everything.</p>
+          <div style="margin-top:24px;display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;gap:14px;align-items:flex-start;"><span style="font-family:'JetBrains Mono',monospace;color:var(--blue);font-size:13px;flex-shrink:0;">01</span><div><div style="color:var(--white);font-weight:600;font-size:14px;">Add Arc Testnet to your wallet</div><div style="color:var(--muted);font-size:13.5px;">Use the &ldquo;Switch to Arc Testnet&rdquo; prompt on the dashboard, or add it manually (Chain ID 5042002, RPC https://rpc.testnet.arc.network).</div></div></div>
+            <div style="display:flex;gap:14px;align-items:flex-start;"><span style="font-family:'JetBrains Mono',monospace;color:var(--blue);font-size:13px;flex-shrink:0;">02</span><div><div style="color:var(--white);font-weight:600;font-size:14px;">Get testnet tokens</div><div style="color:var(--muted);font-size:13.5px;">Request testnet USDC and EURC from the <a href="https://faucet.circle.com" target="_blank" rel="noopener" style="color:var(--blue);">Circle Faucet</a> (select Arc Testnet).</div></div></div>
+            <div style="display:flex;gap:14px;align-items:flex-start;"><span style="font-family:'JetBrains Mono',monospace;color:var(--blue);font-size:13px;flex-shrink:0;">03</span><div><div style="color:var(--white);font-weight:600;font-size:14px;">Open a tool and connect</div><div style="color:var(--muted);font-size:13.5px;">Head to the <a href="/app" style="color:var(--blue);">dashboard</a>, connect your wallet, and start swapping or paying.</div></div></div>
           </div>
         </div>
 
-        <hr class="divider">
+        <hr class="divider" />
 
-        <!-- ── Webhooks ── -->
-        <div class="section" id="webhooks">
-          <div class="section-eyebrow">Webhooks</div>
-          <h2 class="section-title">Payment webhooks</h2>
-          <p class="section-sub">Receive real-time notifications when a payment is confirmed on-chain. ArcFX listens to the PaymentExecuted contract event and POSTs to your endpoint within seconds.</p>
-
-          <div class="endpoint">
-            <div class="endpoint-header">
-              <span class="endpoint-method method-post" style="background:rgba(37,99,235,0.15);color:#3b82f6;">POST</span>
-              <span class="endpoint-path">/v1/webhooks/register</span>
-            </div>
-            <div class="endpoint-body">
-              <div class="code-label">Register your endpoint</div>
-              <pre><span class="p">{</span>
-  <span class="key">"url"</span><span class="p">:</span>    <span class="s">"https://your-server.com/arcfx/webhook"</span><span class="p">,</span>
-  <span class="key">"events"</span><span class="p">:</span> <span class="p">[</span><span class="s">"payment.confirmed"</span><span class="p">,</span> <span class="s">"multisend.confirmed"</span><span class="p">]</span>
-<span class="p">}</span></pre>
-
-              <div class="code-label">Webhook payload (sent to your server)</div>
-              <pre><span class="p">{</span>
-  <span class="key">"event"</span><span class="p">:</span>      <span class="s">"payment.confirmed"</span><span class="p">,</span>
-  <span class="key">"payment_id"</span><span class="p">:</span> <span class="s">"pay_3k9xmT2qR8Lv"</span><span class="p">,</span>
-  <span class="key">"tx_hash"</span><span class="p">:</span>    <span class="s">"0x02ab...17b4"</span><span class="p">,</span>
-  <span class="key">"amount"</span><span class="p">:</span>     <span class="s">"250.00"</span><span class="p">,</span>
-  <span class="key">"token"</span><span class="p">:</span>      <span class="s">"USDC"</span><span class="p">,</span>
-  <span class="key">"payer"</span><span class="p">:</span>      <span class="s">"0xABC..."</span><span class="p">,</span>
-  <span class="key">"recipient"</span><span class="p">:</span>  <span class="s">"0x4F81..."</span><span class="p">,</span>
-  <span class="key">"block"</span><span class="p">:</span>      <span class="n">43571839</span><span class="p">,</span>
-  <span class="key">"timestamp"</span><span class="p">:</span>  <span class="s">"2026-05-23T09:43:17Z"</span>
-<span class="p">}</span></pre>
-            </div>
-          </div>
-        </div>
-
-        <hr class="divider">
-
-        <!-- ── Errors ── -->
-        <div class="section" id="errors">
-          <div class="section-eyebrow">Errors</div>
-          <h2 class="section-title">Error codes</h2>
-          <table class="params-table">
-            <thead><tr><th>Status</th><th>Code</th><th>Description</th></tr></thead>
-            <tbody>
-              <tr><td><span class="param-name" style="color:#ef4444;">400</span></td><td><span class="param-type">invalid_request</span></td><td class="param-desc">Missing or malformed parameters</td></tr>
-              <tr><td><span class="param-name" style="color:#ef4444;">401</span></td><td><span class="param-type">unauthorized</span></td><td class="param-desc">Invalid or missing API key</td></tr>
-              <tr><td><span class="param-name" style="color:#ef4444;">402</span></td><td><span class="param-type">subscription_required</span></td><td class="param-desc">Active $99/month subscription needed</td></tr>
-              <tr><td><span class="param-name" style="color:#f59e0b;">429</span></td><td><span class="param-type">rate_limited</span></td><td class="param-desc">100 requests/minute per API key</td></tr>
-              <tr><td><span class="param-name" style="color:#ef4444;">500</span></td><td><span class="param-type">chain_error</span></td><td class="param-desc">On-chain transaction failed</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <hr class="divider">
-
-        <!-- ── Pricing ── -->
-        <div class="section" id="pricing">
-          <div class="section-eyebrow">Pricing</div>
-          <h2 class="section-title">Simple, usage-based</h2>
-          <p class="section-sub">Two revenue streams — an on-chain protocol fee on every payment, and a monthly API subscription for programmatic access.</p>
-          <div class="pricing-grid">
-            <div class="pricing-card">
-              <div style="font-size:11px;font-weight:600;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;font-family:'JetBrains Mono',monospace;">Protocol fee</div>
-              <div class="pricing-price">0.15%<span> per payment</span></div>
-              <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Collected on-chain automatically</div>
-              <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> No invoicing or manual settlement</div>
-              <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> USDC and EURC supported</div>
-              <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Free up to 5 multisend recipients</div>
-            </div>
-            <div class="pricing-card featured">
-              <div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:0.1em;font-family:'JetBrains Mono',monospace;">API access</div>
-              <div class="pricing-price" style="color:var(--blue);">$99<span>/month</span></div>
-              <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Full REST API access</div>
-              <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Webhook delivery</div>
-              <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Circle Wallets integration</div>
-              <div class="pricing-feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 100 req/min rate limit</div>
-              <div style="margin-top:20px;">
-                <a href="mailto:arcfxapp@gmail.com" style="display:block;text-align:center;padding:10px;background:var(--blue);color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;">Request early API access →</a>
-              </div>
-            </div>
+        <!-- ── Developer API (honest: not yet available) ── -->
+        <div class="section" id="api">
+          <h2 class="section-title">Developer API</h2>
+          <p class="section-sub">A REST API for programmatic payments, invoicing, multisend, and webhooks is in development &mdash; so teams can automate ArcFX from their own backend.</p>
+          <div class="info-box info-amber" style="margin-top:20px;">&#9888; The API is not yet available. There are no live endpoints or API keys today. This section will be filled in with full reference docs when the API ships.</div>
+          <div style="margin-top:8px;">
+            <a href="mailto:arcfxapp@gmail.com?subject=ArcFX%20API%20early%20access" style="display:inline-block;padding:10px 18px;background:var(--blue);color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;">Request early access &rarr;</a>
           </div>
         </div>
 
