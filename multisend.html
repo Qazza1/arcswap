@@ -669,6 +669,29 @@
       </div>
     </div>
 
+    <!-- Scheduled payouts (reminder-based; non-custodial) -->
+    <div style="margin-top:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px 24px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text);">📅 Scheduled payouts</span>
+        <span style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);border:1px solid rgba(245,166,35,.35);border-radius:20px;padding:2px 8px;">Reminder</span>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);line-height:1.6;margin:0 0 16px;">
+        Save the current recipient list as a monthly payout. ArcFX reminds you when one is due and loads it back into the form — you still sign each send yourself. Nothing sends automatically, and schedules are stored only in this browser.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;">
+        <div style="flex:1;min-width:160px;">
+          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:5px;">Schedule name</label>
+          <input id="sched-name" type="text" placeholder="Monthly payroll" style="width:100%;box-sizing:border-box;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:13px;padding:9px 11px;font-family:inherit;outline:none;" />
+        </div>
+        <div style="width:120px;">
+          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:5px;">Day of month</label>
+          <input id="sched-day" type="number" min="1" max="28" value="1" style="width:100%;box-sizing:border-box;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:13px;padding:9px 11px;font-family:inherit;outline:none;" />
+        </div>
+        <button id="sched-save-btn" style="background:var(--blue-dim);border:1px solid rgba(61,126,255,.35);color:var(--blue);border-radius:var(--r-sm);padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Save current list</button>
+      </div>
+      <div id="schedules-list"></div>
+    </div>
+
     <!-- Success overlay -->
     <div id="success-card" style="display:none;margin-top:24px;">
       <div class="tx-success-card">
@@ -1113,6 +1136,108 @@
         }
       }).catch(function(){});
     }
+
+    // ── Scheduled payouts (reminder-based, non-custodial) ──────────────────
+    const SCHEDULE_KEY = "arcfx_multisend_schedules";
+    function loadSchedules(){ try { return JSON.parse(localStorage.getItem(SCHEDULE_KEY) || "[]"); } catch (e) { return []; } }
+    function saveSchedules(a){ try { localStorage.setItem(SCHEDULE_KEY, JSON.stringify(a)); } catch (e) { showStatus("Could not save schedule (browser storage blocked).", "error"); } }
+    function schedMonthKey(d){ d = d || new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1); }
+    function schedIsDue(s){ const now = new Date(); return now.getDate() >= s.dayOfMonth && s.lastRunMonth !== schedMonthKey(now); }
+    function schedEsc(t){ return String(t).replace(/[&<>"]/g, function(c){ return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]; }); }
+
+    function saveCurrentSchedule(){
+      if (!recipients.length) { showStatus("Add recipients first, then save them as a schedule.", "error"); return; }
+      const name = (el("sched-name").value || "").trim() || "Monthly payout";
+      let day = parseInt(el("sched-day").value || "1", 10);
+      if (isNaN(day) || day < 1) day = 1;
+      if (day > 28) day = 28;
+      const all = loadSchedules();
+      all.push({
+        id: "sch_" + Date.now(),
+        name: name, dayOfMonth: day, token: selectedToken,
+        recipients: recipients.map(function(r){ return { address: r.address, amount: String(r.amount), label: r.label || "" }; }),
+        lastRunMonth: null
+      });
+      saveSchedules(all);
+      el("sched-name").value = "";
+      renderSchedules();
+      showStatus('Saved "' + name + '" as a monthly schedule.', "");
+    }
+
+    function loadScheduleById(id){
+      const s = loadSchedules().find(function(x){ return x.id === id; });
+      if (!s) return;
+      const limit = selectedTier === "free" ? 5 : 500;
+      if (s.recipients.length > limit) {
+        showStatus("This schedule has " + s.recipients.length + " recipients. Switch to Pro (up to 500) to load it.", "error");
+        return;
+      }
+      if (typeof selectToken === "function") selectToken(s.token || "USDC");
+      recipients = s.recipients.map(function(r){ return { address: r.address, amount: String(r.amount), label: r.label || "Scheduled" }; });
+      renderTable();
+      updateSummary();
+      showStatus('Loaded "' + s.name + '" - review the list, then send.', "");
+      const sec = el("summary-section");
+      if (sec) sec.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function markScheduleSent(id){
+      const all = loadSchedules();
+      const s = all.find(function(x){ return x.id === id; });
+      if (!s) return;
+      s.lastRunMonth = schedMonthKey();
+      saveSchedules(all);
+      renderSchedules();
+    }
+
+    function deleteSchedule(id){
+      if (!confirm("Delete this schedule?")) return;
+      saveSchedules(loadSchedules().filter(function(s){ return s.id !== id; }));
+      renderSchedules();
+    }
+
+    function renderSchedules(){
+      const wrap = el("schedules-list");
+      if (!wrap) return;
+      const all = loadSchedules();
+      if (!all.length) {
+        wrap.innerHTML = '<div style="font-size:12.5px;color:var(--muted);padding:6px 0;">No saved schedules yet. Add recipients above, then save them here.</div>';
+        return;
+      }
+      wrap.innerHTML = all.map(function(s){
+        const total = s.recipients.reduce(function(a, r){ return a + (parseFloat(r.amount) || 0); }, 0);
+        const due = schedIsDue(s);
+        const badge = due
+          ? '<span style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--green);border:1px solid rgba(0,212,170,.4);border-radius:20px;padding:2px 8px;margin-left:8px;">Due now</span>'
+          : '<span style="font-size:11px;color:var(--muted);margin-left:8px;">day ' + s.dayOfMonth + ' monthly</span>';
+        return '' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-raised);border:1px solid ' + (due ? 'rgba(0,212,170,.3)' : 'var(--border)') + ';border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px;">' +
+            '<div style="min-width:0;">' +
+              '<div style="font-size:13.5px;font-weight:600;color:var(--text);">' + schedEsc(s.name) + badge + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);margin-top:3px;">' + s.recipients.length + ' recipients &middot; ' + total.toFixed(2) + ' ' + schedEsc(s.token) + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;flex-shrink:0;">' +
+              '<button class="sched-act" data-act="load" data-id="' + s.id + '" style="background:var(--blue-dim);border:1px solid rgba(61,126,255,.35);color:var(--blue);border-radius:var(--r-sm);padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">Load</button>' +
+              (due ? '<button class="sched-act" data-act="sent" data-id="' + s.id + '" style="background:var(--green-dim);border:1px solid rgba(0,212,170,.35);color:var(--green);border-radius:var(--r-sm);padding:7px 12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">Mark sent</button>' : '') +
+              '<button class="sched-act" data-act="del" data-id="' + s.id + '" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:var(--r-sm);padding:7px 10px;font-size:12.5px;cursor:pointer;font-family:inherit;">Delete</button>' +
+            '</div>' +
+          '</div>';
+      }).join("");
+    }
+
+    var _schedSaveBtn = el("sched-save-btn");
+    if (_schedSaveBtn) _schedSaveBtn.addEventListener("click", saveCurrentSchedule);
+    var _schedList = el("schedules-list");
+    if (_schedList) _schedList.addEventListener("click", function(e){
+      const b = e.target.closest ? e.target.closest("button[data-act]") : null;
+      if (!b) return;
+      const id = b.getAttribute("data-id");
+      const act = b.getAttribute("data-act");
+      if (act === "load") loadScheduleById(id);
+      else if (act === "sent") markScheduleSent(id);
+      else if (act === "del") deleteSchedule(id);
+    });
+    renderSchedules();
   </script>
 
 
