@@ -212,6 +212,20 @@
             <label>Your wallet address (payments go here)</label>
             <input id="from-wallet" class="mono" type="text" placeholder="0x4F81E393..." autocomplete="off" oninput="updatePreview()" />
           </div>
+          <div class="field">
+            <label>Your logo (optional)</label>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div id="logo-thumb" style="width:44px;height:44px;border-radius:8px;border:1px solid var(--border);background:var(--raised);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:var(--muted);font-size:11px;">&mdash;</div>
+              <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleLogoUpload(event)" />
+              <button type="button" onclick="document.getElementById('logo-input').click()" style="padding:8px 14px;border-radius:var(--rsm);background:var(--raised);border:1px solid var(--bmed);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">Upload logo</button>
+              <button type="button" id="logo-remove" onclick="removeLogo()" style="display:none;padding:8px 12px;border-radius:var(--rsm);background:transparent;border:1px solid var(--border);color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;">Remove</button>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;">PNG, JPG or WebP, under 500&nbsp;KB. Shown on your invoice and PDF.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:2px;">
+            <button type="button" onclick="saveProfile()" style="padding:8px 14px;border-radius:var(--rsm);background:var(--bdim);border:1px solid rgba(61,126,255,0.35);color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Save my details as default</button>
+            <span id="profile-saved-msg" style="font-size:12px;color:var(--teal);display:none;">Saved to this browser &#10003;</span>
+          </div>
         </div>
       </div>
 
@@ -335,8 +349,8 @@
           <div class="inv-header">
             <div class="inv-header-top">
               <div class="inv-logo-row">
-                <div class="inv-logo-box">A</div>
-                <span class="inv-brand">ArcFX</span>
+                <div class="inv-logo-box" id="prev-logo-box">A</div>
+                <span class="inv-brand" id="prev-brand">ArcFX</span>
               </div>
               <div style="text-align:right;">
                 <div class="inv-label">INVOICE</div>
@@ -420,6 +434,8 @@
           <button class="btn-primary" onclick="downloadPDF()">⬇ Download PDF invoice</button>
           <button class="btn-outline" onclick="openPayLink()">↗ Open Pay link in browser</button>
           <button class="btn-copy" id="copy-pay-btn" onclick="copyPayLink()">📋 Copy Pay link</button>
+          <button class="btn-outline" id="check-paid-btn" onclick="checkInvoicePaid()" style="margin-top:8px;">🔍 Check payment status</button>
+          <div id="paid-status" style="display:none;margin-top:10px;padding:12px 14px;border-radius:var(--rsm);font-size:13px;line-height:1.5;"></div>
 
           <div class="pay-link-box" id="pay-link-display" style="display:none;">
             <div class="pay-link-label">Payment link</div>
@@ -444,6 +460,7 @@
 // ── State ─────────────────────────────────────────────────────────────────
 let selectedToken = "USDC";
 let items = [{ desc: "", qty: 1, price: 0 }];
+let logoData = null;  // business logo as base64 data URL (localStorage)
 
 // ── Init ──────────────────────────────────────────────────────────────────
 window.addEventListener("load", () => {
@@ -452,6 +469,7 @@ window.addEventListener("load", () => {
   due.setDate(due.getDate() + 14);
   document.getElementById("inv-date").value = fmt(today);
   document.getElementById("inv-due").value  = fmt(due);
+  loadProfile();
   renderItems();
   updatePreview();
 });
@@ -466,6 +484,56 @@ function fmtDisplay(str) {
     const d = new Date(str + "T00:00:00");
     return d.toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
   } catch { return str; }
+}
+
+// ── Logo + business profile (saved in this browser only) ────────────────────
+window.handleLogoUpload = function(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  if (file.size > 500 * 1024) { showStatus("Logo must be under 500 KB.", "error"); return; }
+  const reader = new FileReader();
+  reader.onload = () => { logoData = reader.result; renderLogoThumb(); updatePreview(); };
+  reader.readAsDataURL(file);
+};
+window.removeLogo = function() {
+  logoData = null;
+  const inp = document.getElementById("logo-input"); if (inp) inp.value = "";
+  renderLogoThumb(); updatePreview();
+};
+function renderLogoThumb() {
+  const thumb = document.getElementById("logo-thumb");
+  const rm    = document.getElementById("logo-remove");
+  if (!thumb) return;
+  if (logoData) {
+    thumb.innerHTML = '<img src="' + logoData + '" alt="logo" style="width:100%;height:100%;object-fit:contain;" />';
+    if (rm) rm.style.display = "inline-block";
+  } else {
+    thumb.innerHTML = "&mdash;";
+    if (rm) rm.style.display = "none";
+  }
+}
+window.saveProfile = function() {
+  const profile = {
+    name:   document.getElementById("from-name")?.value || "",
+    email:  document.getElementById("from-email")?.value || "",
+    wallet: document.getElementById("from-wallet")?.value.trim() || "",
+    logo:   logoData || null
+  };
+  try {
+    localStorage.setItem("arcfx_invoice_profile", JSON.stringify(profile));
+    const msg = document.getElementById("profile-saved-msg");
+    if (msg) { msg.style.display = "inline"; setTimeout(() => { msg.style.display = "none"; }, 2200); }
+  } catch (e) { showStatus("Could not save (storage blocked or full).", "error"); }
+};
+function loadProfile() {
+  try {
+    const raw = localStorage.getItem("arcfx_invoice_profile");
+    if (!raw) return;
+    const p = JSON.parse(raw);
+    const setv = (id, v) => { const n = document.getElementById(id); if (n && v) n.value = v; };
+    setv("from-name", p.name); setv("from-email", p.email); setv("from-wallet", p.wallet);
+    if (p.logo) { logoData = p.logo; renderLogoThumb(); }
+  } catch (e) { /* ignore corrupt profile */ }
 }
 
 // ── Token ──────────────────────────────────────────────────────────────────
@@ -578,6 +646,16 @@ function updatePreview() {
   document.getElementById("prev-due").textContent    = fmtDisplay(invDue);
   document.getElementById("prev-token").textContent  = sym;
 
+  // Branding: business logo + name (falls back to initial / placeholder)
+  const logoBox = document.getElementById("prev-logo-box");
+  const brand   = document.getElementById("prev-brand");
+  if (logoBox) {
+    logoBox.innerHTML = logoData
+      ? '<img src="' + logoData + '" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:6px;" />'
+      : ((fromName.trim().charAt(0) || "A").toUpperCase());
+  }
+  if (brand) brand.textContent = fromName || "Your business";
+
   // Parties
   document.getElementById("prev-from-name").textContent   = fromName   || "Your name";
   document.getElementById("prev-from-detail").textContent = fromEmail  || "—";
@@ -689,18 +767,27 @@ window.downloadPDF = function() {
   doc.setFillColor(6, 8, 16);
   doc.rect(0, 0, W, 52, "F");
 
-  // ArcFX logo box
-  doc.setFillColor(61, 126, 255);
-  doc.roundedRect(14, 10, 14, 14, 2, 2, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(255, 255, 255);
-  doc.text("A", 21, 19.5, { align:"center" });
+  // Business logo (uploaded) or fallback initial box
+  const drawInitialBox = () => {
+    doc.setFillColor(61, 126, 255);
+    doc.roundedRect(14, 10, 14, 14, 2, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.text((fromName.trim().charAt(0) || "A").toUpperCase(), 21, 19.5, { align:"center" });
+  };
+  if (logoData) {
+    try { doc.addImage(logoData, 14, 10, 14, 14); }
+    catch (e) { drawInitialBox(); }
+  } else {
+    drawInitialBox();
+  }
 
-  // ArcFX brand name
+  // Business name
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(232, 237, 248);
-  doc.text("ArcFX", 32, 19.5);
+  doc.text(fromName || "Your business", 32, 19.5);
 
   // INVOICE label
   doc.setFontSize(22);
@@ -868,5 +955,60 @@ function showStatus(msg, type) {
 }
 </script>
 
+  <!-- On-chain Paid status (read-only; matches keccak256(invoiceNumber) + recipient) -->
+  <script type="module">
+    import { JsonRpcProvider, id as ethersId } from "https://esm.sh/ethers@6";
+
+    const ARC_RPC       = "https://rpc.testnet.arc.network";
+    const PAYMENTS       = "0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3";
+    const PAYMENT_TOPIC  = ethersId("PaymentExecuted(bytes32,address,address,address,uint256,uint256,uint256)");
+    const SCAN_BLOCKS    = 100000;
+    const provider       = new JsonRpcProvider(ARC_RPC);
+
+    function pad(addr){ return "0x000000000000000000000000" + addr.slice(2).toLowerCase(); }
+    function setBox(box,bg,border,color,html){ box.style.display="block"; box.style.background=bg; box.style.border=border; box.style.color=color; box.innerHTML=html; }
+
+    async function chunkedLogs(filter, fromBlock, toBlock){
+      const out=[]; const chunk=5000;
+      for (let from=fromBlock; from<=toBlock; from+=chunk){
+        const to=Math.min(from+chunk-1,toBlock);
+        try { const logs=await provider.getLogs({ ...filter, fromBlock:from, toBlock:to }); out.push(...logs); }
+        catch { /* skip failed chunk */ }
+      }
+      return out;
+    }
+
+    window.checkInvoicePaid = async function(){
+      const box=document.getElementById("paid-status");
+      const btn=document.getElementById("check-paid-btn");
+      if (!box) return;
+      const invNum=(document.getElementById("inv-number")?.value||"").trim();
+      const wallet=(document.getElementById("from-wallet")?.value||"").trim();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)){
+        setBox(box,"rgba(255,77,106,0.08)","1px solid rgba(255,77,106,0.3)","#ff8da0","Enter your wallet address first.");
+        return;
+      }
+      setBox(box,"var(--raised)","1px solid var(--border)","var(--muted)","Checking on-chain...");
+      if (btn) btn.disabled=true;
+      try {
+        const latest=await provider.getBlockNumber();
+        const fromBlock=Math.max(0, latest-SCAN_BLOCKS);
+        const paymentId=ethersId(invNum||"arcfx-payment");
+        const logs=await chunkedLogs({ address:PAYMENTS, topics:[PAYMENT_TOPIC, paymentId, null, pad(wallet)] }, fromBlock, latest);
+        if (logs.length){
+          const tx=logs[logs.length-1].transactionHash;
+          setBox(box,"var(--tdim)","1px solid rgba(0,212,170,0.35)","var(--teal)",
+            '&#10003; Paid on-chain &nbsp;&middot;&nbsp; <a href="https://testnet.arcscan.app/tx/'+tx+'" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:underline;">view transaction &#8599;</a>');
+        } else {
+          setBox(box,"var(--raised)","1px solid var(--border)","var(--muted)",
+            "No matching payment found in the last "+SCAN_BLOCKS.toLocaleString()+" blocks. If it was paid longer ago, the full-history check arrives with the indexer.");
+        }
+      } catch (e){
+        setBox(box,"rgba(255,77,106,0.08)","1px solid rgba(255,77,106,0.3)","#ff8da0","Could not check right now - network error. Try again.");
+      } finally {
+        if (btn) btn.disabled=false;
+      }
+    };
+  </script>
 </body>
 </html>
