@@ -1,11 +1,14 @@
 /**
- * analytics.ts — Live Arc Testnet data.
- * Uses same getLogs approach as history tab (which works).
+ * analytics.ts — ArcFX analytics.
+ *  - Protocol stats come from the ArcFX backend (/v1/stats), full history.
+ *  - "Who you paid" bars come from the backend (/v1/breakdown?payer=<wallet>).
+ *  - Live feed is read directly from Arc Testnet (recent window), chunked safely.
  */
 
-import { JsonRpcProvider, Contract, formatUnits, id as keccak256id } from "ethers";
+import { JsonRpcProvider, formatUnits, id as keccak256id } from "ethers";
 
-const ARC_RPC = "https://rpc.testnet.arc.network";
+const API_BASE = "https://arcfx-backend-production.up.railway.app";
+const ARC_RPC  = "https://rpc.testnet.arc.network";
 
 const ADDR = {
   USDC:        "0x3600000000000000000000000000000000000000",
@@ -14,12 +17,10 @@ const ADDR = {
   MULTISENDER: "0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398",
 };
 
-// Same Transfer topic as history tab (works confirmed)
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const PAYMENT_TOPIC  = keccak256id("PaymentExecuted(bytes32,address,address,address,uint256,uint256,uint256)");
 
-const ERC20_ABI = ["function totalSupply() view returns (uint256)"];
-const provider  = new JsonRpcProvider(ARC_RPC);
+const provider = new JsonRpcProvider(ARC_RPC);
 
 // ── DOM helpers ───────────────────────────────────────────────────────────
 const el  = (id: string) => document.getElementById(id);
@@ -33,12 +34,12 @@ function fmtUSD(n: number): string {
 function short(a: string): string  { return `${a.slice(0,8)}…${a.slice(-6)}`; }
 function shortH(h: string): string { return `${h.slice(0,8)}…${h.slice(-4)}`; }
 
-// ── Chunked getLogs — exact same pattern as history tab ───────────────────
+// ── Chunked getLogs — 1,000-block windows (Arc RPC silently caps wide ranges) ─
 async function safeGetLogs(filter: {
   address?: string; topics?: any[]; fromBlock: number; toBlock: number;
 }): Promise<any[]> {
   const results: any[] = [];
-  const chunk = 5000;
+  const chunk = 1000;
   for (let from = filter.fromBlock; from <= filter.toBlock; from += chunk) {
     const to = Math.min(from + chunk - 1, filter.toBlock);
     try {
@@ -49,41 +50,67 @@ async function safeGetLogs(filter: {
   return results;
 }
 
-// pad address for topic filter
 function pad(addr: string): string {
   return "0x000000000000000000000000" + addr.slice(2).toLowerCase();
 }
 
-// ── Network stats ─────────────────────────────────────────────────────────
-async function fetchNetwork(): Promise<void> {
-  const latest = await provider.getBlockNumber();
-  txt("stat-block", latest.toLocaleString());
-  txt("stat-block-sub", "Arc Testnet");
+// ── Protocol stats (from backend — full history, payments) ─────────────────
+async function fetchStats(): Promise<void> {
+  const res = await fetch(`${API_BASE}/v1/stats`);
+  if (!res.ok) throw new Error(`stats ${res.status}`);
+  const d = await res.json();
+  const volume      = Number(d.volume || 0);
+  const settlements = Number(d.settlements || 0);
+  const avg         = settlements > 0 ? volume / settlements : 0;
+
+  txt("stat-volume",    fmtUSD(volume));
+  txt("stat-revenue",   String(settlements));
+  txt("stat-wallets",   String(d.uniquePayers || 0));
+  txt("stat-avg-trade", fmtUSD(avg));
+}
+
+// ── "Who you paid" bars (from backend, scoped to connected wallet) ─────────
+async function loadBreakdown(address: string | null): Promise<void> {
+  const body = el("bars-body");
+  if (!body) return;
+
+  if (!address) {
+    body.innerHTML = `<div class="bars-empty">Connect your wallet to see who you've paid.</div>`;
+    return;
+  }
 
   try {
-    const [bNow, bOld] = await Promise.all([
-      provider.getBlock(latest),
-      provider.getBlock(Math.max(1, latest - 10)),
-    ]);
-    if (bNow?.timestamp && bOld?.timestamp) {
-      txt("stat-blocktime", `${((bNow.timestamp - bOld.timestamp) / 10).toFixed(1)}s`);
-    }
-  } catch { txt("stat-blocktime", "~0.5s"); }
+    const res = await fetch(`${API_BASE}/v1/breakdown?payer=${encodeURIComponent(address)}&limit=10`);
+    if (!res.ok) throw new Error(`breakdown ${res.status}`);
+    const d = await res.json();
+    const recipients: Array<{ recipient: string; count: number; total: string; token: string }> =
+      d.recipients || [];
 
-  // Token supply
-  for (const [id, addr] of [["stat-usdc-supply", ADDR.USDC], ["stat-eurc-supply", ADDR.EURC]] as const) {
-    try {
-      const c = new Contract(addr, ERC20_ABI, provider);
-      const s = await c.totalSupply() as bigint;
-      const n = Number(formatUnits(s, 6));
-      txt(id, n >= 1_000_000 ? `${(n/1_000_000).toFixed(2)}M` : n >= 1_000 ? `${(n/1_000).toFixed(1)}K` : n.toFixed(2));
-    } catch { txt(id, "—"); }
+    if (!recipients.length) {
+      body.innerHTML = `<div class="bars-empty">No payments from this wallet yet.</div>`;
+      return;
+    }
+
+    const max = Math.max(...recipients.map(r => Number(r.total) || 0), 0.000001);
+    body.innerHTML = recipients.map(r => {
+      const total = Number(r.total) || 0;
+      const pct   = Math.max(2, Math.round((total / max) * 100));
+      const times = r.count === 1 ? "1 payment" : `${r.count} payments`;
+      return `
+        <div class="bar-row">
+          <span class="bar-name" title="${r.recipient}">${short(r.recipient)}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+          <span class="bar-val">$${total.toFixed(2)} <span class="bar-count">· ${times}</span></span>
+        </div>`;
+    }).join("");
+  } catch (e) {
+    body.innerHTML = `<div class="bars-empty">Could not load payment breakdown right now.</div>`;
   }
 }
 
-// ── Protocol data ─────────────────────────────────────────────────────────
+// ── Live transaction feed (on-chain, recent window) ────────────────────────
 interface TxEntry {
-  type: "Pay" | "Multisend" | "Swap";
+  type: "Pay" | "Multisend";
   token: string;
   amount: number;
   from: string;
@@ -91,82 +118,55 @@ interface TxEntry {
   txHash: string;
 }
 
-async function fetchProtocol(): Promise<void> {
+async function fetchFeed(): Promise<void> {
+  const feedBody = el("feed-body");
+  if (!feedBody) return;
+
   const latest    = await provider.getBlockNumber();
-  const fromBlock = Math.max(0, latest - 20_000); // ~2.8hrs at 0.5s
+  const fromBlock = Math.max(0, latest - 20_000); // recent window (~feed of latest activity)
   const entries: TxEntry[] = [];
 
-  // ── 1. PaymentExecuted from ArcFXPayments ─────────────────────────────
+  // PaymentExecuted from ArcFXPayments
   try {
-    const logs = await safeGetLogs({
-      address: ADDR.PAYMENTS, topics: [PAYMENT_TOPIC],
-      fromBlock, toBlock: latest,
-    });
+    const logs = await safeGetLogs({ address: ADDR.PAYMENTS, topics: [PAYMENT_TOPIC], fromBlock, toBlock: latest });
     for (const log of logs) {
       try {
         const payer = "0x" + log.topics[2].slice(26);
-        const d     = log.data.slice(2);
-        const token = "0x" + d.slice(24, 64);
-        const gross = Number(formatUnits(BigInt("0x" + d.slice(64, 128)), 6));
-        entries.push({ type:"Pay", token, amount:gross, from:payer,
-          blockNum:log.blockNumber, txHash:log.transactionHash });
+        const dd    = log.data.slice(2);
+        const token = "0x" + dd.slice(24, 64);
+        const gross = Number(formatUnits(BigInt("0x" + dd.slice(64, 128)), 6));
+        entries.push({ type:"Pay", token, amount:gross, from:payer, blockNum:log.blockNumber, txHash:log.transactionHash });
       } catch { /* skip */ }
     }
-  } catch(e) { console.warn("PaymentExecuted:", e); }
+  } catch (e) { console.warn("PaymentExecuted:", e); }
 
-  // ── 2. USDC/EURC transfers TO Multisender (= multisend batch payments) ─
+  // USDC/EURC transfers TO the multisender (= batch payouts)
   for (const tokenAddr of [ADDR.USDC, ADDR.EURC]) {
     try {
-      const logs = await safeGetLogs({
-        address: tokenAddr,
-        topics: [TRANSFER_TOPIC, null, pad(ADDR.MULTISENDER)],
-        fromBlock, toBlock: latest,
-      });
+      const logs = await safeGetLogs({ address: tokenAddr, topics: [TRANSFER_TOPIC, null, pad(ADDR.MULTISENDER)], fromBlock, toBlock: latest });
       for (const log of logs) {
         try {
           const from   = "0x" + log.topics[1].slice(26);
           const amount = Number(formatUnits(BigInt(log.data), 6));
           if (amount <= 0) continue;
-          entries.push({ type:"Multisend", token:tokenAddr, amount, from,
-            blockNum:log.blockNumber, txHash:log.transactionHash });
+          entries.push({ type:"Multisend", token:tokenAddr, amount, from, blockNum:log.blockNumber, txHash:log.transactionHash });
         } catch { /* skip */ }
       }
-    } catch(e) { console.warn("Multisend transfers:", e); }
+    } catch (e) { console.warn("Multisend transfers:", e); }
   }
 
-  // Note: Swaps go through Circle App Kit directly — no ArcFX contract event.
-  // We only count what we can attribute to ArcFX contracts (Pay + Multisend).
-  // This keeps numbers accurate and stable rather than showing random network activity.
-
-  // ── Stats ─────────────────────────────────────────────────────────────
-  const totalVol = entries.reduce((s, e) => s + e.amount, 0);
-  const wallets  = new Set(entries.map(e => e.from.toLowerCase()).filter(Boolean)).size;
-  const count    = entries.length;
-  const avg      = count > 0 ? totalVol / count : 0;
-
-  txt("stat-volume",    count ? fmtUSD(totalVol) : "$0.00");
-  txt("stat-revenue",   count.toString());
-  txt("stat-wallets",   wallets.toString());
-  txt("stat-avg-trade", count ? fmtUSD(avg) : "$0.00");
-
-  // ── Feed ──────────────────────────────────────────────────────────────
-  const feedBody = el("feed-body");
-  if (!feedBody) return;
-
-  if (!count) {
-    feedBody.innerHTML = `<tr><td colspan="5" class="feed-empty">No transactions found in last 20,000 blocks</td></tr>`;
+  if (!entries.length) {
+    feedBody.innerHTML = `<tr><td colspan="5" class="feed-empty">No recent transactions found</td></tr>`;
     return;
   }
 
-  const seen   = new Set<string>();
+  const seen = new Set<string>();
   const unique = entries
     .filter(e => e.txHash && !seen.has(e.txHash) && seen.add(e.txHash))
     .sort((a, b) => b.blockNum - a.blockNum)
     .slice(0, 20);
 
-  const badgeClass: Record<string, string> = {
-    Pay:"badge-pay", Multisend:"badge-multisend", Swap:"badge-swap",
-  };
+  const badgeClass: Record<string, string> = { Pay:"badge-pay", Multisend:"badge-multisend" };
 
   feedBody.innerHTML = unique.map(tx => {
     const sym    = tx.token.toLowerCase() === ADDR.USDC.toLowerCase() ? "USDC" : "EURC";
@@ -183,12 +183,24 @@ async function fetchProtocol(): Promise<void> {
   }).join("");
 }
 
-// ── Refresh ───────────────────────────────────────────────────────────────
+// ── Wallet (read already-connected account; never forces a popup) ──────────
+let currentAddr: string | null = null;
+async function getConnectedAddress(): Promise<string | null> {
+  const eth = (window as any).ethereum;
+  if (!eth) return null;
+  try {
+    const accts: string[] = await eth.request({ method: "eth_accounts" });
+    return accts && accts.length ? accts[0] : null;
+  } catch { return null; }
+}
+
+// ── Refresh ────────────────────────────────────────────────────────────────
 async function refreshAll(): Promise<void> {
   const btn = el("refresh-btn");
   if (btn) btn.classList.add("loading");
   try {
-    await Promise.all([fetchNetwork(), fetchProtocol()]);
+    currentAddr = await getConnectedAddress();
+    await Promise.all([fetchStats(), fetchFeed(), loadBreakdown(currentAddr)]);
     txt("last-updated", new Date().toLocaleTimeString());
     const eb = el("fetch-error");
     if (eb) eb.style.display = "none";
@@ -202,5 +214,15 @@ async function refreshAll(): Promise<void> {
 }
 
 (window as any).refreshAll = refreshAll;
+
+// React to wallet changes (connect/disconnect/switch) without a full reload
+const eth = (window as any).ethereum;
+if (eth && eth.on) {
+  eth.on("accountsChanged", async (accts: string[]) => {
+    currentAddr = accts && accts.length ? accts[0] : null;
+    loadBreakdown(currentAddr);
+  });
+}
+
 refreshAll();
 setInterval(refreshAll, 15_000);
