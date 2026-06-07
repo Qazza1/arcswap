@@ -1,26 +1,11 @@
 /**
- * analytics.ts — ArcFX analytics.
- *  - Protocol stats come from the ArcFX backend (/v1/stats), full history.
- *  - "Who you paid" bars come from the backend (/v1/breakdown?payer=<wallet>).
- *  - Live feed is read directly from Arc Testnet (recent window), chunked safely.
+ * analytics.ts — ArcFX analytics, fully backend-powered.
+ *  - Protocol stats        -> /v1/stats        (full history)
+ *  - "Who you paid" bars    -> /v1/breakdown?payer=<wallet>
+ *  - Recent transaction feed-> /v1/payments     (full history, newest first)
  */
 
-import { JsonRpcProvider, formatUnits, id as keccak256id } from "ethers";
-
 const API_BASE = "https://arcfx-backend-production.up.railway.app";
-const ARC_RPC  = "https://rpc.testnet.arc.network";
-
-const ADDR = {
-  USDC:        "0x3600000000000000000000000000000000000000",
-  EURC:        "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
-  PAYMENTS:    "0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3",
-  MULTISENDER: "0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398",
-};
-
-const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-const PAYMENT_TOPIC  = keccak256id("PaymentExecuted(bytes32,address,address,address,uint256,uint256,uint256)");
-
-const provider = new JsonRpcProvider(ARC_RPC);
 
 // ── DOM helpers ───────────────────────────────────────────────────────────
 const el  = (id: string) => document.getElementById(id);
@@ -34,27 +19,7 @@ function fmtUSD(n: number): string {
 function short(a: string): string  { return `${a.slice(0,8)}…${a.slice(-6)}`; }
 function shortH(h: string): string { return `${h.slice(0,8)}…${h.slice(-4)}`; }
 
-// ── Chunked getLogs — 1,000-block windows (Arc RPC silently caps wide ranges) ─
-async function safeGetLogs(filter: {
-  address?: string; topics?: any[]; fromBlock: number; toBlock: number;
-}): Promise<any[]> {
-  const results: any[] = [];
-  const chunk = 1000;
-  for (let from = filter.fromBlock; from <= filter.toBlock; from += chunk) {
-    const to = Math.min(from + chunk - 1, filter.toBlock);
-    try {
-      const logs = await provider.getLogs({ ...filter, fromBlock: from, toBlock: to });
-      results.push(...logs);
-    } catch { /* skip failed chunk */ }
-  }
-  return results;
-}
-
-function pad(addr: string): string {
-  return "0x000000000000000000000000" + addr.slice(2).toLowerCase();
-}
-
-// ── Protocol stats (from backend — full history, payments) ─────────────────
+// ── Protocol stats (backend, full history) ─────────────────────────────────
 async function fetchStats(): Promise<void> {
   const res = await fetch(`${API_BASE}/v1/stats`);
   if (!res.ok) throw new Error(`stats ${res.status}`);
@@ -69,7 +34,7 @@ async function fetchStats(): Promise<void> {
   txt("stat-avg-trade", fmtUSD(avg));
 }
 
-// ── "Who you paid" bars (from backend, scoped to connected wallet) ─────────
+// ── "Who you paid" bars (backend, scoped to connected wallet) ──────────────
 async function loadBreakdown(address: string | null): Promise<void> {
   const body = el("bars-body");
   if (!body) return;
@@ -103,84 +68,52 @@ async function loadBreakdown(address: string | null): Promise<void> {
           <span class="bar-val">$${total.toFixed(2)} <span class="bar-count">· ${times}</span></span>
         </div>`;
     }).join("");
-  } catch (e) {
+  } catch {
     body.innerHTML = `<div class="bars-empty">Could not load payment breakdown right now.</div>`;
   }
 }
 
-// ── Live transaction feed (on-chain, recent window) ────────────────────────
-interface TxEntry {
-  type: "Pay" | "Multisend";
-  token: string;
-  amount: number;
-  from: string;
-  blockNum: number;
+// ── Recent transaction feed (backend, full history, newest first) ──────────
+interface FeedPayment {
+  type: string;
   txHash: string;
+  payer: string;
+  recipient: string;
+  token: string;
+  gross: string;
+  blockNumber: number;
 }
 
 async function fetchFeed(): Promise<void> {
   const feedBody = el("feed-body");
   if (!feedBody) return;
 
-  const latest    = await provider.getBlockNumber();
-  const fromBlock = Math.max(0, latest - 20_000); // recent window (~feed of latest activity)
-  const entries: TxEntry[] = [];
-
-  // PaymentExecuted from ArcFXPayments
   try {
-    const logs = await safeGetLogs({ address: ADDR.PAYMENTS, topics: [PAYMENT_TOPIC], fromBlock, toBlock: latest });
-    for (const log of logs) {
-      try {
-        const payer = "0x" + log.topics[2].slice(26);
-        const dd    = log.data.slice(2);
-        const token = "0x" + dd.slice(24, 64);
-        const gross = Number(formatUnits(BigInt("0x" + dd.slice(64, 128)), 6));
-        entries.push({ type:"Pay", token, amount:gross, from:payer, blockNum:log.blockNumber, txHash:log.transactionHash });
-      } catch { /* skip */ }
+    const res = await fetch(`${API_BASE}/v1/payments?limit=20`);
+    if (!res.ok) throw new Error(`payments ${res.status}`);
+    const d = await res.json();
+    const payments: FeedPayment[] = d.payments || [];
+
+    if (!payments.length) {
+      feedBody.innerHTML = `<tr><td colspan="5" class="feed-empty">No transactions yet</td></tr>`;
+      return;
     }
-  } catch (e) { console.warn("PaymentExecuted:", e); }
 
-  // USDC/EURC transfers TO the multisender (= batch payouts)
-  for (const tokenAddr of [ADDR.USDC, ADDR.EURC]) {
-    try {
-      const logs = await safeGetLogs({ address: tokenAddr, topics: [TRANSFER_TOPIC, null, pad(ADDR.MULTISENDER)], fromBlock, toBlock: latest });
-      for (const log of logs) {
-        try {
-          const from   = "0x" + log.topics[1].slice(26);
-          const amount = Number(formatUnits(BigInt(log.data), 6));
-          if (amount <= 0) continue;
-          entries.push({ type:"Multisend", token:tokenAddr, amount, from, blockNum:log.blockNumber, txHash:log.transactionHash });
-        } catch { /* skip */ }
-      }
-    } catch (e) { console.warn("Multisend transfers:", e); }
+    feedBody.innerHTML = payments.map(p => {
+      const amount = Number(p.gross) > 0 ? Number(p.gross).toFixed(4) : "—";
+      const url    = `https://testnet.arcscan.app/tx/${p.txHash}`;
+      return `
+        <tr>
+          <td><span class="type-badge badge-pay">${p.type}</span></td>
+          <td><span class="feed-amount">${amount} ${p.token}</span></td>
+          <td><span class="feed-addr">${p.payer ? short(p.payer) : "—"}</span></td>
+          <td class="hide-sm"><span class="feed-block">${p.blockNumber ? p.blockNumber.toLocaleString() : "—"}</span></td>
+          <td><a href="${url}" target="_blank" rel="noopener" class="arcscan-link">${shortH(p.txHash)} ↗</a></td>
+        </tr>`;
+    }).join("");
+  } catch (e) {
+    feedBody.innerHTML = `<tr><td colspan="5" class="feed-empty">Could not load transactions right now</td></tr>`;
   }
-
-  if (!entries.length) {
-    feedBody.innerHTML = `<tr><td colspan="5" class="feed-empty">No recent transactions found</td></tr>`;
-    return;
-  }
-
-  const seen = new Set<string>();
-  const unique = entries
-    .filter(e => e.txHash && !seen.has(e.txHash) && seen.add(e.txHash))
-    .sort((a, b) => b.blockNum - a.blockNum)
-    .slice(0, 20);
-
-  const badgeClass: Record<string, string> = { Pay:"badge-pay", Multisend:"badge-multisend" };
-
-  feedBody.innerHTML = unique.map(tx => {
-    const sym    = tx.token.toLowerCase() === ADDR.USDC.toLowerCase() ? "USDC" : "EURC";
-    const amount = tx.amount > 0 ? tx.amount.toFixed(4) : "—";
-    const url    = `https://testnet.arcscan.app/tx/${tx.txHash}`;
-    return `
-      <tr>
-        <td><span class="type-badge ${badgeClass[tx.type]}">${tx.type}</span></td>
-        <td><span class="feed-amount">${amount} ${sym}</span></td>
-        <td><span class="feed-addr">${tx.from ? short(tx.from) : "—"}</span></td>
-        <td class="hide-sm"><span class="feed-block">${tx.blockNum ? tx.blockNum.toLocaleString() : "—"}</span></td>
-        <td><a href="${url}" target="_blank" rel="noopener" class="arcscan-link">${shortH(tx.txHash)} ↗</a></td>
-      </tr>`;
-  }).join("");
 }
 
 // ── Wallet (read already-connected account; never forces a popup) ──────────
@@ -215,10 +148,10 @@ async function refreshAll(): Promise<void> {
 
 (window as any).refreshAll = refreshAll;
 
-// React to wallet changes (connect/disconnect/switch) without a full reload
+// React to wallet changes without a full reload
 const eth = (window as any).ethereum;
 if (eth && eth.on) {
-  eth.on("accountsChanged", async (accts: string[]) => {
+  eth.on("accountsChanged", (accts: string[]) => {
     currentAddr = accts && accts.length ? accts[0] : null;
     loadBreakdown(currentAddr);
   });
