@@ -956,9 +956,11 @@ function showStatus(msg, type) {
 </script>
 
   <!-- On-chain Paid status (read-only; matches keccak256(invoiceNumber) + recipient) -->
+  <!-- Paid status: live backend (full history) with on-chain fallback -->
   <script type="module">
     import { JsonRpcProvider, id as ethersId } from "https://esm.sh/ethers@6";
 
+    const API_BASE      = "https://arcfx-backend-production.up.railway.app";
     const ARC_RPC       = "https://rpc.testnet.arc.network";
     const PAYMENTS       = "0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3";
     const PAYMENT_TOPIC  = ethersId("PaymentExecuted(bytes32,address,address,address,uint256,uint256,uint256)");
@@ -967,15 +969,35 @@ function showStatus(msg, type) {
 
     function pad(addr){ return "0x000000000000000000000000" + addr.slice(2).toLowerCase(); }
     function setBox(box,bg,border,color,html){ box.style.display="block"; box.style.background=bg; box.style.border=border; box.style.color=color; box.innerHTML=html; }
+    function paidHtml(txHash, extra){
+      const link = txHash
+        ? ' &nbsp;&middot;&nbsp; <a href="https://testnet.arcscan.app/tx/'+txHash+'" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:underline;">view transaction &#8599;</a>'
+        : '';
+      return '&#10003; Paid on-chain' + (extra||'') + link;
+    }
 
+    // Fallback: read-only on-chain scan over the last SCAN_BLOCKS (used only if the API is unreachable)
     async function chunkedLogs(filter, fromBlock, toBlock){
-      const out=[]; const chunk=5000;
+      const out=[]; const chunk=1000;
       for (let from=fromBlock; from<=toBlock; from+=chunk){
         const to=Math.min(from+chunk-1,toBlock);
         try { const logs=await provider.getLogs({ ...filter, fromBlock:from, toBlock:to }); out.push(...logs); }
         catch { /* skip failed chunk */ }
       }
       return out;
+    }
+    async function onchainFallback(box, invNum, wallet){
+      const latest=await provider.getBlockNumber();
+      const fromBlock=Math.max(0, latest-SCAN_BLOCKS);
+      const paymentId=ethersId(invNum||"arcfx-payment");
+      const logs=await chunkedLogs({ address:PAYMENTS, topics:[PAYMENT_TOPIC, paymentId, null, pad(wallet)] }, fromBlock, latest);
+      if (logs.length){
+        const tx=logs[logs.length-1].transactionHash;
+        setBox(box,"var(--tdim)","1px solid rgba(0,212,170,0.35)","var(--teal)", paidHtml(tx));
+      } else {
+        setBox(box,"var(--raised)","1px solid var(--border)","var(--muted)",
+          "No matching payment found in the last "+SCAN_BLOCKS.toLocaleString()+" blocks.");
+      }
     }
 
     window.checkInvoicePaid = async function(){
@@ -988,23 +1010,27 @@ function showStatus(msg, type) {
         setBox(box,"rgba(255,77,106,0.08)","1px solid rgba(255,77,106,0.3)","#ff8da0","Enter your wallet address first.");
         return;
       }
-      setBox(box,"var(--raised)","1px solid var(--border)","var(--muted)","Checking on-chain...");
+      setBox(box,"var(--raised)","1px solid var(--border)","var(--muted)","Checking payment status...");
       if (btn) btn.disabled=true;
       try {
-        const latest=await provider.getBlockNumber();
-        const fromBlock=Math.max(0, latest-SCAN_BLOCKS);
-        const paymentId=ethersId(invNum||"arcfx-payment");
-        const logs=await chunkedLogs({ address:PAYMENTS, topics:[PAYMENT_TOPIC, paymentId, null, pad(wallet)] }, fromBlock, latest);
-        if (logs.length){
-          const tx=logs[logs.length-1].transactionHash;
-          setBox(box,"var(--tdim)","1px solid rgba(0,212,170,0.35)","var(--teal)",
-            '&#10003; Paid on-chain &nbsp;&middot;&nbsp; <a href="https://testnet.arcscan.app/tx/'+tx+'" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:underline;">view transaction &#8599;</a>');
+        // Primary: live backend, full-history check
+        const url = API_BASE + "/v1/invoices/status?number=" + encodeURIComponent(invNum||"arcfx-payment")
+                  + "&recipient=" + encodeURIComponent(wallet);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("api status "+res.status);
+        const data = await res.json();
+        if (data.paid){
+          const p = data.payment || {};
+          const amt = p.gross ? ' &nbsp;&middot;&nbsp; '+p.gross+' '+(p.token||'') : '';
+          setBox(box,"var(--tdim)","1px solid rgba(0,212,170,0.35)","var(--teal)", paidHtml(p.txHash, amt));
         } else {
           setBox(box,"var(--raised)","1px solid var(--border)","var(--muted)",
-            "No matching payment found in the last "+SCAN_BLOCKS.toLocaleString()+" blocks. If it was paid longer ago, the full-history check arrives with the indexer.");
+            "No payment found yet for this invoice number and wallet. If you just paid, give it a minute and check again.");
         }
       } catch (e){
-        setBox(box,"rgba(255,77,106,0.08)","1px solid rgba(255,77,106,0.3)","#ff8da0","Could not check right now - network error. Try again.");
+        // API unreachable -> fall back to direct on-chain scan so the button still works
+        try { await onchainFallback(box, invNum, wallet); }
+        catch { setBox(box,"rgba(255,77,106,0.08)","1px solid rgba(255,77,106,0.3)","#ff8da0","Could not check right now - network error. Try again."); }
       } finally {
         if (btn) btn.disabled=false;
       }
