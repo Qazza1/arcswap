@@ -178,17 +178,17 @@
       </div>
       <div class="stat">
         <div class="stat-lbl">Volume processed</div>
-        <div class="stat-val empty">—</div>
+        <div class="stat-val empty" id="statVolume">—</div>
         <a href="/analytics" class="stat-link">View in Analytics →</a>
       </div>
       <div class="stat">
         <div class="stat-lbl">Settlements</div>
-        <div class="stat-val empty">—</div>
+        <div class="stat-val empty" id="statSettlements">—</div>
         <a href="/history" class="stat-link">View in History →</a>
       </div>
       <div class="stat">
         <div class="stat-lbl">Fees paid</div>
-        <div class="stat-val empty">—</div>
+        <div class="stat-val empty" id="statFees">—</div>
         <div class="stat-sub">0.15% per payment</div>
       </div>
     </div>
@@ -478,8 +478,27 @@
 
     function refreshAll(addr){ if (addr){ hydrate(addr); loadActivity(addr); checkNetwork(); } }
 
+    // ── Protocol stats (live backend, full history; not wallet-specific) ──
+    var ARCFX_API = "https://arcfx-backend-production.up.railway.app";
+    async function loadProtocolStats(){
+      var vEl = document.getElementById('statVolume');
+      var sEl = document.getElementById('statSettlements');
+      var fEl = document.getElementById('statFees');
+      try {
+        var res = await fetch(ARCFX_API + "/v1/stats");
+        if (!res.ok) throw new Error("stats " + res.status);
+        var d = await res.json();
+        if (vEl){ vEl.textContent = "$" + d.volume; vEl.classList.remove('empty'); }
+        if (sEl){ sEl.textContent = d.settlements;  sEl.classList.remove('empty'); }
+        if (fEl){ fEl.textContent = "$" + d.fees;    fEl.classList.remove('empty'); }
+      } catch (e) {
+        // Leave the tiles as "—" if the API is unreachable; no error shown to user.
+      }
+    }
+
     // ── Wiring ──
     (function () {
+      loadProtocolStats();            // protocol stats don't need a wallet
       var eth = window.ethereum;
       if (!eth) return;
       checkNetwork();
