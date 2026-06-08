@@ -268,108 +268,149 @@ async function connectWallet() {
   }
 }
 
+// Silent reconnect on page load: if the wallet is already connected, load
+// history without showing a MetaMask popup. Uses eth_accounts (not request).
+async function tryAutoConnect() {
+  if (!window.ethereum) return;
+  try {
+    provider = new BrowserProvider(window.ethereum);
+    const accounts = await provider.send("eth_accounts", []); // no popup
+    if (!accounts || !accounts.length) return;                // not connected -> leave prompt
+    signer      = await provider.getSigner();
+    userAddress = await signer.getAddress();
+    const short = `${userAddress.slice(0,8)}\u2026${userAddress.slice(-6)}`;
+    const cb = el("connect-btn");
+    if (cb) { cb.textContent = short; cb.classList.add("connected"); }
+    const wd = el("wallet-display");
+    if (wd) { wd.textContent = short; wd.style.display = "block"; }
+    await loadHistory();
+  } catch (e) { /* stay on the connect prompt if anything goes wrong */ }
+}
+
 // ── Load history ───────────────────────────────────────────────────────────
 async function loadHistory() {
-  if (!provider || !userAddress) return;
-  setLoading("Fetching transactions…");
+  if (!userAddress) return;
+  setLoading("Loading your USDC &amp; EURC history…");
 
-  const padded = "0x000000000000000000000000" + userAddress.slice(2).toLowerCase();
+  const API = "https://testnet.arcscan.app/api/v2";
+  const USDC_ADDR = USDC.toLowerCase();
+  const EURC_ADDR = EURC.toLowerCase();
+  const me = userAddress.toLowerCase();
 
-  async function getLogs(filter) {
-    const results = [];
-    const chunk = 5000;
-    for (let from = filter.fromBlock; from <= filter.toBlock; from += chunk) {
-      const to = Math.min(from + chunk - 1, filter.toBlock);
-      try {
-        const logs = await provider.getLogs({ ...filter, fromBlock: from, toBlock: to });
-        results.push(...logs);
-      } catch { /* skip chunk */ }
+  // Fetch all ERC-20 token transfers for this wallet, following pagination
+  // (Blockscout returns ~50 per page). Capped at 10 pages for safety.
+  async function fetchAllTransfers() {
+    const out = [];
+    let params = "";
+    for (let page = 0; page < 10; page++) {
+      const url = `${API}/addresses/${userAddress}/token-transfers?type=ERC-20${params}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`explorer ${res.status}`);
+      const data = await res.json();
+      const items = data.items || [];
+      out.push(...items);
+      const np = data.next_page_params;
+      if (!np || !items.length) break;
+      params = `&block_number=${np.block_number}&index=${np.index}`;
     }
-    return results;
+    return out;
   }
 
   try {
-    const latest   = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, latest - 20000);
-    const toBlock = latest;
+    const items = await fetchAllTransfers();
 
-    setLoading("Loading your USDC &amp; EURC history…");
+    // Keep only USDC / EURC transfers that involve this wallet.
+    const tagged = [];
+    for (const it of items) {
+      const tokenAddr = (it.token?.address_hash || "").toLowerCase();
+      let sym;
+      if (tokenAddr === USDC_ADDR) sym = "USDC";
+      else if (tokenAddr === EURC_ADDR) sym = "EURC";
+      else continue; // ignore other tokens
 
-    const [usdcOut, usdcIn, eurcOut, eurcIn] = await Promise.all([
-      getLogs({ fromBlock, toBlock, address: USDC, topics: [TRANSFER, padded, null] }),
-      getLogs({ fromBlock, toBlock, address: USDC, topics: [TRANSFER, null, padded] }),
-      getLogs({ fromBlock, toBlock, address: EURC, topics: [TRANSFER, padded, null] }),
-      getLogs({ fromBlock, toBlock, address: EURC, topics: [TRANSFER, null, padded] }),
-    ]);
+      const fromAddr = (it.from?.hash || "").toLowerCase();
+      const toAddr   = (it.to?.hash   || "").toLowerCase();
+      let dir;
+      if (fromAddr === me) dir = "out";
+      else if (toAddr === me) dir = "in";
+      else continue; // not involving this wallet
 
-    // Tag all logs
-    const tagged = [
-      ...usdcOut.map(l => ({ log:l, sym:"USDC", dir:"out" })),
-      ...usdcIn.map(l  => ({ log:l, sym:"USDC", dir:"in"  })),
-      ...eurcOut.map(l => ({ log:l, sym:"EURC", dir:"out" })),
-      ...eurcIn.map(l  => ({ log:l, sym:"EURC", dir:"in"  })),
-    ];
-
-    // Group by txHash
-    const groups = new Map();
-    for (const t of tagged) {
-      const h = t.log.transactionHash;
-      if (!groups.has(h)) groups.set(h, []);
-      groups.get(h).push(t);
+      const decimals = parseInt(it.total?.decimals || "6", 10);
+      const rawVal   = it.total?.value || "0";
+      tagged.push({
+        sym, dir,
+        hash: it.transaction_hash,
+        block: it.block_number,
+        from: fromAddr,
+        to: toAddr,
+        decimals,
+        rawVal,
+      });
     }
 
-    // Process groups into clean tx objects
+    const fmt = (rawVal, decimals) => {
+      try { return (Number(BigInt(rawVal)) / Math.pow(10, decimals)).toFixed(4); }
+      catch { return "?"; }
+    };
+    const rawNum = (rawVal, decimals) => {
+      try { return Number(BigInt(rawVal)) / Math.pow(10, decimals); }
+      catch { return 0; }
+    };
+
+    // Group by transaction hash to detect swaps (two legs in one tx)
+    const groups = new Map();
+    for (const t of tagged) {
+      if (!groups.has(t.hash)) groups.set(t.hash, []);
+      groups.get(t.hash).push(t);
+    }
+
+    tagged.sort((a, b) => b.block - a.block);
+
     const processed = [];
     const seen = new Set();
 
-    // Sort all tagged by block desc
-    tagged.sort((a,b) => b.log.blockNumber - a.log.blockNumber);
-
     for (const t of tagged) {
-      const hash = t.log.transactionHash;
+      const hash = t.hash;
       if (seen.has(hash)) continue;
       seen.add(hash);
 
       const group  = groups.get(hash);
       const hasOut = group.some(g => g.dir === "out");
       const hasIn  = group.some(g => g.dir === "in");
-      const isSwap = hasOut && hasIn && group.some(g=>g.sym==="USDC") && group.some(g=>g.sym==="EURC");
+      const isSwap = hasOut && hasIn && group.some(g => g.sym === "USDC") && group.some(g => g.sym === "EURC");
 
       let type, icon, iconClass, amtDisplay, amtClass, sym;
 
       if (isSwap) {
-        const outItem = group.find(g => g.dir==="out");
-        const inItem  = group.find(g => g.dir==="in");
-        const outAmt  = safeAmt(outItem.log.data);
-        const inAmt   = safeAmt(inItem.log.data);
+        const outItem = group.find(g => g.dir === "out");
+        const inItem  = group.find(g => g.dir === "in");
         type       = "Swap";
-        icon       = "⇄";
+        icon       = "\u21c4";
         iconClass  = "icon-swap";
-        amtDisplay = `${outAmt} → ${inAmt}`;
+        amtDisplay = `${fmt(outItem.rawVal, outItem.decimals)} \u2192 ${fmt(inItem.rawVal, inItem.decimals)}`;
         amtClass   = "amt-swap";
-        sym        = `${outItem.sym} → ${inItem.sym}`;
+        sym        = `${outItem.sym} \u2192 ${inItem.sym}`;
       } else {
-        const amt = safeAmt(t.log.data);
+        const amt = fmt(t.rawVal, t.decimals);
         sym = t.sym;
         if (t.dir === "out") {
-          type = "Sent"; icon = "↑"; iconClass = "icon-out";
-          amtDisplay = `−${amt}`; amtClass = "amt-out";
+          type = "Sent"; icon = "\u2191"; iconClass = "icon-out";
+          amtDisplay = `\u2212${amt}`; amtClass = "amt-out";
         } else {
-          type = "Received"; icon = "↓"; iconClass = "icon-in";
+          type = "Received"; icon = "\u2193"; iconClass = "icon-in";
           amtDisplay = `+${amt}`; amtClass = "amt-in";
         }
       }
 
-      const counterparty = isSwap ? "" : (t.dir === "out"
-        ? "0x" + t.log.topics[2].slice(26)
-        : "0x" + t.log.topics[1].slice(26));
+      const counterparty = isSwap ? "" : (t.dir === "out" ? t.to : t.from);
+
       processed.push({
-        hash, block: t.log.blockNumber,
+        hash, block: t.block,
         type, icon, iconClass, amtDisplay, amtClass, sym,
         isSwap,
         dir: t.dir,
         counterparty,
-        rawAmt: safeAmtRaw(t.log.data),
+        rawAmt: rawNum(t.rawVal, t.decimals),
       });
     }
 
@@ -377,7 +418,7 @@ async function loadHistory() {
     updateStats();
     renderTable();
 
-  } catch(err) {
+  } catch (err) {
     setEmpty(`Could not load history. ${err.message}`);
   }
 }
@@ -600,6 +641,8 @@ function setEmpty(msg) {
 // ── Wire up nav button ────────────────────────────────────────────────────
 el("connect-btn")?.addEventListener("click", connectWallet);
 window.connectWallet = connectWallet;
+
+tryAutoConnect();  // attempt silent reconnect on page load
 
 window.ethereum?.on("accountsChanged", accounts => {
   if (!accounts.length) window.location.reload();
