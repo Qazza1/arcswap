@@ -92,6 +92,7 @@ const MARKETING_NAV_LINKS: Array<{ href: string; label: string; key: ActiveLink 
   { href: '/#use-cases',  label: 'Use cases', key: 'use-cases' },
   { href: '/pricing',     label: 'Pricing',   key: 'pricing' },
   { href: '/docs',        label: 'Docs',      key: 'docs' },
+  { href: '/developers',  label: 'Developers', key: 'developers' },
   { href: '/ecosystem',   label: 'Ecosystem', key: 'ecosystem' },
   { href: '/security',    label: 'Security',  key: 'security' },
 ];
