@@ -228,7 +228,7 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
   // intentionally NOT in the app nav.
   const tradeLink = buildLink('/trade', 'Trade', activeLink === 'trade');
   const productLinks = TOP_LEVEL_LINKS
-    .filter(l => l.key === 'analytics' || l.key === 'history' || l.key === 'docs')
+    .filter(l => l.key === 'analytics' || l.key === 'history' || l.key === 'docs' || l.key === 'developers')
     .map(l => buildLink(l.href, l.label, l.key === activeLink))
     .join('');
 
