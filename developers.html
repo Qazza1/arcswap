@@ -149,7 +149,20 @@
           <h2>Authentication</h2>
           <p>Authenticated endpoints require an API key, sent as a Bearer token in the <code>Authorization</code> header:</p>
           <pre><span class="c-key">Authorization</span>: Bearer arcfx_sk_test_...</pre>
-          <p>Keys are issued by the ArcFX team. To request a key for testing or integration, contact <code>arcfxapp@gmail.com</code>. Keep your key secret — treat it like a password, and never embed it in client-side code you ship to users.</p>
+          <p>Keep your key secret — treat it like a password, and never embed it in client-side code you ship to users.</p>
+
+          <h3>Get an API key</h3>
+          <p>Generate a testnet key instantly. Enter your email (so we can reach you about your integration), and we'll issue a key. It's shown once — copy it immediately.</p>
+          <div class="card">
+            <div class="tryit-row">
+              <input class="tryit-input" type="email" id="key-email" placeholder="you@example.com" />
+              <button class="tryit-btn" id="key-gen-btn">Generate key</button>
+            </div>
+            <div class="tryit-out" id="key-gen-out">
+              <div class="tryit-status" id="key-gen-status"></div>
+              <pre id="key-gen-body" style="margin-bottom:0;"></pre>
+            </div>
+          </div>
           <div class="note"><strong>Tip.</strong> You can try the public endpoints below right now with no key. For the authenticated endpoints, paste your key into the "Try it" box and it'll be used only for that request (held in your browser, never sent anywhere except the API).</div>
         </section>
 
@@ -445,6 +458,50 @@
         runTry(btn.dataset.run, btn.dataset.path, btn.dataset.auth === '1', btn);
       });
     });
+
+    // Self-serve key generation
+    const keyBtn = document.getElementById('key-gen-btn');
+    if (keyBtn) {
+      keyBtn.addEventListener('click', async () => {
+        const email = document.getElementById('key-email').value.trim();
+        const out = document.getElementById('key-gen-out');
+        const status = document.getElementById('key-gen-status');
+        const body = document.getElementById('key-gen-body');
+        out.classList.add('show');
+        status.className = 'tryit-status';
+        status.textContent = 'Generating…';
+        body.textContent = '';
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          status.className = 'tryit-status err';
+          status.textContent = 'Enter a valid email first.';
+          return;
+        }
+
+        keyBtn.disabled = true;
+        try {
+          const res = await fetch(BASE + '/api/v1/keys', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+          const data = await res.json();
+          if (res.ok && data.key) {
+            status.className = 'tryit-status ok';
+            status.textContent = 'Key created — copy it now, it won\'t be shown again:';
+            body.innerHTML = syntaxHighlight(JSON.stringify({ id: data.id, key: data.key }, null, 2));
+          } else {
+            status.className = 'tryit-status err';
+            status.textContent = (data.message || ('Error ' + res.status));
+          }
+        } catch (err) {
+          status.className = 'tryit-status err';
+          status.textContent = 'Request failed: ' + err.message;
+        } finally {
+          keyBtn.disabled = false;
+        }
+      });
+    }
   </script>
 </body>
 </html>
