@@ -28,11 +28,11 @@
 
 export type PageKey =
   | 'index' | 'app' | 'trade' | 'multisend' | 'pay' | 'invoice' | 'history'
-  | 'analytics' | 'docs' | 'pricing' | 'ecosystem' | 'security';
+  | 'analytics' | 'docs' | 'developers' | 'pricing' | 'ecosystem' | 'security';
 
 export type ActiveLink =
   | 'trade' | 'tools' | 'analytics' | 'history' | 'pricing' | 'ecosystem' | 'security'
-  | 'use-cases' | 'docs' | null;
+  | 'use-cases' | 'docs' | 'developers' | null;
 
 export type ActiveTool =
   | 'multisend' | 'pay' | 'invoice' | 'history' | 'docs' | null;
@@ -74,6 +74,7 @@ const TOP_LEVEL_LINKS: Array<{ href: string; label: string; key: ActiveLink }> =
   { href: '/analytics',   label: 'Analytics', key: 'analytics' },
   { href: '/history',     label: 'History',   key: 'history' },
   { href: '/docs',        label: 'Docs',      key: 'docs' },
+  { href: '/developers',  label: 'Developers', key: 'developers' },
   { href: '/pricing',     label: 'Pricing',   key: 'pricing' },
   { href: '/ecosystem',   label: 'Ecosystem', key: 'ecosystem' },
   { href: '/security',    label: 'Security',  key: 'security' },

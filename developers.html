@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcFX — Developers</title>
+  <meta name="description" content="Build on ArcFX. REST API for stablecoin payments on Arc — query payments, poll invoice status, and track on-chain settlement in real time." />
+  <link rel="icon" href="/logo.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#060810; --bg-card:#0b0f1a; --bg-raised:#101420; --bg-deep:#050709;
+      --border:#1a2035; --border-med:#252d45; --text:#e8edf8; --muted:#94a3b8;
+      --subtle:#64748b; --dim:#334155;
+      --blue:#2563eb; --blue-bright:#3d7eff; --blue-dim:rgba(61,126,255,0.1);
+      --teal:#00d4aa; --teal-dim:rgba(0,212,170,0.08);
+      --r-sm:6px; --r-lg:12px; --r-xl:16px;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html,body { background:var(--bg); color:var(--text); font-family:"Inter",system-ui,sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased; }
+    a { text-decoration:none; color:inherit; }
+    .mono { font-family:"JetBrains Mono",monospace; }
+
+    .wrap { max-width:1000px; margin:0 auto; padding:48px 24px 80px; }
+
+    /* Hero */
+    .dev-hero { margin-bottom:40px; }
+    .dev-eyebrow { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--teal); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:12px; }
+    .dev-hero h1 { font-size:38px; font-weight:700; letter-spacing:-0.02em; margin-bottom:12px; }
+    .dev-hero p { font-size:16px; color:var(--muted); max-width:640px; }
+
+    /* Layout: sidebar + content */
+    .dev-layout { display:grid; grid-template-columns:200px 1fr; gap:40px; align-items:start; }
+    .dev-side { position:sticky; top:24px; display:flex; flex-direction:column; gap:4px; }
+    .dev-side a { font-size:13px; color:var(--muted); padding:6px 10px; border-radius:var(--r-sm); border-left:2px solid transparent; transition:all .15s; }
+    .dev-side a:hover { color:var(--text); background:var(--bg-card); }
+    .dev-side .side-head { font-family:"JetBrains Mono",monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.1em; color:var(--subtle); padding:10px 10px 4px; }
+
+    .dev-content { min-width:0; }
+    section { margin-bottom:48px; scroll-margin-top:24px; }
+    section h2 { font-size:22px; font-weight:700; margin-bottom:14px; letter-spacing:-0.01em; }
+    section h3 { font-size:15px; font-weight:600; margin:24px 0 10px; }
+    section p { color:var(--muted); font-size:14.5px; margin-bottom:14px; }
+    section p code, li code { font-family:"JetBrains Mono",monospace; font-size:12.5px; background:var(--bg-raised); padding:2px 6px; border-radius:4px; color:var(--text); }
+    ul { margin:0 0 14px 20px; color:var(--muted); font-size:14.5px; }
+    li { margin-bottom:6px; }
+
+    .card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-lg); padding:20px; margin-bottom:16px; }
+
+    .base-url { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .base-url .mono { background:var(--bg-deep); border:1px solid var(--border); border-radius:var(--r-sm); padding:8px 12px; font-size:13px; color:var(--teal); }
+
+    /* Endpoint blocks */
+    .endpoint { border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:20px; background:var(--bg-card); }
+    .endpoint-head { display:flex; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+    .method { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:600; padding:3px 9px; border-radius:5px; letter-spacing:0.04em; }
+    .method-get { background:var(--teal-dim); color:var(--teal); border:1px solid rgba(0,212,170,0.3); }
+    .endpoint-path { font-family:"JetBrains Mono",monospace; font-size:13.5px; color:var(--text); }
+    .badge-auth { margin-left:auto; font-family:"JetBrains Mono",monospace; font-size:10px; padding:3px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:0.05em; }
+    .badge-key { background:var(--blue-dim); color:var(--blue-bright); border:1px solid rgba(61,126,255,0.3); }
+    .badge-public { background:rgba(148,163,184,0.1); color:var(--muted); border:1px solid var(--border-med); }
+    .endpoint-body { padding:18px; }
+    .endpoint-desc { font-size:14px; color:var(--muted); margin-bottom:16px; }
+
+    table.params { width:100%; border-collapse:collapse; margin-bottom:16px; font-size:13px; }
+    table.params th { text-align:left; font-family:"JetBrains Mono",monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--subtle); padding:6px 10px; border-bottom:1px solid var(--border); }
+    table.params td { padding:8px 10px; border-bottom:1px solid var(--border); color:var(--muted); vertical-align:top; }
+    table.params td.pname { font-family:"JetBrains Mono",monospace; color:var(--text); white-space:nowrap; }
+    table.params td.ptype { font-family:"JetBrains Mono",monospace; color:var(--teal); font-size:12px; }
+
+    pre { background:var(--bg-deep); border:1px solid var(--border); border-radius:var(--r-sm); padding:14px; overflow-x:auto; font-family:"JetBrains Mono",monospace; font-size:12.5px; line-height:1.6; color:#c9d4e8; margin-bottom:16px; }
+    pre .c-key { color:#7dd3fc; }
+    pre .c-str { color:#86efac; }
+    pre .c-num { color:#fda4af; }
+
+    /* Try it */
+    .tryit { border-top:1px dashed var(--border-med); margin-top:8px; padding-top:16px; }
+    .tryit-label { font-family:"JetBrains Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--subtle); margin-bottom:10px; }
+    .tryit-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+    .tryit-input { flex:1; min-width:200px; background:var(--bg-deep); border:1px solid var(--border); border-radius:var(--r-sm); padding:9px 12px; color:var(--text); font-family:"JetBrains Mono",monospace; font-size:12.5px; }
+    .tryit-input:focus { outline:none; border-color:var(--blue-bright); }
+    .tryit-btn { background:var(--blue); color:#fff; border:0; border-radius:var(--r-sm); padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:background .15s; white-space:nowrap; }
+    .tryit-btn:hover { background:var(--blue-bright); }
+    .tryit-btn:disabled { opacity:0.5; cursor:not-allowed; }
+    .tryit-out { display:none; }
+    .tryit-out.show { display:block; }
+    .tryit-status { font-family:"JetBrains Mono",monospace; font-size:11.5px; margin-bottom:6px; }
+    .tryit-status.ok { color:var(--teal); }
+    .tryit-status.err { color:#f87171; }
+
+    .note { background:var(--teal-dim); border:1px solid rgba(0,212,170,0.25); border-radius:var(--r-sm); padding:12px 14px; font-size:13px; color:var(--muted); margin-bottom:16px; }
+    .note strong { color:var(--teal); }
+
+    @media (max-width:760px) {
+      .dev-layout { grid-template-columns:1fr; }
+      .dev-side { position:static; flex-direction:row; flex-wrap:wrap; margin-bottom:24px; }
+      .dev-hero h1 { font-size:30px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="arcfx-stats-bar"></div>
+  <div id="arcfx-nav"></div>
+
+  <div class="wrap">
+    <div class="dev-hero">
+      <div class="dev-eyebrow">Developers</div>
+      <h1>Build on ArcFX</h1>
+      <p>A REST API for stablecoin payments on Arc. Query payments, poll invoice status, and read on-chain settlement data — backed by live event tracking via Circle's Smart Contract Platform.</p>
+    </div>
+
+    <div class="dev-layout">
+      <nav class="dev-side">
+        <div class="side-head">Getting started</div>
+        <a href="#intro">Introduction</a>
+        <a href="#auth">Authentication</a>
+        <div class="side-head">Authenticated API</div>
+        <a href="#api-payments">List payments</a>
+        <a href="#api-invoice">Invoice status</a>
+        <div class="side-head">Public API</div>
+        <a href="#pub-stats">Stats</a>
+        <a href="#pub-breakdown">Breakdown</a>
+        <a href="#pub-payments">Payments</a>
+        <div class="side-head">Reference</div>
+        <a href="#errors">Errors</a>
+      </nav>
+
+      <div class="dev-content">
+
+        <!-- INTRO -->
+        <section id="intro">
+          <h2>Introduction</h2>
+          <p>The ArcFX API lets you read payment and settlement data from the ArcFX protocol on Arc. All responses are JSON. The API has two surfaces:</p>
+          <ul>
+            <li><strong>Authenticated API</strong> (<code>/api/v1</code>) — requires an API key. This is the developer surface for building integrations.</li>
+            <li><strong>Public API</strong> (<code>/v1</code>) — no key required. Serves public on-chain protocol data (the same endpoints the ArcFX dashboard uses).</li>
+          </ul>
+          <h3>Base URL</h3>
+          <div class="base-url">
+            <span class="mono" id="base-url-text">https://arcfx-backend-production.up.railway.app</span>
+          </div>
+          <div class="note" style="margin-top:16px;"><strong>Testnet.</strong> The API currently serves Arc Testnet data. Amounts are in human-readable units (e.g. <code>1.000000</code> USDC).</div>
+        </section>
+
+        <!-- AUTH -->
+        <section id="auth">
+          <h2>Authentication</h2>
+          <p>Authenticated endpoints require an API key, sent as a Bearer token in the <code>Authorization</code> header:</p>
+          <pre><span class="c-key">Authorization</span>: Bearer arcfx_sk_test_...</pre>
+          <p>Keys are issued by the ArcFX team. To request a key for testing or integration, contact <code>arcfxapp@gmail.com</code>. Keep your key secret — treat it like a password, and never embed it in client-side code you ship to users.</p>
+          <div class="note"><strong>Tip.</strong> You can try the public endpoints below right now with no key. For the authenticated endpoints, paste your key into the "Try it" box and it'll be used only for that request (held in your browser, never sent anywhere except the API).</div>
+        </section>
+
+        <!-- ============ AUTHENTICATED ============ -->
+
+        <!-- /api/v1/payments -->
+        <section id="api-payments">
+          <h2>List payments</h2>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method method-get">GET</span>
+              <span class="endpoint-path">/api/v1/payments</span>
+              <span class="badge-auth badge-key">API key</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="endpoint-desc">Returns payments processed through ArcFX, newest first (full history).</div>
+              <table class="params">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td class="pname">payer</td><td class="ptype">string</td><td>Optional. Filter to payments from a specific wallet address (<code>0x…</code>).</td></tr>
+                <tr><td class="pname">limit</td><td class="ptype">integer</td><td>Optional. Max results, 1–100. Default 20.</td></tr>
+              </table>
+              <h3>Example response</h3>
+              <pre>{
+  <span class="c-key">"count"</span>: <span class="c-num">1</span>,
+  <span class="c-key">"payments"</span>: [
+    {
+      <span class="c-key">"txHash"</span>: <span class="c-str">"0x4ec3…d6bb"</span>,
+      <span class="c-key">"payer"</span>: <span class="c-str">"0x63c3…c897"</span>,
+      <span class="c-key">"recipient"</span>: <span class="c-str">"0x50E6…9c4F"</span>,
+      <span class="c-key">"token"</span>: <span class="c-str">"USDC"</span>,
+      <span class="c-key">"gross"</span>: <span class="c-str">"1.000000"</span>,
+      <span class="c-key">"fee"</span>: <span class="c-str">"0.001500"</span>,
+      <span class="c-key">"net"</span>: <span class="c-str">"0.998500"</span>,
+      <span class="c-key">"blockNumber"</span>: <span class="c-num">45944963</span>,
+      <span class="c-key">"blockTime"</span>: <span class="c-str">"2026-06-07T09:15:19.000Z"</span>,
+      <span class="c-key">"explorer"</span>: <span class="c-str">"https://testnet.arcscan.app/tx/0x4ec3…"</span>
+    }
+  ]
+}</pre>
+              <div class="tryit">
+                <div class="tryit-label">Try it</div>
+                <div class="tryit-row">
+                  <input class="tryit-input" type="password" placeholder="Your API key (arcfx_sk_test_…)" data-key="api-payments" />
+                </div>
+                <div class="tryit-row">
+                  <input class="tryit-input" type="text" placeholder="limit (optional, e.g. 3)" data-param="api-payments" value="3" />
+                  <button class="tryit-btn" data-run="api-payments" data-path="/api/v1/payments" data-auth="1">Send request</button>
+                </div>
+                <div class="tryit-out" data-out="api-payments">
+                  <div class="tryit-status" data-status="api-payments"></div>
+                  <pre data-body="api-payments"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- /api/v1/invoices/status -->
+        <section id="api-invoice">
+          <h2>Invoice status</h2>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method method-get">GET</span>
+              <span class="endpoint-path">/api/v1/invoices/status</span>
+              <span class="badge-auth badge-key">API key</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="endpoint-desc">Check whether an invoice has been paid. Poll this to detect settlement.</div>
+              <table class="params">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td class="pname">number</td><td class="ptype">string</td><td>Required. The invoice number you generated (e.g. <code>INV-001</code>).</td></tr>
+                <tr><td class="pname">recipient</td><td class="ptype">string</td><td>Required. The recipient wallet address (<code>0x…</code>).</td></tr>
+              </table>
+              <h3>Example response (paid)</h3>
+              <pre>{
+  <span class="c-key">"paid"</span>: <span class="c-num">true</span>,
+  <span class="c-key">"invoiceNumber"</span>: <span class="c-str">"INV-001"</span>,
+  <span class="c-key">"recipient"</span>: <span class="c-str">"0x50E6…9c4F"</span>,
+  <span class="c-key">"payment"</span>: {
+    <span class="c-key">"txHash"</span>: <span class="c-str">"0x4ec3…d6bb"</span>,
+    <span class="c-key">"token"</span>: <span class="c-str">"USDC"</span>,
+    <span class="c-key">"gross"</span>: <span class="c-str">"1.000000"</span>,
+    <span class="c-key">"blockTime"</span>: <span class="c-str">"2026-06-07T09:15:19.000Z"</span>
+  }
+}</pre>
+              <div class="tryit">
+                <div class="tryit-label">Try it</div>
+                <div class="tryit-row">
+                  <input class="tryit-input" type="password" placeholder="Your API key (arcfx_sk_test_…)" data-key="api-invoice" />
+                </div>
+                <div class="tryit-row">
+                  <input class="tryit-input" type="text" placeholder="invoice number" data-p1="api-invoice" />
+                  <input class="tryit-input" type="text" placeholder="recipient 0x…" data-p2="api-invoice" />
+                  <button class="tryit-btn" data-run="api-invoice" data-path="/api/v1/invoices/status" data-auth="1">Send request</button>
+                </div>
+                <div class="tryit-out" data-out="api-invoice">
+                  <div class="tryit-status" data-status="api-invoice"></div>
+                  <pre data-body="api-invoice"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ PUBLIC ============ -->
+
+        <!-- /v1/stats -->
+        <section id="pub-stats">
+          <h2>Protocol stats</h2>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method method-get">GET</span>
+              <span class="endpoint-path">/v1/stats</span>
+              <span class="badge-auth badge-public">Public</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="endpoint-desc">Aggregate protocol totals: settlements, volume, fees, and unique payers.</div>
+              <h3>Example response</h3>
+              <pre>{
+  <span class="c-key">"settlements"</span>: <span class="c-num">8</span>,
+  <span class="c-key">"volume"</span>: <span class="c-str">"10.00"</span>,
+  <span class="c-key">"fees"</span>: <span class="c-str">"0.01"</span>,
+  <span class="c-key">"uniquePayers"</span>: <span class="c-num">2</span>
+}</pre>
+              <div class="tryit">
+                <div class="tryit-label">Try it — no key needed</div>
+                <div class="tryit-row">
+                  <button class="tryit-btn" data-run="pub-stats" data-path="/v1/stats" data-auth="0">Send request</button>
+                </div>
+                <div class="tryit-out" data-out="pub-stats">
+                  <div class="tryit-status" data-status="pub-stats"></div>
+                  <pre data-body="pub-stats"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- /v1/breakdown -->
+        <section id="pub-breakdown">
+          <h2>Recipient breakdown</h2>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method method-get">GET</span>
+              <span class="endpoint-path">/v1/breakdown</span>
+              <span class="badge-auth badge-public">Public</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="endpoint-desc">For a given payer, totals grouped by recipient (who they've paid, and how much).</div>
+              <table class="params">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td class="pname">payer</td><td class="ptype">string</td><td>Required. Wallet address to break down (<code>0x…</code>).</td></tr>
+                <tr><td class="pname">limit</td><td class="ptype">integer</td><td>Optional. Max recipients returned.</td></tr>
+              </table>
+              <div class="tryit">
+                <div class="tryit-label">Try it — no key needed</div>
+                <div class="tryit-row">
+                  <input class="tryit-input" type="text" placeholder="payer 0x…" data-p1="pub-breakdown" />
+                  <button class="tryit-btn" data-run="pub-breakdown" data-path="/v1/breakdown" data-auth="0">Send request</button>
+                </div>
+                <div class="tryit-out" data-out="pub-breakdown">
+                  <div class="tryit-status" data-status="pub-breakdown"></div>
+                  <pre data-body="pub-breakdown"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- /v1/payments -->
+        <section id="pub-payments">
+          <h2>Public payments feed</h2>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method method-get">GET</span>
+              <span class="endpoint-path">/v1/payments</span>
+              <span class="badge-auth badge-public">Public</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="endpoint-desc">Recent payments across the protocol, newest first. Same shape as the authenticated endpoint.</div>
+              <table class="params">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td class="pname">limit</td><td class="ptype">integer</td><td>Optional. Max results. Default 20.</td></tr>
+              </table>
+              <div class="tryit">
+                <div class="tryit-label">Try it — no key needed</div>
+                <div class="tryit-row">
+                  <input class="tryit-input" type="text" placeholder="limit (optional)" data-p1="pub-payments" value="3" />
+                  <button class="tryit-btn" data-run="pub-payments" data-path="/v1/payments" data-auth="0">Send request</button>
+                </div>
+                <div class="tryit-out" data-out="pub-payments">
+                  <div class="tryit-status" data-status="pub-payments"></div>
+                  <pre data-body="pub-payments"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ERRORS -->
+        <section id="errors">
+          <h2>Errors</h2>
+          <p>Authenticated endpoints return <code>401</code> when the key is missing, malformed, or invalid:</p>
+          <pre>{
+  <span class="c-key">"error"</span>: <span class="c-str">"missing_api_key"</span>,
+  <span class="c-key">"message"</span>: <span class="c-str">"Provide your key as: Authorization: Bearer &lt;key&gt;"</span>
+}</pre>
+          <p>Other error codes: <code>invalid_api_key</code> (bad or revoked key), <code>400</code> for missing required parameters.</p>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { arcfxMountHeader } from '/src/shared/header.ts';
+    arcfxMountHeader({ pageKey: 'developers', activeLink: 'developers', activeTool: null });
+  </script>
+
+  <script>
+    const BASE = "https://arcfx-backend-production.up.railway.app";
+
+    function syntaxHighlight(json) {
+      // basic JSON highlighter, HTML-escaped first
+      const esc = json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return esc.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, (match) => {
+        let cls = 'c-num';
+        if (/^"/.test(match)) {
+          cls = /:$/.test(match) ? 'c-key' : 'c-str';
+        } else if (/true|false|null/.test(match)) {
+          cls = 'c-num';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+      });
+    }
+
+    async function runTry(id, path, needsAuth, btn) {
+      const statusEl = document.querySelector(`[data-status="${id}"]`);
+      const bodyEl   = document.querySelector(`[data-body="${id}"]`);
+      const outEl    = document.querySelector(`[data-out="${id}"]`);
+      outEl.classList.add('show');
+      statusEl.className = 'tryit-status';
+      statusEl.textContent = 'Sending…';
+      bodyEl.textContent = '';
+
+      // Build query params
+      const qs = new URLSearchParams();
+      const p1 = document.querySelector(`[data-p1="${id}"]`);
+      const p2 = document.querySelector(`[data-p2="${id}"]`);
+      const param = document.querySelector(`[data-param="${id}"]`);
+
+      // Per-endpoint param wiring
+      if (id === 'api-payments' && param && param.value.trim()) qs.set('limit', param.value.trim());
+      if (id === 'api-invoice') {
+        if (p1 && p1.value.trim()) qs.set('number', p1.value.trim());
+        if (p2 && p2.value.trim()) qs.set('recipient', p2.value.trim());
+      }
+      if (id === 'pub-breakdown' && p1 && p1.value.trim()) qs.set('payer', p1.value.trim());
+      if (id === 'pub-payments' && p1 && p1.value.trim()) qs.set('limit', p1.value.trim());
+
+      const url = BASE + path + (qs.toString() ? ('?' + qs.toString()) : '');
+      const headers = {};
+      if (needsAuth) {
+        const keyEl = document.querySelector(`[data-key="${id}"]`);
+        const key = keyEl ? keyEl.value.trim() : '';
+        if (!key) {
+          statusEl.className = 'tryit-status err';
+          statusEl.textContent = 'Enter your API key first.';
+          return;
+        }
+        headers['Authorization'] = 'Bearer ' + key;
+      }
+
+      btn.disabled = true;
+      try {
+        const res = await fetch(url, { headers });
+        const text = await res.text();
+        let pretty = text;
+        try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch {}
+        statusEl.className = 'tryit-status ' + (res.ok ? 'ok' : 'err');
+        statusEl.textContent = `${res.status} ${res.statusText}`;
+        bodyEl.innerHTML = syntaxHighlight(pretty);
+      } catch (err) {
+        statusEl.className = 'tryit-status err';
+        statusEl.textContent = 'Request failed: ' + err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.querySelectorAll('[data-run]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        runTry(btn.dataset.run, btn.dataset.path, btn.dataset.auth === '1', btn);
+      });
+    });
+  </script>
+</body>
+</html>
