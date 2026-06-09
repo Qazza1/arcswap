@@ -246,17 +246,82 @@ function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): T {
 }
 
 
-// ─── Bridge Config ────────────────────────────────────────────────────────────
-const ETHEREUM_SEPOLIA = {
-  chainId: "0xaa36a7",
-  chainName: "Ethereum Sepolia",
-  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-  rpcUrls: ["https://rpc.sepolia.org"],
-  blockExplorerUrls: ["https://sepolia.etherscan.io"],
+// ─── Bridge Config (multi-chain) ──────────────────────────────────────────────
+// Arc Testnet is the hub. Users bridge USDC between Arc and any external chain
+// below. Chain identifiers must match Circle App Kit's BridgeChain enum
+// (name with spaces -> underscores, case-sensitive). Bridge supports USDC only.
+
+interface BridgeChainDef {
+  bridgeId: string;            // App Kit BridgeChain identifier
+  chainId: string;            // hex chain id for wallet_switchEthereumChain
+  chainName: string;          // wallet display name
+  label: string;              // UI label
+  nativeCurrency: { name: string; symbol: string; decimals: number };
+  rpcUrls: string[];
+  blockExplorerUrls: string[];
+  dot: string;                // UI dot color
+}
+
+const ARC_CHAIN: BridgeChainDef = {
+  bridgeId: "Arc_Testnet",
+  chainId: "0x4CEF52",
+  chainName: "Arc Network Testnet",
+  label: "Arc Testnet",
+  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+  rpcUrls: ["https://rpc.testnet.arc.network"],
+  blockExplorerUrls: ["https://testnet.arcscan.app"],
+  dot: "#4e8ef7",
+};
+
+// External chains the user can bridge to/from (Arc is always the other side).
+const EXTERNAL_CHAINS: Record<string, BridgeChainDef> = {
+  Ethereum_Sepolia: {
+    bridgeId: "Ethereum_Sepolia",
+    chainId: "0xaa36a7",
+    chainName: "Ethereum Sepolia",
+    label: "Ethereum Sepolia",
+    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://rpc.sepolia.org"],
+    blockExplorerUrls: ["https://sepolia.etherscan.io"],
+    dot: "#627eea",
+  },
+  Base_Sepolia: {
+    bridgeId: "Base_Sepolia",
+    chainId: "0x14a34",
+    chainName: "Base Sepolia",
+    label: "Base Sepolia",
+    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://sepolia.base.org"],
+    blockExplorerUrls: ["https://sepolia.basescan.org"],
+    dot: "#0052ff",
+  },
+  Arbitrum_Sepolia: {
+    bridgeId: "Arbitrum_Sepolia",
+    chainId: "0x66eee",
+    chainName: "Arbitrum Sepolia",
+    label: "Arbitrum Sepolia",
+    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://sepolia-rollup.arbitrum.io/rpc"],
+    blockExplorerUrls: ["https://sepolia.arbiscan.io"],
+    dot: "#28a0f0",
+  },
+  OP_Sepolia: {
+    bridgeId: "OP_Sepolia",
+    chainId: "0xaa37dc",
+    chainName: "OP Sepolia",
+    label: "OP Sepolia",
+    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://sepolia.optimism.io"],
+    blockExplorerUrls: ["https://sepolia-optimism.etherscan.io"],
+    dot: "#ff0420",
+  },
 };
 
 let isBridging = false;
-let bridgeDirection: "to-arc" | "to-sepolia" = "to-arc";
+// The currently selected external chain (the non-Arc side).
+let selectedExternal: string = "Ethereum_Sepolia";
+// Direction: into Arc (external -> Arc) or out of Arc (Arc -> external).
+let bridgeToArc: boolean = true;
 
 function setBridgeStep(id: string, state: "active"|"done"|"reset"): void {
   const s = el(id);
@@ -264,7 +329,6 @@ function setBridgeStep(id: string, state: "active"|"done"|"reset"): void {
   s.classList.remove("active","done");
   if (state !== "reset") s.classList.add(state);
 
-  // Also update inline styles directly (for new bridge HTML that uses inline styles)
   const dot  = s.querySelector(".bridge-step-dot") as HTMLElement | null;
   const span = s.querySelector("span") as HTMLElement | null;
   if (state === "done") {
@@ -288,69 +352,78 @@ function showBridgeStatus(msg: string, type: "success"|"error"|"info"|""): void 
   setHTML("bridge-global-status", html);
 }
 
-function flipBridgeDirection(): void {
-  bridgeDirection = bridgeDirection === "to-arc" ? "to-sepolia" : "to-arc";
-  const toArc = bridgeDirection === "to-arc";
+// Build the external-chain dropdown once.
+function initBridgeChainSelector(): void {
+  const sel = el<HTMLSelectElement>("bridge-external-select");
+  if (!sel) return;
+  sel.innerHTML = Object.values(EXTERNAL_CHAINS)
+    .map(c => `<option value="${c.bridgeId}">${c.label}</option>`)
+    .join("");
+  sel.value = selectedExternal;
+  sel.addEventListener("change", () => {
+    selectedExternal = sel.value;
+    renderBridgeChains();
+  });
+}
 
-  // Update from/to labels
-  const fromLabel = document.getElementById("bridge-from-label");
-  const toLabel   = document.getElementById("bridge-to-label");
-  const toDot     = document.getElementById("bridge-to-dot");
-  const fromDot   = document.querySelector("#bridge-from-name .chain-dot") as HTMLElement;
-  const recvLabel = document.getElementById("bridge-receive-label");
-  const burnLabel = document.getElementById("bstep-burn-label");
-  const mintLabel = document.getElementById("bstep-mint-label");
+// Reflect current direction + selected chain in the UI.
+function renderBridgeChains(): void {
+  const ext = EXTERNAL_CHAINS[selectedExternal] || EXTERNAL_CHAINS.Ethereum_Sepolia;
+  const from = bridgeToArc ? ext : ARC_CHAIN;
+  const to   = bridgeToArc ? ARC_CHAIN : ext;
+
+  setText("bridge-from-label", from.label);
+  setText("bridge-to-label", to.label);
+  setText("bridge-from-chainid", `Chain ${parseInt(from.chainId, 16)}`);
+  setText("bridge-to-chainid", `Chain ${parseInt(to.chainId, 16)}`);
+
+  const fromDot = document.querySelector("#bridge-from-name .chain-dot") as HTMLElement | null;
+  const toDot   = el("bridge-to-dot");
+  if (fromDot) fromDot.style.background = from.dot;
+  if (toDot)   { toDot.style.background = to.dot; toDot.style.boxShadow = `0 0 6px ${to.dot}`; }
+
+  // Keep the dropdown in sync with the selected external chain.
+  const sel = el<HTMLSelectElement>("bridge-external-select");
+  if (sel) sel.value = selectedExternal;
+
+  setText("bstep-burn-label", `Burn USDC on ${from.label}`);
+  setText("bstep-mint-label", `Mint USDC on ${to.label}`);
+  setText("bridge-receive-label", `You receive on ${to.label}`);
+
   const bridgeBtn = el("bridge-btn");
+  if (bridgeBtn) bridgeBtn.textContent = `Bridge to ${to.label} →`;
+}
 
-  if (toArc) {
-    if (fromLabel) fromLabel.textContent = "Ethereum Sepolia";
-    if (toLabel)   toLabel.textContent   = "Arc Testnet";
-    if (fromDot)   fromDot.style.background = "#627eea";
-    if (toDot)   { toDot.style.background = "#4e8ef7"; toDot.style.boxShadow = "0 0 6px #4e8ef7"; }
-    if (recvLabel) recvLabel.textContent = "You receive on Arc";
-    if (burnLabel) burnLabel.textContent = "Burn USDC on Ethereum Sepolia";
-    if (mintLabel) mintLabel.textContent = "Mint USDC on Arc Testnet";
-    if (bridgeBtn) bridgeBtn.textContent = "Bridge to Arc →";
-  } else {
-    if (fromLabel) fromLabel.textContent = "Arc Testnet";
-    if (toLabel)   toLabel.textContent   = "Ethereum Sepolia";
-    if (fromDot)   fromDot.style.background = "#4e8ef7";
-    if (toDot)   { toDot.style.background = "#627eea"; toDot.style.boxShadow = "none"; }
-    if (recvLabel) recvLabel.textContent = "You receive on Sepolia";
-    if (burnLabel) burnLabel.textContent = "Burn USDC on Arc Testnet";
-    if (mintLabel) mintLabel.textContent = "Mint USDC on Ethereum Sepolia";
-    if (bridgeBtn) bridgeBtn.textContent = "Bridge to Sepolia →";
-  }
+function flipBridgeDirection(): void {
+  bridgeToArc = !bridgeToArc;
+  renderBridgeChains();
 
-  // Reset amount and status
   const amtInput = el<HTMLInputElement>("bridge-amount-input");
   if (amtInput) amtInput.value = "";
   setText("bridge-receive-amt","—");
   setHTML("bridge-status","");
 
-  // Rotate the flip button
   const flipBtn = el("bridge-flip-btn");
   if (flipBtn) {
-    flipBtn.style.transform = toArc ? "rotate(0deg)" : "rotate(180deg)";
+    flipBtn.style.transform = bridgeToArc ? "rotate(0deg)" : "rotate(180deg)";
     flipBtn.style.borderColor = "var(--blue)";
     flipBtn.style.color = "var(--blue)";
-    setTimeout(() => {
-      if (flipBtn) { flipBtn.style.borderColor = ""; flipBtn.style.color = ""; }
-    }, 400);
+    setTimeout(() => { if (flipBtn) { flipBtn.style.borderColor = ""; flipBtn.style.color = ""; } }, 400);
   }
 }
 
 async function executeBridge(): Promise<void> {
   if (isBridging || !window.ethereum) return;
   const amtInput = el<HTMLInputElement>("bridge-amount-input");
-  const amount   = amtInput?.value.trim() ?? "";
+  const amount = amtInput?.value?.trim() ?? "";
   if (!amount || parseFloat(amount) <= 0) { showBridgeStatus("Enter an amount to bridge.","error"); return; }
 
-  const toArc     = bridgeDirection === "to-arc";
-  const fromChain = toArc ? "Ethereum_Sepolia" : "Arc_Testnet";
-  const toChain   = toArc ? "Arc_Testnet"       : "Ethereum_Sepolia";
-  const switchTo  = toArc ? ETHEREUM_SEPOLIA     : ARC_TESTNET;
-  const destName  = toArc ? "Arc Testnet"        : "Ethereum Sepolia";
+  const ext = EXTERNAL_CHAINS[selectedExternal] || EXTERNAL_CHAINS.Ethereum_Sepolia;
+  const fromDef = bridgeToArc ? ext : ARC_CHAIN;
+  const toDef   = bridgeToArc ? ARC_CHAIN : ext;
+  const fromChain = fromDef.bridgeId;
+  const toChain   = toDef.bridgeId;
+  const destName  = toDef.label;
 
   isBridging = true;
   const btn = el("bridge-btn");
@@ -358,17 +431,23 @@ async function executeBridge(): Promise<void> {
   const stepsEl = el("bridge-steps");
   if (stepsEl) stepsEl.classList.add("visible");
   ["bstep-approve","bstep-burn","bstep-attest","bstep-mint"].forEach(id => setBridgeStep(id,"reset"));
-  showBridgeStatus(`Switching to ${toArc ? "Ethereum Sepolia" : "Arc Testnet"}…`,"info");
+  showBridgeStatus(`Switching to ${fromDef.label}…`,"info");
 
   try {
-    // Switch wallet to source chain
+    // Switch wallet to source chain (add it if the wallet doesn't have it).
     try {
-      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:switchTo.chainId}] });
+      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:fromDef.chainId}] });
     } catch (e: any) {
       const code = e.code ?? e.error?.code ?? e.info?.error?.code;
       const msg  = e.message ?? "";
       if (code===4902||msg.includes("4902")||msg.includes("wallet_addEthereumChain")) {
-        await window.ethereum.request({ method:"wallet_addEthereumChain", params:[switchTo] });
+        await window.ethereum.request({ method:"wallet_addEthereumChain", params:[{
+          chainId: fromDef.chainId,
+          chainName: fromDef.chainName,
+          nativeCurrency: fromDef.nativeCurrency,
+          rpcUrls: fromDef.rpcUrls,
+          blockExplorerUrls: fromDef.blockExplorerUrls,
+        }] });
       } else throw e;
     }
 
@@ -391,7 +470,6 @@ async function executeBridge(): Promise<void> {
     });
 
     ["bstep-approve","bstep-burn","bstep-attest","bstep-mint"].forEach(id => setBridgeStep(id,"done"));
-    // Get tx hash from bridge result — try multiple paths
     const steps    = (result as any)?.steps ?? [];
     const lastStep = steps[steps.length - 1];
     const txHash   = lastStep?.data?.txHash
@@ -400,20 +478,17 @@ async function executeBridge(): Promise<void> {
                   ?? (result as any)?.txHash
                   ?? null;
 
-    const baseUrl  = toArc ? "https://testnet.arcscan.app" : "https://sepolia.etherscan.io";
-    // Use tx URL if we have hash, otherwise link to user address (shows all related txs)
+    const baseUrl  = toDef.blockExplorerUrls[0];
     const explorerUrl = lastStep?.data?.explorerUrl
                      ?? (txHash ? `${baseUrl}/tx/${txHash}` : `${baseUrl}/address/${userAddress}`);
 
     setHTML("bridge-status",`<div class="status success"><div class="status-title">✅ Bridge complete</div><div class="status-row"><span>${amount} USDC</span><span class="arrow">→</span><strong>${amount} USDC on ${destName}</strong></div><a class="explorer-link" href="${explorerUrl}" target="_blank" rel="noopener">View on explorer ↗</a></div>`);
     if (amtInput) amtInput.value = "";
 
-    // Switch back to Arc and reinitialize provider
+    // Switch back to Arc and reinitialize provider so the wallet stays on Arc.
     try {
-      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:ARC_TESTNET.chainId}] });
-      // Small delay to let chainChanged fire while isBridging is still true
+      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:ARC_CHAIN.chainId}] });
       await new Promise(r => setTimeout(r, 500));
-      // Reinitialize provider on Arc so wallet stays connected
       ethersProvider = new BrowserProvider(window.ethereum!);
       ethersSigner   = await ethersProvider.getSigner();
       await loadBalances();
@@ -427,7 +502,8 @@ async function executeBridge(): Promise<void> {
     isBridging = false;
     if (btn) {
       btn.removeAttribute("disabled");
-      btn.textContent = bridgeDirection === "to-arc" ? "Bridge to Arc →" : "Bridge to Sepolia →";
+      const toDef2 = bridgeToArc ? ARC_CHAIN : (EXTERNAL_CHAINS[selectedExternal] || EXTERNAL_CHAINS.Ethereum_Sepolia);
+      btn.textContent = `Bridge to ${toDef2.label} →`;
     }
   }
 }
@@ -662,6 +738,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Bridge events
   el("bridge-btn")?.addEventListener("click", executeBridge);
   el("bridge-amount-input")?.addEventListener("input", updateBridgeReceiveAmt);
+  initBridgeChainSelector();
+  renderBridgeChains();
 
   // Expose functions globally so inline HTML onclick can reach them
   (window as any).executeBridge = executeBridge;

@@ -661,6 +661,16 @@
             </div>
           </div>
 
+          <!-- External chain selector (the non-Arc side) -->
+          <div style="margin-bottom:12px;">
+            <div style="font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+                        letter-spacing:0.1em;margin-bottom:6px;">External chain</div>
+            <select id="bridge-external-select"
+                    style="width:100%;background:#0f172a;border:1px solid #1e293b;
+                           border-radius:6px;color:#e2e8f0;font-size:13px;padding:9px 10px;
+                           font-family:'JetBrains Mono',monospace;cursor:pointer;"></select>
+          </div>
+
           <!-- Network selectors -->
           <div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:8px;align-items:center;margin-bottom:16px;">
 
@@ -668,15 +678,15 @@
             <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:12px 14px;">
               <div style="font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
                           letter-spacing:0.1em;margin-bottom:8px;">From network</div>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <div style="width:8px;height:8px;border-radius:50%;background:#627eea;flex-shrink:0;"></div>
+              <div id="bridge-from-name" style="display:flex;align-items:center;gap:8px;">
+                <div class="chain-dot" style="width:8px;height:8px;border-radius:50%;background:#627eea;flex-shrink:0;"></div>
                 <span id="bridge-from-label"
                       style="font-size:13px;font-weight:600;color:#f1f5f9;">
                   Ethereum Sepolia
                 </span>
               </div>
-              <div style="font-size:10px;color:#334155;margin-top:4px;font-family:'JetBrains Mono',monospace;">
-                EIP-155 · Chain 11155111
+              <div id="bridge-from-chainid" style="font-size:10px;color:#334155;margin-top:4px;font-family:'JetBrains Mono',monospace;">
+                Chain 11155111
               </div>
             </div>
 
@@ -706,8 +716,8 @@
                   Arc Testnet
                 </span>
               </div>
-              <div style="font-size:10px;color:#334155;margin-top:4px;font-family:'JetBrains Mono',monospace;">
-                EVM · Chain 5042002
+              <div id="bridge-to-chainid" style="font-size:10px;color:#334155;margin-top:4px;font-family:'JetBrains Mono',monospace;">
+                Chain 5042002
               </div>
             </div>
           </div>
