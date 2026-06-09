@@ -102,7 +102,6 @@
 
     /* Empty / loading states */
     .state-box { text-align: center; padding: 60px 24px; color: var(--muted); }
-    .hidden { display: none !important; }
     .state-icon { font-size: 40px; margin-bottom: 16px; }
     .state-title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
     .state-sub { font-size: 13.5px; line-height: 1.7; margin-bottom: 24px; }
@@ -138,9 +137,9 @@
 
   <div class="page-header">
     <div>
-      <div class="eyebrow">📋 Arc Testnet · USDC &amp; EURC</div>
+      <div class="eyebrow">📋 Arc Testnet · USDC · EURC · cirBTC</div>
       <h1>Payment <span class="gradient">history.</span></h1>
-      <p class="sub">All your USDC and EURC transactions on Arc — swaps, bridges, sends and receives.</p>
+      <p class="sub">All your USDC, EURC and cirBTC transactions on Arc — swaps, bridges, sends and receives.</p>
     </div>
     <div id="wallet-display" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);display:none;background:var(--card);border:1px solid var(--border);padding:8px 14px;border-radius:var(--rsm);"></div>
   </div>
@@ -153,11 +152,11 @@
     </div>
     <div class="stat-card">
       <div class="stat-val green" id="stat-received">—</div>
-      <div class="stat-lbl">Total received (USDC+EURC)</div>
+      <div class="stat-lbl">Total received</div>
     </div>
     <div class="stat-card">
       <div class="stat-val red" id="stat-sent">—</div>
-      <div class="stat-lbl">Total sent (USDC+EURC)</div>
+      <div class="stat-lbl">Total sent</div>
     </div>
     <div class="stat-card">
       <div class="stat-val" id="stat-swaps">—</div>
@@ -184,7 +183,7 @@
     <div class="state-box" id="state-box">
       <div class="state-icon">🔌</div>
       <div class="state-title">Connect your wallet</div>
-      <div class="state-sub">Connect MetaMask on Arc Testnet to view your<br>full USDC and EURC transaction history.</div>
+      <div class="state-sub">Connect MetaMask on Arc Testnet to view your<br>full transaction history.</div>
       <button class="btn-connect-center" onclick="connectWallet()">Connect MetaMask</button>
     </div>
     <table class="history-table hidden" id="history-table">
@@ -202,7 +201,7 @@
   </div>
 
   <div class="page-footer">
-    <span>Showing your full USDC &amp; EURC transaction history on Arc Testnet</span>
+    <span>Showing your full USDC, EURC &amp; cirBTC transaction history on Arc Testnet</span>
     <div style="display:flex;gap:20px;">
       <a href="/invoice">Create invoice →</a>
       <a href="/pay">Pay link →</a>
@@ -216,9 +215,18 @@
 import { BrowserProvider, Contract, formatUnits } from "https://esm.sh/ethers@6";
 
 // ── Config ─────────────────────────────────────────────────────────────────
-const USDC = "0x3600000000000000000000000000000000000000";
-const EURC = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
+const USDC   = "0x3600000000000000000000000000000000000000";
+const EURC   = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
+const CIRBTC = "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF";
 const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+// Tokens we display, keyed by lowercase contract address.
+const TRACKED = {
+  [USDC.toLowerCase()]:   { sym: "USDC",   decimals: 6 },
+  [EURC.toLowerCase()]:   { sym: "EURC",   decimals: 6 },
+  [CIRBTC.toLowerCase()]: { sym: "cirBTC", decimals: 8 },
+};
+const ARCSCAN_API = "https://testnet.arcscan.app/api/v2";
 
 const ARC_TESTNET = {
   chainId: "0x4CEF52",
@@ -269,116 +277,90 @@ async function connectWallet() {
   }
 }
 
-// Silent reconnect on page load: if the wallet is already connected, load
-// history without showing a MetaMask popup. Uses eth_accounts (not request).
-async function tryAutoConnect() {
-  if (!window.ethereum) return;
-  try {
-    provider = new BrowserProvider(window.ethereum);
-    const accounts = await provider.send("eth_accounts", []); // no popup
-    if (!accounts || !accounts.length) return;                // not connected -> leave prompt
-    signer      = await provider.getSigner();
-    userAddress = await signer.getAddress();
-    const short = `${userAddress.slice(0,8)}\u2026${userAddress.slice(-6)}`;
-    const cb = el("connect-btn");
-    if (cb) { cb.textContent = short; cb.classList.add("connected"); }
-    const wd = el("wallet-display");
-    if (wd) { wd.textContent = short; wd.style.display = "block"; }
-    await loadHistory();
-  } catch (e) { /* stay on the connect prompt if anything goes wrong */ }
-}
-
 // ── Load history ───────────────────────────────────────────────────────────
 async function loadHistory() {
-  if (!userAddress) return;
-  setLoading("Loading your USDC &amp; EURC history…");
+  if (!provider || !userAddress) return;
+  setLoading("Fetching transactions\u2026");
 
-  const API = "https://testnet.arcscan.app/api/v2";
-  const USDC_ADDR = USDC.toLowerCase();
-  const EURC_ADDR = EURC.toLowerCase();
-  const me = userAddress.toLowerCase();
-
-  // Fetch all ERC-20 token transfers for this wallet, following pagination
-  // (Blockscout returns ~50 per page). Capped at 10 pages for safety.
-  async function fetchAllTransfers() {
+  // Pull this wallet's full ERC-20 transfer history from the Blockscout API.
+  // (One paginated call — no narrow block window, and it returns every token,
+  // so USDC, EURC and cirBTC all come through.)
+  async function fetchAllTransfers(addr) {
     const out = [];
-    let params = "";
-    for (let page = 0; page < 10; page++) {
-      const url = `${API}/addresses/${userAddress}/token-transfers?type=ERC-20${params}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`explorer ${res.status}`);
-      const data = await res.json();
-      const items = data.items || [];
-      out.push(...items);
+    let url = `${ARCSCAN_API}/addresses/${addr}/token-transfers?type=ERC-20`;
+    for (let page = 0; page < 10 && url; page++) {
+      let data;
+      try {
+        const res = await fetch(url, { headers: { Accept: "application/json" } });
+        if (!res.ok) break;
+        data = await res.json();
+      } catch { break; }
+      for (const it of (data.items || [])) out.push(it);
       const np = data.next_page_params;
-      if (!np || !items.length) break;
-      params = `&block_number=${np.block_number}&index=${np.index}`;
+      if (np && (np.block_number != null) && (np.index != null)) {
+        const qs = new URLSearchParams(np).toString();
+        url = `${ARCSCAN_API}/addresses/${addr}/token-transfers?type=ERC-20&${qs}`;
+      } else {
+        url = null;
+      }
     }
     return out;
   }
 
   try {
-    const items = await fetchAllTransfers();
+    const me = userAddress.toLowerCase();
+    const items = await fetchAllTransfers(userAddress);
 
-    // Keep only USDC / EURC transfers that involve this wallet.
+    // Keep only the tokens we track (USDC / EURC / cirBTC), tag direction.
     const tagged = [];
     for (const it of items) {
-      const tokenAddr = (it.token?.address_hash || "").toLowerCase();
-      let sym;
-      if (tokenAddr === USDC_ADDR) sym = "USDC";
-      else if (tokenAddr === EURC_ADDR) sym = "EURC";
-      else continue; // ignore other tokens
-
-      const fromAddr = (it.from?.hash || "").toLowerCase();
-      const toAddr   = (it.to?.hash   || "").toLowerCase();
-      let dir;
-      if (fromAddr === me) dir = "out";
-      else if (toAddr === me) dir = "in";
-      else continue; // not involving this wallet
-
-      const decimals = parseInt(it.total?.decimals || "6", 10);
-      const rawVal   = it.total?.value || "0";
+      const tokenAddr = (it.token?.address_hash || it.token?.address || "").toLowerCase();
+      const meta = TRACKED[tokenAddr];
+      if (!meta) continue;
+      const from = (it.from?.hash || it.from || "").toLowerCase();
+      const to   = (it.to?.hash   || it.to   || "").toLowerCase();
+      const dir  = (from === me) ? "out" : (to === me ? "in" : null);
+      if (!dir) continue;
+      // decimals: trust the transfer's own value, fall back to our literal
+      const dec = Number(it.total?.decimals ?? it.token?.decimals ?? meta.decimals);
+      const rawValue = it.total?.value ?? it.value ?? "0";
+      let amtNum = 0;
+      try { amtNum = Number(BigInt(rawValue)) / Math.pow(10, dec); } catch { amtNum = 0; }
       tagged.push({
-        sym, dir,
-        hash: it.transaction_hash,
-        block: it.block_number,
-        from: fromAddr,
-        to: toAddr,
-        decimals,
-        rawVal,
+        hash: it.transaction_hash || it.tx_hash,
+        block: Number(it.block_number ?? 0),
+        ts: it.timestamp || null,
+        sym: meta.sym,
+        dir,
+        from, to,
+        amtNum,
       });
     }
 
-    const fmt = (rawVal, decimals) => {
-      try { return (Number(BigInt(rawVal)) / Math.pow(10, decimals)).toFixed(4); }
-      catch { return "?"; }
-    };
-    const rawNum = (rawVal, decimals) => {
-      try { return Number(BigInt(rawVal)) / Math.pow(10, decimals); }
-      catch { return 0; }
-    };
-
-    // Group by transaction hash to detect swaps (two legs in one tx)
+    // Group by tx hash (a swap shows up as two legs in one tx).
     const groups = new Map();
     for (const t of tagged) {
       if (!groups.has(t.hash)) groups.set(t.hash, []);
       groups.get(t.hash).push(t);
     }
 
+    // Newest first.
     tagged.sort((a, b) => b.block - a.block);
 
     const processed = [];
     const seen = new Set();
+    const fmt = n => n.toLocaleString("en-US", { maximumFractionDigits: 8 });
 
     for (const t of tagged) {
-      const hash = t.hash;
-      if (seen.has(hash)) continue;
-      seen.add(hash);
+      if (seen.has(t.hash)) continue;
+      seen.add(t.hash);
 
-      const group  = groups.get(hash);
+      const group  = groups.get(t.hash);
       const hasOut = group.some(g => g.dir === "out");
       const hasIn  = group.some(g => g.dir === "in");
-      const isSwap = hasOut && hasIn && group.some(g => g.sym === "USDC") && group.some(g => g.sym === "EURC");
+      const syms   = new Set(group.map(g => g.sym));
+      // Swap = same tx moves one token out and a *different* token in.
+      const isSwap = hasOut && hasIn && syms.size >= 2;
 
       let type, icon, iconClass, amtDisplay, amtClass, sym;
 
@@ -388,30 +370,27 @@ async function loadHistory() {
         type       = "Swap";
         icon       = "\u21c4";
         iconClass  = "icon-swap";
-        amtDisplay = `${fmt(outItem.rawVal, outItem.decimals)} \u2192 ${fmt(inItem.rawVal, inItem.decimals)}`;
+        amtDisplay = `${fmt(outItem.amtNum)} \u2192 ${fmt(inItem.amtNum)}`;
         amtClass   = "amt-swap";
         sym        = `${outItem.sym} \u2192 ${inItem.sym}`;
+      } else if (t.dir === "out") {
+        type = "Sent"; icon = "\u2191"; iconClass = "icon-out";
+        amtDisplay = `\u2212${fmt(t.amtNum)}`; amtClass = "amt-out"; sym = t.sym;
       } else {
-        const amt = fmt(t.rawVal, t.decimals);
-        sym = t.sym;
-        if (t.dir === "out") {
-          type = "Sent"; icon = "\u2191"; iconClass = "icon-out";
-          amtDisplay = `\u2212${amt}`; amtClass = "amt-out";
-        } else {
-          type = "Received"; icon = "\u2193"; iconClass = "icon-in";
-          amtDisplay = `+${amt}`; amtClass = "amt-in";
-        }
+        type = "Received"; icon = "\u2193"; iconClass = "icon-in";
+        amtDisplay = `+${fmt(t.amtNum)}`; amtClass = "amt-in"; sym = t.sym;
       }
 
       const counterparty = isSwap ? "" : (t.dir === "out" ? t.to : t.from);
 
       processed.push({
-        hash, block: t.block,
+        hash: t.hash,
+        block: t.block,
         type, icon, iconClass, amtDisplay, amtClass, sym,
         isSwap,
         dir: t.dir,
         counterparty,
-        rawAmt: rawNum(t.rawVal, t.decimals),
+        rawAmt: t.amtNum,
       });
     }
 
@@ -424,18 +403,15 @@ async function loadHistory() {
   }
 }
 
-function safeAmt(data) {
-  try { return (Number(BigInt(data)) / 1e6).toFixed(4); } catch { return "?"; }
-}
-function safeAmtRaw(data) {
-  try { return Number(BigInt(data)) / 1e6; } catch { return 0; }
-}
-
 // ── Stats ──────────────────────────────────────────────────────────────────
 function updateStats() {
   const txs      = allTxs.length;
-  const received = allTxs.filter(t => t.dir==="in"  && !t.isSwap).reduce((s,t) => s+t.rawAmt, 0);
-  const sent     = allTxs.filter(t => t.dir==="out" && !t.isSwap).reduce((s,t) => s+t.rawAmt, 0);
+  // "Total received/sent" sums stablecoins (USDC+EURC). cirBTC is a different
+  // unit (BTC-denominated), so it's excluded from these fiat totals — it still
+  // shows in the transaction list and the swaps count.
+  const isStable = t => t.sym === "USDC" || t.sym === "EURC";
+  const received = allTxs.filter(t => t.dir==="in"  && !t.isSwap && isStable(t)).reduce((s,t) => s+t.rawAmt, 0);
+  const sent     = allTxs.filter(t => t.dir==="out" && !t.isSwap && isStable(t)).reduce((s,t) => s+t.rawAmt, 0);
   const swaps    = allTxs.filter(t => t.isSwap).length;
 
   txt("stat-txs",      txs > 0 ? txs : "0");
@@ -489,7 +465,7 @@ function renderTable() {
           </div>
         </td>
         <td><div class="tx-block">${t.block.toLocaleString()}</div></td>
-        <td class="hide-sm"><div style="font-size:12px;color:var(--muted);">${t.sym.includes("→") ? "USDC/EURC" : t.sym}</div></td>
+        <td class="hide-sm"><div style="font-size:12px;color:var(--muted);">${t.sym}</div></td>
         <td>
           <div class="tx-amount ${t.amtClass}">${t.amtDisplay}</div>
         </td>
@@ -642,8 +618,6 @@ function setEmpty(msg) {
 // ── Wire up nav button ────────────────────────────────────────────────────
 el("connect-btn")?.addEventListener("click", connectWallet);
 window.connectWallet = connectWallet;
-
-tryAutoConnect();  // attempt silent reconnect on page load
 
 window.ethereum?.on("accountsChanged", accounts => {
   if (!accounts.length) window.location.reload();
