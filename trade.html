@@ -473,7 +473,6 @@
         <div class="app-tabs">
           <button id="tab-swap"    class="app-tab active"      onclick="switchAppTab('swap')">⇄ Swap</button>
           <button id="tab-bridge"  class="app-tab bridge-tab"  onclick="switchAppTab('bridge')">⇅ Bridge</button>
-          <button id="tab-history" class="app-tab history-tab" onclick="switchAppTab('history')">📋 History</button>
         </div>
 
         <!-- Swap -->
@@ -641,9 +640,6 @@
 
         <!-- Bridge — Enterprise redesign -->
         <div id="panel-bridge" style="display:none;background:#0f172a;border:1px solid #1e293b;border-radius:0 0 10px 10px;padding:20px;">
-
-          <!-- Status -->
-          <div id="bridge-global-status"></div>
 
           <!-- Header -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
@@ -845,22 +841,17 @@
         </div>
 
         <!-- History -->
-        <div id="panel-history" class="app-panel" style="display:none;min-height:180px;max-height:480px;overflow-y:auto;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <span style="font-size:14px;font-weight:700;">Transaction history</span>
-            <button onclick="loadHistory()" style="font-size:11px;color:var(--blue);background:transparent;border:1px solid rgba(61,126,255,.25);border-radius:var(--r-sm);padding:4px 10px;cursor:pointer;font-family:'Space Grotesk',sans-serif;">↻ Refresh</button>
-          </div>
-          <div id="history-content">
-            <div style="text-align:center;padding:28px 0;color:var(--muted);font-size:13px;">Connect your wallet to view history</div>
-          </div>
-          <div style="text-align:center;margin-top:14px;">
-            <a href="/docs" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;transition:background .15s;"
-             onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">API Docs</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Developer reference</div></div>
+        <!-- History moved to dedicated /history page -->
+        <div id="panel-history" class="app-panel" style="display:none;"></div>
+
+        <!-- Link to the full history page -->
+        <div style="margin-top:14px;text-align:center;">
+          <a href="/history" style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;padding:9px 16px;border:1px solid var(--border);border-radius:var(--r-sm);transition:color .15s,border-color .15s;"
+             onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--border-med)'"
+             onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            View full transaction history &amp; export
           </a>
-          <a href="/history" style="font-size:12px;color:var(--blue);">View full history + CSV export →</a>
-          </div>
         </div>
       </div>
     </div>
@@ -1049,14 +1040,13 @@
   <!-- Tab switcher + reveal + waitlist -->
   <script>
     function switchAppTab(tab){
-      ["swap","bridge","history"].forEach(t=>{
+      ["swap","bridge"].forEach(t=>{
         const panel=document.getElementById("panel-"+t);
         const btn=document.getElementById("tab-"+t);
         if(!panel||!btn)return;
         if(t===tab){panel.style.display="block";btn.classList.add("active");}
         else{panel.style.display="none";btn.classList.remove("active");}
       });
-      if(tab==="history"&&typeof window.loadHistory==="function")window.loadHistory();
     }
 
     // Reveal on scroll

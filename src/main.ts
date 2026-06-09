@@ -87,7 +87,6 @@ async function connectWallet(): Promise<void> {
     if (execBtn) execBtn.textContent = `Swap ${tokenIn} → ${tokenOut}`;
     showStatus("Connected to Arc Testnet ✓", "success");
     await loadBalances();
-    await loadHistory();
 
   } catch (err: any) {
     if (btn) btn.textContent = "Connect wallet";
@@ -349,7 +348,6 @@ function setBridgeStep(id: string, state: "active"|"done"|"reset"): void {
 function showBridgeStatus(msg: string, type: "success"|"error"|"info"|""): void {
   const html = msg ? `<div class="status ${type}">${msg}</div>` : "";
   setHTML("bridge-status", html);
-  setHTML("bridge-global-status", html);
 }
 
 // Build the external-chain dropdown once.
