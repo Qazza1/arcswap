@@ -625,6 +625,32 @@ window.ethereum?.on("accountsChanged", accounts => {
   else { userAddress = accounts[0]; loadHistory(); }
 });
 window.ethereum?.on("chainChanged", () => window.location.reload());
+
+// Auto-reconnect on load if the wallet is already authorized for this site.
+// Uses eth_accounts (NOT eth_requestAccounts) so it never triggers a popup —
+// if the wallet isn't connected yet, this stays silent and the connect button
+// remains for a manual click.
+async function tryAutoConnect() {
+  if (!window.ethereum) return;
+  try {
+    const accounts = await window.ethereum.request({ method: "eth_accounts" });
+    if (accounts && accounts.length) {
+      provider    = new BrowserProvider(window.ethereum);
+      signer      = await provider.getSigner();
+      userAddress = await signer.getAddress();
+
+      const short = `${userAddress.slice(0,8)}…${userAddress.slice(-6)}`;
+      const cb = el("connect-btn");
+      if (cb) { cb.textContent = short; cb.classList.add("connected"); }
+      const wd = el("wallet-display");
+      if (wd) { wd.textContent = short; wd.style.display = "block"; }
+
+      await loadHistory();
+    }
+  } catch { /* silent — user can still click Connect */ }
+}
+tryAutoConnect();
+
 </script>
 
 </body>
