@@ -16,12 +16,13 @@ const ARC_TESTNET = {
 };
 
 const TOKENS = {
-  USDC: { address: "0x3600000000000000000000000000000000000000", decimals: 6, flag: "$" },
-  EURC: { address: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", decimals: 6, flag: "€" },
+  USDC:   { address: "0x3600000000000000000000000000000000000000", decimals: 6, flag: "$" },
+  EURC:   { address: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", decimals: 6, flag: "€" },
+  cirBTC: { address: "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF", decimals: 8, flag: "₿" },
 } as const;
 
 type TokenSymbol = keyof typeof TOKENS;
-const ERC20_ABI = ["function balanceOf(address owner) view returns (uint256)"];
+const ERC20_ABI = ["function balanceOf(address owner) view returns (uint256)", "function decimals() view returns (uint8)"];
 
 let ethersProvider: BrowserProvider | null = null;
 let ethersSigner: any = null;
@@ -104,7 +105,10 @@ async function loadBalances(): Promise<void> {
     try {
       const c = new Contract(token.address, ERC20_ABI, ethersProvider);
       const raw: bigint = await c.balanceOf(userAddress);
-      setText(`balance-${sym}`, parseFloat(formatUnits(raw, token.decimals)).toFixed(4));
+      // Read decimals live (Arc docs recommend this); fall back to the literal.
+      let dec: number = token.decimals;
+      try { dec = Number(await c.decimals()); } catch { /* use literal */ }
+      setText(`balance-${sym}`, parseFloat(formatUnits(raw, dec)).toFixed(4));
     } catch { setText(`balance-${sym}`, "—"); }
   }
   updateBalanceLabels();
@@ -112,38 +116,88 @@ async function loadBalances(): Promise<void> {
 
 function updateBalanceLabels(): void {
   setText("balance-in-label",  `Balance: ${el(`balance-${tokenIn}`)?.textContent  ?? "—"} ${tokenIn}`);
-  setText("balance-out-label", `Balance: ${el(`balance-${tokenOut}`)?.textContent ?? "—"} ${tokenOut}`);
+  if (el("balance-out-label")) {
+    setText("balance-out-label", `Balance: ${el(`balance-${tokenOut}`)?.textContent ?? "—"} ${tokenOut}`);
+  }
 }
 
-function flipTokens(): void {
-  [tokenIn, tokenOut] = [tokenOut, tokenIn];
+const TOKEN_LOGO_COLORS: Record<string, string> = { USDC: "#2775ca", EURC: "#1a3ca8", cirBTC: "#f7931a" };
 
-  // Update header pill IDs
+// Populate both token dropdowns from the TOKENS registry and wire change handlers.
+function initSwapSelectors(): void {
+  const inSel  = el<HTMLSelectElement>("token-in-select");
+  const outSel = el<HTMLSelectElement>("token-out-select");
+  if (!inSel || !outSel) return;
+
+  const opts = (Object.keys(TOKENS) as TokenSymbol[])
+    .map(sym => `<option value="${sym}">${sym}</option>`).join("");
+  inSel.innerHTML = opts;
+  outSel.innerHTML = opts;
+  inSel.value = tokenIn;
+  outSel.value = tokenOut;
+
+  inSel.addEventListener("change", () => {
+    tokenIn = inSel.value as TokenSymbol;
+    // Can't pay and receive the same token — bump the other side.
+    if (tokenOut === tokenIn) {
+      tokenOut = (Object.keys(TOKENS) as TokenSymbol[]).find(s => s !== tokenIn) ?? tokenOut;
+    }
+    onTokenPairChanged();
+  });
+  outSel.addEventListener("change", () => {
+    tokenOut = outSel.value as TokenSymbol;
+    if (tokenIn === tokenOut) {
+      tokenIn = (Object.keys(TOKENS) as TokenSymbol[]).find(s => s !== tokenOut) ?? tokenIn;
+    }
+    onTokenPairChanged();
+  });
+}
+
+// Reflect the current tokenIn/tokenOut everywhere in the swap UI.
+function renderSwapTokens(): void {
+  // Header pill (small summary)
   setText("token-in-symbol",  tokenIn);
   setText("token-out-symbol", tokenOut);
   setText("token-in-flag",    TOKENS[tokenIn].flag);
   setText("token-out-flag",   TOKENS[tokenOut].flag);
+  const inFlag  = el("token-in-flag");
+  const outFlag = el("token-out-flag");
+  if (inFlag)  inFlag.style.background  = TOKEN_LOGO_COLORS[tokenIn]  ?? "#2775ca";
+  if (outFlag) outFlag.style.background = TOKEN_LOGO_COLORS[tokenOut] ?? "#1a3ca8";
 
-  // Update You Pay / You Receive input pill logos + names
-  const logoColors: Record<string, string> = { USDC: "#2775ca", EURC: "#1a3ca8" };
-  const inLogo  = document.getElementById("pay-in-logo");
-  const outLogo = document.getElementById("pay-out-logo");
-  if (inLogo)  { inLogo.textContent  = TOKENS[tokenIn].flag;  inLogo.style.background  = logoColors[tokenIn]; }
-  if (outLogo) { outLogo.textContent = TOKENS[tokenOut].flag; outLogo.style.background = logoColors[tokenOut]; }
-  setText("pay-in-name",  tokenIn);
-  setText("pay-out-name", tokenOut);
+  // You Pay / You Receive logos
+  const inLogo  = el("pay-in-logo");
+  const outLogo = el("pay-out-logo");
+  if (inLogo)  { inLogo.textContent  = TOKENS[tokenIn].flag;  inLogo.style.background  = TOKEN_LOGO_COLORS[tokenIn]  ?? "#2775ca"; }
+  if (outLogo) { outLogo.textContent = TOKENS[tokenOut].flag; outLogo.style.background = TOKEN_LOGO_COLORS[tokenOut] ?? "#1a3ca8"; }
 
-  // Update execute button label
-  const execBtn = document.getElementById("execute-swap-btn");
+  // Keep the dropdowns in sync (e.g. after a flip or auto-bump)
+  const inSel  = el<HTMLSelectElement>("token-in-select");
+  const outSel = el<HTMLSelectElement>("token-out-select");
+  if (inSel)  inSel.value  = tokenIn;
+  if (outSel) outSel.value = tokenOut;
+
+  // Execute button label
+  const execBtn = el("execute-swap-btn");
   if (execBtn && !execBtn.hasAttribute("disabled")) {
-    execBtn.textContent = "Swap " + tokenIn + " → " + tokenOut;
+    execBtn.textContent = `Swap ${tokenIn} → ${tokenOut}`;
   }
   updateBalanceLabels();
+}
+
+// Shared reset when the pair changes (via dropdown or flip).
+function onTokenPairChanged(): void {
+  renderSwapTokens();
   const inp = el<HTMLInputElement>("amount-input");
   if (inp) inp.value = "";
   setText("estimate-output", "—");
   addClass("estimate-row", "hidden");
   showStatus("", "");
+}
+
+function flipTokens(): void {
+  [tokenIn, tokenOut] = [tokenOut, tokenIn];
+  onTokenPairChanged();
 }
 
 async function estimateSwap(amountIn: string): Promise<void> {
@@ -709,6 +763,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Swap widget controls
   el("flip-btn")?.addEventListener("click", flipTokens);
+  initSwapSelectors();
+  renderSwapTokens();
   el("swap-btn")?.addEventListener("click", executeSwap);         // hidden compat button
   el("execute-swap-btn")?.addEventListener("click", executeSwap); // new visible button
   el("max-btn")?.addEventListener("click", setMaxAmount);

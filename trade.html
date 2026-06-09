@@ -91,6 +91,12 @@
 
     .connected { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--muted); }
 
+    /* Token select dropdowns — readable option list on dark backgrounds */
+    #token-in-select option, #token-out-select option, #bridge-external-select option {
+      background:#0f172a; color:#e8edf8;
+    }
+    #token-in-select, #token-out-select { appearance:none; -webkit-appearance:none; }
+
     /* History link */
     .history-link { display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:500; color:var(--muted); padding:9px 16px; border:1px solid var(--border); border-radius:var(--r-sm); transition:color .15s,border-color .15s; }
     .history-link:hover { color:var(--text); border-color:var(--border-med); }
@@ -143,6 +149,10 @@
       <div class="ctx-item">
         <span class="ctx-label">EURC balance</span>
         <span class="ctx-val"><span id="balance-EURC">—</span></span>
+      </div>
+      <div class="ctx-item">
+        <span class="ctx-label">cirBTC balance</span>
+        <span class="ctx-val"><span id="balance-cirBTC">—</span></span>
       </div>
     </div>
 
@@ -226,9 +236,12 @@
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:12px;">
-                <div style="display:flex;align-items:center;gap:7px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:7px 12px;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:7px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:7px 10px 7px 12px;flex-shrink:0;">
                   <div id="pay-in-logo" style="width:22px;height:22px;border-radius:50%;background:#2775ca;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;">$</div>
-                  <span id="pay-in-name" style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#e2e8f0;">USDC</span>
+                  <select id="token-in-select"
+                          style="background:transparent;border:none;outline:none;cursor:pointer;
+                                 font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#e2e8f0;padding-right:2px;"></select>
+                  <span id="pay-in-name" style="display:none;">USDC</span>
                 </div>
                 <input
                   id="amount-input"
@@ -267,9 +280,12 @@
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:12px;">
-                <div style="display:flex;align-items:center;gap:7px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:7px 12px;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:7px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:7px 10px 7px 12px;flex-shrink:0;">
                   <div id="pay-out-logo" style="width:22px;height:22px;border-radius:50%;background:#1a3ca8;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;">€</div>
-                  <span id="pay-out-name" style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#e2e8f0;">EURC</span>
+                  <select id="token-out-select"
+                          style="background:transparent;border:none;outline:none;cursor:pointer;
+                                 font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#e2e8f0;padding-right:2px;"></select>
+                  <span id="pay-out-name" style="display:none;">EURC</span>
                 </div>
                 <div id="estimate-output"
                      style="flex:1;text-align:right;font-family:'JetBrains Mono',monospace;
