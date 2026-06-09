@@ -91,11 +91,21 @@
 
     .connected { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--muted); }
 
-    /* Token select dropdowns — readable option list on dark backgrounds */
-    #token-in-select option, #token-out-select option, #bridge-external-select option {
-      background:#0f172a; color:#e8edf8;
-    }
-    #token-in-select, #token-out-select { appearance:none; -webkit-appearance:none; }
+    /* Custom token picker — clickable pill + dropdown menu */
+    .token-pill { display:flex; align-items:center; gap:7px; background:#0f172a; border:1px solid #283449; border-radius:8px; padding:7px 10px 7px 12px; cursor:pointer; transition:border-color .15s, background .15s; font-family:inherit; }
+    .token-pill:hover { border-color:#3a4a63; background:#131a2b; }
+    .token-pill-logo { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; flex-shrink:0; }
+    .token-pill-name { font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:500; color:#e8edf8; }
+    .token-pill-chev { color:#64748b; margin-left:1px; transition:transform .18s; }
+    .token-pill.open .token-pill-chev { transform:rotate(180deg); }
+    .token-menu { position:absolute; top:calc(100% + 6px); left:0; min-width:150px; background:#0d1322; border:1px solid #283449; border-radius:9px; padding:5px; z-index:50; box-shadow:0 12px 28px rgba(0,0,0,.5); animation:fadeUp .14s ease both; }
+    .token-menu-item { display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:6px; cursor:pointer; transition:background .12s; }
+    .token-menu-item:hover { background:#172033; }
+    .token-menu-item.selected { background:#15203a; }
+    .token-menu-item .tm-logo { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; flex-shrink:0; }
+    .token-menu-item .tm-sym { font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:500; color:#e8edf8; flex:1; }
+    .token-menu-item .tm-check { color:var(--blue); opacity:0; }
+    .token-menu-item.selected .tm-check { opacity:1; }
 
     /* History link */
     .history-link { display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:500; color:var(--muted); padding:9px 16px; border:1px solid var(--border); border-radius:var(--r-sm); transition:color .15s,border-color .15s; }
@@ -236,12 +246,14 @@
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:12px;">
-                <div style="display:flex;align-items:center;gap:7px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:7px 10px 7px 12px;flex-shrink:0;">
-                  <div id="pay-in-logo" style="width:22px;height:22px;border-radius:50%;background:#2775ca;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;">$</div>
-                  <select id="token-in-select"
-                          style="background:transparent;border:none;outline:none;cursor:pointer;
-                                 font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#e2e8f0;padding-right:2px;"></select>
-                  <span id="pay-in-name" style="display:none;">USDC</span>
+                <div class="token-picker" style="position:relative;flex-shrink:0;">
+                  <button type="button" id="token-in-pill" class="token-pill" onclick="toggleTokenMenu('in')">
+                    <span id="pay-in-logo" class="token-pill-logo" style="background:#2775ca;">$</span>
+                    <span id="pay-in-name" class="token-pill-name">USDC</span>
+                    <svg class="token-pill-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  <div id="token-in-menu" class="token-menu" style="display:none;"></div>
+                  <select id="token-in-select" style="display:none;"></select>
                 </div>
                 <input
                   id="amount-input"
@@ -280,12 +292,14 @@
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:12px;">
-                <div style="display:flex;align-items:center;gap:7px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:7px 10px 7px 12px;flex-shrink:0;">
-                  <div id="pay-out-logo" style="width:22px;height:22px;border-radius:50%;background:#1a3ca8;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;">€</div>
-                  <select id="token-out-select"
-                          style="background:transparent;border:none;outline:none;cursor:pointer;
-                                 font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#e2e8f0;padding-right:2px;"></select>
-                  <span id="pay-out-name" style="display:none;">EURC</span>
+                <div class="token-picker" style="position:relative;flex-shrink:0;">
+                  <button type="button" id="token-out-pill" class="token-pill" onclick="toggleTokenMenu('out')">
+                    <span id="pay-out-logo" class="token-pill-logo" style="background:#1a3ca8;">€</span>
+                    <span id="pay-out-name" class="token-pill-name">EURC</span>
+                    <svg class="token-pill-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  <div id="token-out-menu" class="token-menu" style="display:none;"></div>
+                  <select id="token-out-select" style="display:none;"></select>
                 </div>
                 <div id="estimate-output"
                      style="flex:1;text-align:right;font-family:'JetBrains Mono',monospace;

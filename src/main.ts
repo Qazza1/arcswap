@@ -123,7 +123,7 @@ function updateBalanceLabels(): void {
 
 const TOKEN_LOGO_COLORS: Record<string, string> = { USDC: "#2775ca", EURC: "#1a3ca8", cirBTC: "#f7931a" };
 
-// Populate both token dropdowns from the TOKENS registry and wire change handlers.
+// Populate hidden selects (source of truth) + build the custom dropdown menus.
 function initSwapSelectors(): void {
   const inSel  = el<HTMLSelectElement>("token-in-select");
   const outSel = el<HTMLSelectElement>("token-out-select");
@@ -138,7 +138,6 @@ function initSwapSelectors(): void {
 
   inSel.addEventListener("change", () => {
     tokenIn = inSel.value as TokenSymbol;
-    // Can't pay and receive the same token — bump the other side.
     if (tokenOut === tokenIn) {
       tokenOut = (Object.keys(TOKENS) as TokenSymbol[]).find(s => s !== tokenIn) ?? tokenOut;
     }
@@ -151,6 +150,65 @@ function initSwapSelectors(): void {
     }
     onTokenPairChanged();
   });
+
+  buildTokenMenu("in");
+  buildTokenMenu("out");
+
+  // Close any open menu when clicking outside the pickers.
+  document.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement;
+    if (!t.closest(".token-picker")) closeAllTokenMenus();
+  });
+}
+
+// Render the option rows for one side's custom menu.
+function buildTokenMenu(side: "in" | "out"): void {
+  const menu = el(`token-${side}-menu`);
+  if (!menu) return;
+  const current = side === "in" ? tokenIn : tokenOut;
+  menu.innerHTML = (Object.keys(TOKENS) as TokenSymbol[]).map(sym => {
+    const color = TOKEN_LOGO_COLORS[sym] ?? "#2775ca";
+    const sel = sym === current ? " selected" : "";
+    return `<div class="token-menu-item${sel}" data-side="${side}" data-sym="${sym}">
+      <span class="tm-logo" style="background:${color};">${TOKENS[sym].flag}</span>
+      <span class="tm-sym">${sym}</span>
+      <svg class="tm-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>`;
+  }).join("");
+  // Wire each row.
+  menu.querySelectorAll(".token-menu-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const sym = (item as HTMLElement).dataset.sym as TokenSymbol;
+      selectToken(side, sym);
+    });
+  });
+}
+
+function toggleTokenMenu(side: "in" | "out"): void {
+  const menu = el(`token-${side}-menu`);
+  const pill = el(`token-${side}-pill`);
+  if (!menu || !pill) return;
+  const isOpen = menu.style.display !== "none";
+  closeAllTokenMenus();
+  if (!isOpen) { menu.style.display = "block"; pill.classList.add("open"); }
+}
+
+function closeAllTokenMenus(): void {
+  (["in", "out"] as const).forEach(s => {
+    const m = el(`token-${s}-menu`); const p = el(`token-${s}-pill`);
+    if (m) m.style.display = "none";
+    if (p) p.classList.remove("open");
+  });
+}
+
+// User picked a token from the custom menu → drive the hidden select (which runs all existing logic).
+function selectToken(side: "in" | "out", sym: TokenSymbol): void {
+  closeAllTokenMenus();
+  const sel = el<HTMLSelectElement>(`token-${side}-select`);
+  if (!sel) return;
+  if (sel.value === sym) return; // no change
+  sel.value = sym;
+  sel.dispatchEvent(new Event("change"));
 }
 
 // Reflect the current tokenIn/tokenOut everywhere in the swap UI.
@@ -171,11 +229,17 @@ function renderSwapTokens(): void {
   if (inLogo)  { inLogo.textContent  = TOKENS[tokenIn].flag;  inLogo.style.background  = TOKEN_LOGO_COLORS[tokenIn]  ?? "#2775ca"; }
   if (outLogo) { outLogo.textContent = TOKENS[tokenOut].flag; outLogo.style.background = TOKEN_LOGO_COLORS[tokenOut] ?? "#1a3ca8"; }
 
-  // Keep the dropdowns in sync (e.g. after a flip or auto-bump)
+  // Keep the hidden selects in sync (e.g. after a flip or auto-bump)
   const inSel  = el<HTMLSelectElement>("token-in-select");
   const outSel = el<HTMLSelectElement>("token-out-select");
   if (inSel)  inSel.value  = tokenIn;
   if (outSel) outSel.value = tokenOut;
+
+  // Update the custom pill names + rebuild menu selection highlight
+  setText("pay-in-name",  tokenIn);
+  setText("pay-out-name", tokenOut);
+  if (el("token-in-menu"))  buildTokenMenu("in");
+  if (el("token-out-menu")) buildTokenMenu("out");
 
   // Execute button label
   const execBtn = el("execute-swap-btn");
@@ -799,6 +863,7 @@ document.addEventListener("DOMContentLoaded", () => {
   (window as any).executeBridge = executeBridge;
   (window as any).updateBridgeReceiveAmt = updateBridgeReceiveAmt;
   (window as any).flipBridgeDirection = flipBridgeDirection;
+  (window as any).toggleTokenMenu = toggleTokenMenu;
   (window as any).loadHistory = loadHistory;
 
   // Auto-reconnect if wallet was previously connected (silent — no popup)
