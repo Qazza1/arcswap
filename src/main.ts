@@ -305,8 +305,8 @@ const EXTERNAL_CHAINS: Record<string, BridgeChainDef> = {
     blockExplorerUrls: ["https://sepolia.arbiscan.io"],
     dot: "#28a0f0",
   },
-  OP_Sepolia: {
-    bridgeId: "OP_Sepolia",
+  Optimism_Sepolia: {
+    bridgeId: "Optimism_Sepolia",
     chainId: "0xaa37dc",
     chainName: "OP Sepolia",
     label: "OP Sepolia",
