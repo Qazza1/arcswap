@@ -109,21 +109,21 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div class="pillar-title">On-chain verifiable</div>
-        <div class="pillar-desc">Every payment, batch transfer, and fee collection is recorded on Arc and verifiable on ArcScan. There is no off-chain ledger, no internal database of transactions.</div>
+        <div class="pillar-desc">Every payment, batch transfer, and fee collection settles on Arc and is verifiable on ArcScan. ArcFX additionally indexes these public on-chain events into a database to power analytics and the developer API — but settlement itself is always on-chain, never in a private ledger.</div>
       </div>
       <div class="pillar">
         <div class="pillar-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
         </div>
         <div class="pillar-title">No private key storage</div>
-        <div class="pillar-desc">ArcFX never requests, stores, or transmits private keys or seed phrases. Wallet connection uses MetaMask or WalletConnect — your keys stay in your browser.</div>
+        <div class="pillar-desc">ArcFX never requests, stores, or transmits private keys or seed phrases. Wallet connection uses MetaMask — your keys stay in your browser.</div>
       </div>
       <div class="pillar">
         <div class="pillar-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
         </div>
         <div class="pillar-title">Safe / Multi-sig compatible</div>
-        <div class="pillar-desc">ArcFX works with Safe (Gnosis Safe) multi-sig wallets. Corporate treasuries requiring multiple approvals can use all ArcFX tools without modification.</div>
+        <div class="pillar-desc">ArcFX is non-custodial and interacts with standard ERC-20 tokens, so it is designed to work with smart-contract wallets such as Safe (Gnosis Safe). Full Safe multi-sig support is on our roadmap and not yet independently verified end-to-end on Arc.</div>
       </div>
     </div>
 
@@ -178,7 +178,7 @@
     <div class="section">
       <div class="section-title">Data storage &amp; privacy</div>
       <div class="section-body">
-        <p>ArcFX stores no personal data on any server. Your address book, saved invoice details and logo, and any scheduled payouts are kept entirely in your browser's localStorage — they never leave your device. Invoice PDFs and transaction receipts are generated client-side and downloaded directly to your machine.</p>
+        <p>ArcFX keeps your in-app data — your address book, saved invoice details and logo, and any scheduled payouts — entirely in your browser's localStorage; it never leaves your device, and invoice PDFs and receipts are generated client-side. The one exception: if you create a developer API key, we store the email address you provide and the request IP for that issuance, solely to issue the key and prevent abuse. We don't collect personal data beyond that.</p>
         <p>The only data ArcFX reads from external sources is your on-chain transaction history, fetched directly from Arc Testnet RPC and ArcScan. This is public blockchain data, the same data available to anyone with your wallet address.</p>
         <p>ArcFX does not use cookies, tracking pixels, or analytics beyond what is strictly necessary for the application to function. There is no advertising, no user profiling, and no data sold to third parties.</p>
       </div>
@@ -189,7 +189,7 @@
       <div class="section-title">Smart contract audit status</div>
       <div class="info-amber" style="margin-bottom:16px;">⚠ ArcFX smart contracts have not yet been formally audited by a third-party security firm. We are currently on Arc Testnet — mainnet deployment will follow a professional audit.</div>
       <div class="section-body">
-        <p>Our contracts are open source and verifiable on ArcScan &mdash; browse the full codebase at <a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" style="color:#2563eb;">github.com/Qazza1/arcswap</a>. We encourage security researchers to review the code. Responsible disclosure of any vulnerabilities should be sent to <a href="mailto:arcfxapp@gmail.com" style="color:#2563eb;">arcfxapp@gmail.com</a>.</p>
+        <p>Our contracts are open source &mdash; browse the full codebase at <a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" style="color:#2563eb;">github.com/Qazza1/arcswap</a>. We encourage security researchers to review the code. Responsible disclosure of any vulnerabilities should be sent to <a href="mailto:arcfxapp@gmail.com" style="color:#2563eb;">arcfxapp@gmail.com</a>.</p>
         <p>A formal audit from a reputable security firm is planned prior to Arc Mainnet launch. Audit reports will be published publicly.</p>
       </div>
     </div>

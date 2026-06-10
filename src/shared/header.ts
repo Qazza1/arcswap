@@ -59,7 +59,7 @@ const PRODUCT_STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boole
 
 // MARKETING mode: leads with business trust facts, testnet status moved to end (no dot)
 const MARKETING_STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boolean; valueColor?: string }> = [
-  { label: 'Backed by', value: 'a16z &amp; BlackRock' },
+  { label: 'Built on Arc', value: 'a16z &amp; BlackRock backed' },
   { label: 'Settlement',       value: '&lt; 1 second', valueColor: '#00d4aa' },
   { label: 'Avg fee',          value: '$0.0002',       valueColor: '#00d4aa' },
   { label: 'Gas token',        value: 'USDC' },

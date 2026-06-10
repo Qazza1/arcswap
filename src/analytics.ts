@@ -21,17 +21,25 @@ function shortH(h: string): string { return `${h.slice(0,8)}…${h.slice(-4)}`; 
 
 // ── Protocol stats (backend, full history) ─────────────────────────────────
 async function fetchStats(): Promise<void> {
-  const res = await fetch(`${API_BASE}/v1/stats`);
-  if (!res.ok) throw new Error(`stats ${res.status}`);
-  const d = await res.json();
-  const volume      = Number(d.volume || 0);
-  const settlements = Number(d.settlements || 0);
-  const avg         = settlements > 0 ? volume / settlements : 0;
+  try {
+    const res = await fetch(`${API_BASE}/v1/stats`);
+    if (!res.ok) throw new Error(`stats ${res.status}`);
+    const d = await res.json();
+    const volume      = Number(d.volume || 0);
+    const settlements = Number(d.settlements || 0);
+    const avg         = settlements > 0 ? volume / settlements : 0;
 
-  txt("stat-volume",    fmtUSD(volume));
-  txt("stat-revenue",   String(settlements));
-  txt("stat-wallets",   String(d.uniquePayers || 0));
-  txt("stat-avg-trade", fmtUSD(avg));
+    txt("stat-volume",    fmtUSD(volume));
+    txt("stat-revenue",   String(settlements));
+    txt("stat-wallets",   String(d.uniquePayers || 0));
+    txt("stat-avg-trade", fmtUSD(avg));
+  } catch {
+    // Don't leave the headline cards pulsing forever on failure.
+    txt("stat-volume", "—");
+    txt("stat-revenue", "—");
+    txt("stat-wallets", "—");
+    txt("stat-avg-trade", "—");
+  }
 }
 
 // ── "Who you paid" bars (backend, scoped to connected wallet) ──────────────
@@ -102,9 +110,13 @@ async function fetchFeed(): Promise<void> {
     feedBody.innerHTML = payments.map(p => {
       const amount = Number(p.gross) > 0 ? Number(p.gross).toFixed(4) : "—";
       const url    = `https://testnet.arcscan.app/tx/${p.txHash}`;
+      const t      = (p.type || "").toLowerCase();
+      const badge  = t.includes("swap") ? "badge-swap"
+                   : t.includes("multi") ? "badge-multisend"
+                   : "badge-pay";
       return `
         <tr>
-          <td><span class="type-badge badge-pay">${p.type}</span></td>
+          <td><span class="type-badge ${badge}">${p.type}</span></td>
           <td><span class="feed-amount">${amount} ${p.token}</span></td>
           <td><span class="feed-addr">${p.payer ? short(p.payer) : "—"}</span></td>
           <td class="hide-sm"><span class="feed-block">${p.blockNumber ? p.blockNumber.toLocaleString() : "—"}</span></td>
@@ -158,4 +170,4 @@ if (eth && eth.on) {
 }
 
 refreshAll();
-setInterval(refreshAll, 15_000);
+setInterval(() => { if (!document.hidden) refreshAll(); }, 15_000);
