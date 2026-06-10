@@ -363,36 +363,57 @@ async function loadHistory() {
       // Swap = same tx moves one token out and a *different* token in.
       const isSwap = hasOut && hasIn && syms.size >= 2;
 
-      let type, icon, iconClass, amtDisplay, amtClass, sym;
-
       if (isSwap) {
         const outItem = group.find(g => g.dir === "out");
         const inItem  = group.find(g => g.dir === "in");
-        type       = "Swap";
-        icon       = "\u21c4";
-        iconClass  = "icon-swap";
-        amtDisplay = `${fmt(outItem.amtNum)} \u2192 ${fmt(inItem.amtNum)}`;
-        amtClass   = "amt-swap";
-        sym        = `${outItem.sym} \u2192 ${inItem.sym}`;
-      } else if (t.dir === "out") {
-        type = "Sent"; icon = "\u2191"; iconClass = "icon-out";
-        amtDisplay = `\u2212${fmt(t.amtNum)}`; amtClass = "amt-out"; sym = t.sym;
-      } else {
-        type = "Received"; icon = "\u2193"; iconClass = "icon-in";
-        amtDisplay = `+${fmt(t.amtNum)}`; amtClass = "amt-in"; sym = t.sym;
+        processed.push({
+          hash: t.hash, block: t.block,
+          type: "Swap", icon: "\u21c4", iconClass: "icon-swap",
+          amtDisplay: `${fmt(outItem.amtNum)} \u2192 ${fmt(inItem.amtNum)}`,
+          amtClass: "amt-swap",
+          sym: `${outItem.sym} \u2192 ${inItem.sym}`,
+          isSwap: true, dir: t.dir, counterparty: "",
+          rawAmt: outItem.amtNum,
+        });
+        continue;
       }
 
-      const counterparty = isSwap ? "" : (t.dir === "out" ? t.to : t.from);
+      // Non-swap: sum same-direction legs per token so a multisend (many
+      // out-legs in one tx) reports its FULL total, not just the first leg.
+      // Emit one row per (direction, token) combination present in the tx.
+      const buckets = new Map(); // key: dir|sym -> { dir, sym, sum, count, other }
+      for (const g of group) {
+        const key = `${g.dir}|${g.sym}`;
+        const b = buckets.get(key) || { dir: g.dir, sym: g.sym, sum: 0, count: 0, other: g.dir === "out" ? g.to : g.from };
+        b.sum += g.amtNum;
+        b.count += 1;
+        buckets.set(key, b);
+      }
 
-      processed.push({
-        hash: t.hash,
-        block: t.block,
-        type, icon, iconClass, amtDisplay, amtClass, sym,
-        isSwap,
-        dir: t.dir,
-        counterparty,
-        rawAmt: t.amtNum,
-      });
+      for (const b of buckets.values()) {
+        const many = b.count > 1;
+        if (b.dir === "out") {
+          processed.push({
+            hash: t.hash, block: t.block,
+            type: many ? `Sent (\u00d7${b.count})` : "Sent",
+            icon: "\u2191", iconClass: "icon-out",
+            amtDisplay: `\u2212${fmt(b.sum)}`, amtClass: "amt-out", sym: b.sym,
+            isSwap: false, dir: "out",
+            counterparty: many ? "" : b.other,
+            rawAmt: b.sum,
+          });
+        } else {
+          processed.push({
+            hash: t.hash, block: t.block,
+            type: many ? `Received (\u00d7${b.count})` : "Received",
+            icon: "\u2193", iconClass: "icon-in",
+            amtDisplay: `+${fmt(b.sum)}`, amtClass: "amt-in", sym: b.sym,
+            isSwap: false, dir: "in",
+            counterparty: many ? "" : b.other,
+            rawAmt: b.sum,
+          });
+        }
+      }
     }
 
     allTxs = processed;
