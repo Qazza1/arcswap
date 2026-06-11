@@ -42,10 +42,17 @@ function setHTML(id: string, html: string): void  { const n = el(id); if (n) n.i
 function addClass(id: string, cls: string): void    { el(id)?.classList.add(cls); }
 function removeClass(id: string, cls: string): void { el(id)?.classList.remove(cls); }
 
-// Status: writes to both elements so it works before and after wallet connect
+// Status: writes to both targets so errors are visible before AND after connect.
+// Pre-connect, the swap card (and its #swap-status) is hidden, so we also write
+// to #global-status — which sits above the connect card — and toggle its
+// visibility so connect errors ("MetaMask not found", "Connection rejected")
+// aren't swallowed by a hidden element.
 function showStatus(msg: string, type: "success"|"error"|"info"|""): void {
   const html = msg ? `<div class="status ${type}">${msg}</div>` : "";
-  setHTML("swap-status", html);   // global-status is hidden; swap-status is the visible target
+  setHTML("swap-status", html);
+  setHTML("global-status", html);
+  const gs = el("global-status");
+  if (gs) gs.style.display = msg ? "block" : "none";
 }
 
 async function connectWallet(): Promise<void> {

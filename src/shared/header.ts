@@ -134,12 +134,14 @@ const CANONICAL_CSS = `
     .stats-bar-inner::-webkit-scrollbar { display: none; }
     .stats-bar-sep { margin: 0 14px; }
 
-    /* Nav: hide center links and the testnet pill; keep logo + primary action.
-       Marketing → Logo + Launch/Back-to-app.  Product → Logo + Contacts + Connect. */
+    /* Nav: hide center links on mobile, show the hamburger instead.
+       Marketing → Logo + Launch/Back-to-app.  Product → Logo + hamburger + Connect. */
     .arcfx-nav { padding: 0 16px !important; }
     .arcfx-nav-center { display: none !important; }
-    .arcfx-testnet-pill { display: none !important; }
+    .arcfx-hamburger { display: flex !important; }
   }
+  /* Hamburger is desktop-hidden; the media query above reveals it ≤768px. */
+  .arcfx-hamburger { display: none; }
 `;
 
 function ensureCss(): void {
@@ -245,6 +247,27 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
     return `<a href="${l.href}" style="display:block;padding:9px 12px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;color:${col};background:${bg};transition:all .15s;" onmouseover="this.style.background='#1e293b';this.style.color='#f1f5f9'" onmouseout="this.style.background='${bg}';this.style.color='${col}'">${l.label}</a>`;
   }).join('');
 
+  // ── Mobile menu (≤768px): a flat list of every destination, since the
+  // center nav (Trade / Tools / Analytics / History / Docs / More) is hidden. ──
+  const mobileLinkStyle = (active: boolean) => {
+    const bg  = active ? '#1e293b' : 'transparent';
+    const col = active ? '#f1f5f9' : '#cbd5e1';
+    return `display:block;padding:13px 16px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:500;color:${col};background:${bg};`;
+  };
+  const mobileSectionLabel = (t: string) =>
+    `<div style="padding:14px 16px 6px;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#475569;font-family:'JetBrains Mono',monospace;">${t}</div>`;
+
+  const mobileMenuItems = [
+    `<a href="/trade" style="${mobileLinkStyle(activeLink === 'trade')}">Trade</a>`,
+    mobileSectionLabel('Tools'),
+    ...TOOLS.map(t => `<a href="${t.href}" style="${mobileLinkStyle(activeTool === t.key)}">${t.name}</a>`),
+    mobileSectionLabel('More'),
+    ...TOP_LEVEL_LINKS
+      .filter(l => l.key === 'analytics' || l.key === 'history' || l.key === 'docs' || l.key === 'developers')
+      .map(l => `<a href="${l.href}" style="${mobileLinkStyle(l.key === activeLink)}">${l.label}</a>`),
+    ...MORE_LINKS.map(l => `<a href="${l.href}" style="${mobileLinkStyle(l.key === activeLink)}">${l.label}</a>`),
+  ].join('');
+
   return `
 <nav class="arcfx-nav" style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;">
   <a href="/app" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
@@ -274,6 +297,12 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
     </div>
     <button id="arcfx-contacts-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;" onmouseover="this.style.borderColor='#2563eb';this.style.color='#94a3b8'" onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Contacts</button>
     <button id="connect-btn" style="padding:7px 16px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#94a3b8;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#1e293b'">Connect wallet</button>
+    <button class="arcfx-hamburger" id="arcfx-hamburger-${pageKey}" aria-label="Menu" style="align-items:center;justify-content:center;width:38px;height:38px;border-radius:8px;border:1px solid #1e293b;background:#0f172a;color:#cbd5e1;cursor:pointer;flex-shrink:0;padding:0;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+  <div id="arcfx-mobile-menu-${pageKey}" style="display:none;position:absolute;top:64px;left:0;right:0;background:#0a0f1e;border-bottom:1px solid #1e293b;padding:10px 12px 16px;z-index:90;box-shadow:0 20px 40px rgba(0,0,0,.5);">
+    ${mobileMenuItems}
   </div>
 </nav>
 `;
@@ -306,6 +335,21 @@ const CONTACTS_MODAL_HTML = `
 function wireBehavior(pageKey: PageKey, mode: Mode): void {
   // Marketing mode has none of these elements — bail early.
   if (mode === 'marketing') return;
+
+  // Mobile hamburger menu toggle
+  const hamburger  = document.getElementById(`arcfx-hamburger-${pageKey}`);
+  const mobileMenu = document.getElementById(`arcfx-mobile-menu-${pageKey}`);
+  if (hamburger && mobileMenu) {
+    hamburger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      mobileMenu.style.display = mobileMenu.style.display === 'block' ? 'none' : 'block';
+    });
+    document.addEventListener('click', (e) => {
+      if (!mobileMenu.contains(e.target as Node) && !hamburger.contains(e.target as Node)) {
+        mobileMenu.style.display = 'none';
+      }
+    });
+  }
 
   // Tools dropdown toggle
   const toolsBtn = document.getElementById(`arcfx-tools-btn-${pageKey}`);
