@@ -206,6 +206,18 @@ const toAddr   = params.get("to")     || "";
 const fixedAmt = params.get("amount") || "";
 const tokenPrm = (params.get("token") || "USDC").toUpperCase();
 const note     = params.get("note")   || "";
+
+// Escape any user-supplied string before it goes into innerHTML.
+// `note` comes straight from the URL and is attacker-controllable, so it must
+// never be rendered as raw HTML (reflected-XSS guard).
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 const isPayMode = isAddress(toAddr);
 
 if (isPayMode) {
@@ -390,7 +402,7 @@ function renderPayMode() {
         ${note ? `
         <div class="pay-note">
           <strong>Note</strong>
-          ${note}
+          ${escapeHtml(note)}
         </div>` : ""}
 
         <div id="pay-status"></div>
