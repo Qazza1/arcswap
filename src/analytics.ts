@@ -11,11 +11,7 @@ const API_BASE = "https://arcfx-backend-production.up.railway.app";
 const el  = (id: string) => document.getElementById(id);
 const txt = (id: string, val: string) => { const n = el(id); if (n) n.textContent = val; };
 
-function fmtUSD(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000)     return `$${(n / 1_000).toFixed(2)}K`;
-  return `$${n.toFixed(2)}`;
-}
+// (Removed fmtUSD — volume is now reported per-token, never as a blended "$".)
 function short(a: string): string  { return `${a.slice(0,8)}…${a.slice(-6)}`; }
 function shortH(h: string): string { return `${h.slice(0,8)}…${h.slice(-4)}`; }
 
@@ -25,14 +21,44 @@ async function fetchStats(): Promise<void> {
     const res = await fetch(`${API_BASE}/v1/stats`);
     if (!res.ok) throw new Error(`stats ${res.status}`);
     const d = await res.json();
-    const volume      = Number(d.volume || 0);
     const settlements = Number(d.settlements || 0);
-    const avg         = settlements > 0 ? volume / settlements : 0;
 
-    txt("stat-volume",    fmtUSD(volume));
+    // Volume is split per token — USDC and EURC are different currencies and
+    // must not be merged into one "$" figure (M18). Show each on its own.
+    const byToken: Array<{ token: string; volume: number }> = Array.isArray(d.byToken) ? d.byToken : [];
+    const fmtAmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+    if (byToken.length) {
+      // Primary card: the largest-volume token; sublabel lists the rest.
+      const sorted = byToken
+        .map(t => ({ token: t.token, volume: Number(t.volume || 0) }))
+        .sort((a, b) => b.volume - a.volume);
+      const top = sorted[0];
+      txt("stat-volume", `${fmtAmt(top.volume)} ${top.token}`);
+      const subParts = sorted.map(t => `${fmtAmt(t.volume)} ${t.token}`);
+      txt("stat-volume-sub", subParts.join(" · ") + " processed");
+    } else {
+      // Fallback if backend hasn't been deployed with byToken yet.
+      txt("stat-volume", fmtAmt(Number(d.volume || 0)));
+      txt("stat-volume-sub", "USDC + EURC combined");
+    }
+
     txt("stat-revenue",   String(settlements));
     txt("stat-wallets",   String(d.uniquePayers || 0));
-    txt("stat-avg-trade", fmtUSD(avg));
+
+    // Avg payment: report it per the dominant token to avoid a cross-currency
+    // average. (A blended USDC+EURC average isn't a meaningful figure.)
+    if (byToken.length) {
+      const sorted = byToken
+        .map(t => ({ token: t.token, volume: Number(t.volume || 0), settlements: Number((t as any).settlements || 0) }))
+        .sort((a, b) => b.volume - a.volume);
+      const top = sorted[0];
+      const avg = top.settlements > 0 ? top.volume / top.settlements : 0;
+      txt("stat-avg-trade", `${fmtAmt(avg)} ${top.token}`);
+    } else {
+      const avg = settlements > 0 ? Number(d.volume || 0) / settlements : 0;
+      txt("stat-avg-trade", fmtAmt(avg));
+    }
   } catch {
     // Don't leave the headline cards pulsing forever on failure.
     txt("stat-volume", "—");
@@ -69,11 +95,12 @@ async function loadBreakdown(address: string | null): Promise<void> {
       const total = Number(r.total) || 0;
       const pct   = Math.max(2, Math.round((total / max) * 100));
       const times = r.count === 1 ? "1 payment" : `${r.count} payments`;
+      const tk    = r.token ? ` ${r.token}` : "";
       return `
         <div class="bar-row">
           <span class="bar-name" title="${r.recipient}">${short(r.recipient)}</span>
           <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-          <span class="bar-val">$${total.toFixed(2)} <span class="bar-count">· ${times}</span></span>
+          <span class="bar-val">${total.toFixed(2)}${tk} <span class="bar-count">· ${times}</span></span>
         </div>`;
     }).join("");
   } catch {
