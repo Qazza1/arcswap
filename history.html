@@ -203,7 +203,7 @@
   </div>
 
   <div class="page-footer">
-    <span>Showing your full USDC, EURC &amp; cirBTC transaction history on Arc Testnet</span>
+    <span id="history-footer-note">Showing your full USDC, EURC &amp; cirBTC transaction history on Arc Testnet</span>
     <div style="display:flex;gap:20px;">
       <a href="/invoice">Create invoice →</a>
       <a href="/pay">Pay link →</a>
@@ -290,7 +290,9 @@ async function loadHistory() {
   async function fetchAllTransfers(addr) {
     const out = [];
     let url = `${ARCSCAN_API}/addresses/${addr}/token-transfers?type=ERC-20`;
-    for (let page = 0; page < 10 && url; page++) {
+    let truncated = false;
+    const MAX_PAGES = 20;
+    for (let page = 0; page < MAX_PAGES && url; page++) {
       let data;
       try {
         const res = await fetch(url, { headers: { Accept: "application/json" } });
@@ -300,18 +302,28 @@ async function loadHistory() {
       for (const it of (data.items || [])) out.push(it);
       const np = data.next_page_params;
       if (np && (np.block_number != null) && (np.index != null)) {
+        // Still more pages after we hit the cap → history is incomplete.
+        if (page === MAX_PAGES - 1) { truncated = true; break; }
         const qs = new URLSearchParams(np).toString();
         url = `${ARCSCAN_API}/addresses/${addr}/token-transfers?type=ERC-20&${qs}`;
       } else {
         url = null;
       }
     }
+    out._truncated = truncated;
     return out;
   }
 
   try {
     const me = userAddress.toLowerCase();
     const items = await fetchAllTransfers(userAddress);
+    // M5: if pagination hit its cap, the wallet has more history than we loaded.
+    const footNote = el("history-footer-note");
+    if (footNote) {
+      footNote.textContent = items._truncated
+        ? "Showing your most recent transactions on Arc Testnet — older history was truncated (this wallet has a lot of activity)."
+        : "Showing your full USDC, EURC & cirBTC transaction history on Arc Testnet";
+    }
 
     // Keep only the tokens we track (USDC / EURC / cirBTC), tag direction.
     const tagged = [];

@@ -546,7 +546,15 @@ function flipBridgeDirection(): void {
 }
 
 async function executeBridge(): Promise<void> {
-  if (isBridging || !window.ethereum) return;
+  if (isBridging) return;
+  if (!window.ethereum) {
+    showBridgeStatus("No wallet detected. Install MetaMask to bridge.", "error");
+    return;
+  }
+  if (!ethersProvider || !userAddress) {
+    showBridgeStatus("Connect your wallet first to bridge.", "error");
+    return;
+  }
   const amtInput = el<HTMLInputElement>("bridge-amount-input");
   const amount = amtInput?.value?.trim() ?? "";
   if (!amount || parseFloat(amount) <= 0) { showBridgeStatus("Enter an amount to bridge.","error"); return; }
