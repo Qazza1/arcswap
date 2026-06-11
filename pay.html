@@ -198,6 +198,7 @@ const PAYMENTS_ADDRESS = "0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3";
 const PAYMENTS_ABI = [
   "function pay(address token, address recipient, uint256 gross, bytes32 paymentId) external",
   "function quoteFee(uint256 gross) external pure returns (uint256 fee, uint256 net)",
+  "function FEE_BPS() view returns (uint256)",
 ];
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -229,6 +230,7 @@ if (isPayMode) {
   document.getElementById("page-title").textContent = `Pay ${toAddr.slice(0,6)}… on ArcFX`;
   selectedToken = TOKENS[tokenPrm] ? tokenPrm : "USDC";
   renderPayMode();
+  loadPayFeeBps();  // populate the live fee breakdown (recipient gets / fee / you pay)
 } else {
   renderGenMode();
 }
@@ -415,9 +417,15 @@ function renderPayMode() {
           <div class="field">
             <label>Amount</label>
             <input id="pay-custom-amount" type="number" min="0" step="any" placeholder="0.00" autocomplete="off"
-              oninput="document.getElementById('pay-amount-display').textContent = this.value || '—'" />
+              oninput="document.getElementById('pay-amount-display').textContent = this.value || '—'; updateFeeBreakdown();" />
           </div>
         </div>` : ""}
+
+        <div id="fee-breakdown" style="display:none;background:var(--raised);border:1px solid var(--bmed);border-radius:var(--rsm);padding:12px 14px;margin-bottom:14px;font-size:13px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="color:var(--muted);">Recipient receives</span><span id="fb-net" style="font-family:'JetBrains Mono',monospace;color:var(--text);">—</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="color:var(--muted);">ArcFX fee <span id="fb-pct" style="color:var(--subtle);"></span></span><span id="fb-fee" style="font-family:'JetBrains Mono',monospace;color:var(--subtle);">—</span></div>
+          <div style="display:flex;justify-content:space-between;padding-top:7px;border-top:1px solid var(--bmed);font-weight:600;"><span style="color:var(--text);">You pay</span><span id="fb-gross" style="font-family:'JetBrains Mono',monospace;color:var(--text);">—</span></div>
+        </div>
 
         ${note ? `
         <div class="pay-note">
@@ -517,15 +525,36 @@ async function sendPayment() {
 
   try {
     const tok      = TOKENS[selectedToken];
-    const gross    = parseUnits(parseFloat(amount).toFixed(tok.decimals), tok.decimals);
     const erc20    = new Contract(tok.address, ERC20_ABI, signer);
     const payments = new Contract(PAYMENTS_ADDRESS, PAYMENTS_ABI, signer);
+
+    // The entered amount is what the RECIPIENT should receive (net). The contract
+    // deducts FEE_BPS from whatever it's sent, so we gross it up: the payer sends
+    // `gross`, the contract takes the fee, and the recipient nets >= the entered
+    // amount. Integer (BigInt) math with ceiling — never float — so the recipient
+    // is never short by dust.
+    const wantNet = parseUnits(parseFloat(amount).toFixed(tok.decimals), tok.decimals);
+
+    // feeBps read live from the contract (anti-drift); falls back to 15 (0.15%).
+    let bps = 15n;
+    try { bps = BigInt(await payments.FEE_BPS()); } catch { bps = 15n; }
+    const DENOM = 10000n;
+    // gross = ceil(wantNet * DENOM / (DENOM - bps))
+    const denomNet = DENOM - bps;
+    let gross = (wantNet * DENOM + (denomNet - 1n)) / denomNet;
+
+    // Belt-and-suspenders: confirm the contract's own math nets >= wantNet,
+    // and nudge up by the smallest unit if a rounding edge ever leaves it short.
+    try {
+      const q = await payments.quoteFee(gross);
+      if (q.net < wantNet) gross = gross + 1n;
+    } catch { /* quoteFee best-effort; the ceiling above already covers it */ }
 
     // Build paymentId from note or fallback
     const noteText = note || "arcfx-payment";
     const paymentId = ethersId(noteText); // keccak256 of the note string
 
-    // Step 1 — Approve ArcFXPayments to spend gross amount
+    // Step 1 — Approve ArcFXPayments to spend the grossed-up amount
     showPayStatus("Step 1/2 — Approve token spending in MetaMask…", "info");
     const approveTx = await erc20.approve(PAYMENTS_ADDRESS, gross);
     await approveTx.wait();
@@ -544,10 +573,11 @@ async function sendPayment() {
     const sub  = document.getElementById("success-sub");
     const link = document.getElementById("success-link");
 
-    // Calculate net for display (gross - 0.15% fee)
-    const feeAmt = parseFloat(amount) * 0.0015;
-    const netAmt = parseFloat(amount) - feeAmt;
-    if (sub)  sub.textContent = `${netAmt.toFixed(4)} ${selectedToken} delivered · ${feeAmt.toFixed(4)} protocol fee`;
+    // Display: recipient received the full entered amount; show what payer paid.
+    const grossF = parseFloat(formatUnits(gross, tok.decimals));
+    const netF   = parseFloat(amount);
+    const feeF   = grossF - netF;
+    if (sub)  sub.textContent = `${netF.toFixed(4)} ${selectedToken} delivered to recipient · you paid ${grossF.toFixed(4)} (incl. ${feeF.toFixed(4)} fee)`;
     if (link) link.href = `https://testnet.arcscan.app/tx/${receipt.hash}`;
 
   } catch(err) {
@@ -602,6 +632,37 @@ window.ethereum?.on("accountsChanged", (a) => { if (!a.length) window.location.r
 // expose for pay mode
 window.connectAndPay = connectAndPay;
 window.sendPayment   = sendPayment;
+
+// Fee breakdown (live): shows "recipient receives / fee / you pay" so the
+// payer sees the gross-up upfront. Fee rate read from the contract once.
+let payFeeBps = 15n;
+async function loadPayFeeBps() {
+  try {
+    const p = new Contract(PAYMENTS_ADDRESS, PAYMENTS_ABI, provider || new BrowserProvider(window.ethereum));
+    payFeeBps = BigInt(await p.FEE_BPS());
+  } catch { payFeeBps = 15n; }
+  updateFeeBreakdown();
+}
+window.updateFeeBreakdown = function() {
+  const box = document.getElementById("fee-breakdown");
+  if (!box) return;
+  const raw = (fixedAmt && parseFloat(fixedAmt) > 0)
+    ? fixedAmt
+    : (document.getElementById("pay-custom-amount")?.value || "");
+  const net = parseFloat(raw);
+  if (!net || net <= 0) { box.style.display = "none"; return; }
+
+  const bps = Number(payFeeBps);
+  const gross = net * 10000 / (10000 - bps);
+  const fee   = gross - net;
+  const sym   = selectedToken;
+  const set = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = v; };
+  set("fb-net",  `${net.toFixed(2)} ${sym}`);
+  set("fb-fee",  `${fee.toFixed(2)} ${sym}`);
+  set("fb-gross",`${gross.toFixed(2)} ${sym}`);
+  set("fb-pct",  `(${(bps/100).toFixed(2)}%)`);
+  box.style.display = "block";
+};
 // "Make another payment" — reload the same URL so the recipient/amount context
 // is preserved and the form resets cleanly (no stale success state).
 window.payAgain = function() { window.location.reload(); };

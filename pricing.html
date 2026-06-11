@@ -120,7 +120,7 @@
 
     <!-- Clarifier: pricing is usage-based, not a plan to choose -->
     <div style="background:#0c1628;border:1px solid #1e293b;border-left:3px solid #2563eb;border-radius:8px;padding:14px 18px;margin-bottom:32px;font-size:13px;color:#94a3b8;line-height:1.7;">
-      ArcFX is one product — there's no signup or plan to choose. The tiers below describe how fees apply at different usage levels. The 0.15% fee is deducted automatically on-chain the moment a payment is sent.
+      ArcFX is one product — there's no signup or plan to choose. The tiers below describe how fees apply at different usage levels. The 0.15% fee is added on top of the payment on-chain the moment a payment is sent, so the recipient always receives the full amount.
     </div>
 
     <!-- Plans -->
@@ -197,10 +197,10 @@
         </div>
         <div class="calc-arrow">→</div>
         <div>
-          <div class="calc-label">Fee (0.15%)</div>
+          <div class="calc-label">Fee (0.15%, paid by sender)</div>
           <div class="calc-result">
             <div class="calc-result-val" id="calc-fee">1.50 USDC</div>
-            <div class="calc-result-label">Recipient receives <span id="calc-net" style="color:#f1f5f9;font-weight:600;">998.50 USDC</span></div>
+            <div class="calc-result-label">You pay <span id="calc-net" style="color:#f1f5f9;font-weight:600;">1001.50 USDC</span> · recipient receives the full amount</div>
           </div>
         </div>
       </div>
@@ -266,7 +266,7 @@
     </div>
     <div class="faq-item">
       <div class="faq-q">How is the fee collected?</div>
-      <div class="faq-a">Automatically on-chain. When a payment is made, the smart contract deducts 0.15% and routes it to the ArcFX treasury wallet. The recipient receives the remainder instantly. No invoicing, no manual billing.</div>
+      <div class="faq-a">Automatically on-chain. The fee is added on top of the payment amount, so the recipient receives the full amount they were sent and the 0.15% is routed to the ArcFX treasury wallet in the same transaction. No invoicing, no manual billing.</div>
     </div>
     <div class="faq-item">
       <div class="faq-q">Is there a minimum payment size?</div>
@@ -299,11 +299,13 @@
 
   <script>
     function calcFee() {
+      // Payer-pays model: the entered amount is what the recipient receives;
+      // the sender pays that plus the 0.15% fee on top.
       var amt = parseFloat(document.getElementById('calc-amount').value) || 0;
       var fee = (amt * 0.0015).toFixed(2);
-      var net = (amt - parseFloat(fee)).toFixed(2);
+      var youPay = (amt + parseFloat(fee)).toFixed(2);
       document.getElementById('calc-fee').textContent = fee + ' USDC';
-      document.getElementById('calc-net').textContent  = net + ' USDC';
+      document.getElementById('calc-net').textContent  = youPay + ' USDC';
     }
   </script>
 
