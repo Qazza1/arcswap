@@ -645,7 +645,7 @@
             </div>
             <div class="summary-cell">
               <div class="summary-val" id="sum-fee">0.00</div>
-              <div class="summary-lbl">ArcFX fee (0.15%)</div>
+              <div class="summary-lbl" id="sum-fee-lbl">ArcFX fee</div>
             </div>
           </div>
 
@@ -984,6 +984,7 @@
       txt("sum-recipients", count);
       txt("sum-total",      total.toFixed(4) + " " + selectedToken);
       txt("sum-fee",        fee > 0 ? fee.toFixed(4) + " " + selectedToken : "Free");
+      txt("sum-fee-lbl",    isPro ? `ArcFX fee (${feePct}%)` : "ArcFX fee (Free tier)");
 
       el("tier-info").innerHTML = isPro
         ? `<strong>Pro tier:</strong> Up to 500 recipients. A <strong>${feePct}% fee</strong> (${fee.toFixed(4)} ${selectedToken}) is added. Total needed: <strong>${(total+fee).toFixed(4)} ${selectedToken}</strong>.`
