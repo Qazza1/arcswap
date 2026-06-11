@@ -846,6 +846,16 @@
     };
 
     window.selectTier = function(tier) {
+      // The Free tier (multisendFree) is capped at 5 recipients on-chain. Switching
+      // to Free with more than 5 loaded would revert AFTER a paid approval, so block
+      // it here with a clear message instead of letting it fail on-chain (M7).
+      if (tier === "free" && recipients.length > 5) {
+        showStatus(`Free tier is limited to 5 recipients — you have ${recipients.length}. Remove recipients down to 5, or stay on Pro.`, "error");
+        // Keep the buttons reflecting the actual (still-Pro) tier.
+        el("btn-free").classList.toggle("active", selectedTier === "free");
+        el("btn-pro").classList.toggle("active", selectedTier === "pro");
+        return;
+      }
       selectedTier = tier;
       el("btn-free").classList.toggle("active", tier === "free");
       el("btn-pro").classList.toggle("active", tier === "pro");
@@ -940,9 +950,10 @@
         if (parts.length < 2) { errors++; continue; }
         const addr = parts[0];
         const amt  = parts[1];
-        if (!addr.match(/^0x[0-9a-fA-F]{40}$/) || !amt || parseFloat(amt) <= 0) { errors++; continue; }
+        const amtNum = parseAmountLoose(amt);
+        if (!addr.match(/^0x[0-9a-fA-F]{40}$/) || isNaN(amtNum) || amtNum <= 0) { errors++; continue; }
         if (recipients.length >= limit) break;
-        recipients.push({ address: addr, amount: amt });
+        recipients.push({ address: addr, amount: String(amtNum) });
         added++;
       }
 
@@ -1053,6 +1064,23 @@
         return;
       }
 
+      // Balance pre-check (M8): compare the needed total to the actual balance
+      // BEFORE asking for an approval, so insufficient funds shows a friendly
+      // message instead of a cryptic on-chain "execution reverted" after the
+      // user has already paid for the approval tx.
+      try {
+        const tokenRead = new Contract(token.address, ERC20_ABI, signer);
+        const bal = await tokenRead.balanceOf(userAddress);
+        if (bal < neededWei) {
+          const needFmt = parseFloat(formatUnits(neededWei, token.decimals)).toFixed(4);
+          const haveFmt = parseFloat(formatUnits(bal, token.decimals)).toFixed(4);
+          btn.disabled = false;
+          btn.textContent = `1. Approve ${selectedToken}`;
+          showStatus(`Insufficient balance: you need ${needFmt} ${selectedToken} (incl. fee) but have ${haveFmt}.`, "error");
+          return;
+        }
+      } catch { /* balance read best-effort; contract still enforces it on-chain */ }
+
       try {
         const tokenContract = new Contract(token.address, ERC20_ABI, signer);
 
@@ -1162,14 +1190,43 @@
 
     window.ethereum?.on("chainChanged", () => window.location.reload());
 
-    // Auto-reconnect silently on page load
-    if (window.ethereum) {
-      window.ethereum.request({ method: "eth_accounts" }).then(function(accounts) {
-        if (accounts && accounts.length > 0 && typeof connectWallet === "function") {
-          connectWallet();
+    // Auto-reconnect silently on page load — use eth_accounts (no popup) and do
+    // NOT call connectWallet(), which would fire wallet_switchEthereumChain and
+    // pop MetaMask unprompted (M12). Only show the app if already on Arc Testnet.
+    async function silentReconnect() {
+      if (!window.ethereum) return;
+      try {
+        const accounts = await window.ethereum.request({ method: "eth_accounts" });
+        if (!accounts || !accounts.length) return;
+
+        let chainId = "";
+        try { chainId = await window.ethereum.request({ method: "eth_chainId" }); } catch { chainId = ""; }
+        if (chainId && chainId.toLowerCase() !== ARC_TESTNET.chainId.toLowerCase()) {
+          // Authorized but wrong network — leave the connect screen; a manual
+          // Connect click will switch the chain. No popup on load.
+          return;
         }
-      }).catch(function(){});
+
+        provider    = new BrowserProvider(window.ethereum);
+        signer      = await provider.getSigner();
+        userAddress = await signer.getAddress();
+        const short = userAddress.slice(0,6)+"…"+userAddress.slice(-4);
+        el("connect-btn").textContent = short;
+        el("connect-btn").classList.add("connected");
+
+        hide("connect-section");
+        show("app-section");
+
+        try {
+          const msRead = new Contract(MULTISENDER_ADDRESS, MULTISENDER_ABI, signer);
+          feeBps = Number(await msRead.FEE_BPS());
+        } catch { /* keep default */ }
+
+        await loadBalance();
+        updateSummary();
+      } catch { /* silent — user can connect manually */ }
     }
+    silentReconnect();
 
     // ── Scheduled payouts (reminder-based, non-custodial) ──────────────────
     const SCHEDULE_KEY = "arcfx_multisend_schedules";
@@ -1296,9 +1353,9 @@
 
       let html = "";
       entries.forEach(function(e, i) {
-        const initial = (e.name || "?").charAt(0).toUpperCase();
-        const addr    = (e.address || "");
-        const name    = (e.name || "");
+        const initial = schedEsc((e.name || "?").charAt(0).toUpperCase());
+        const addr    = schedEsc(e.address || "");
+        const name    = schedEsc(e.name || "");
         html += "<div style=\"display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;\">";
         html += "<div style=\"width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;\">" + initial + "</div>";
         html += "<div style=\"flex:1;min-width:0;\">";
@@ -1502,12 +1559,43 @@
       applyMapping(dataRows, addrCol, amtCol);
     };
 
+    // Parse a human-typed amount that may use US (1,234.56) or EU (1.234,56)
+    // grouping/decimal conventions. Heuristic: whichever of '.' or ',' appears
+    // LAST is the decimal separator; the other is a thousands separator and is
+    // stripped. This prevents a silent ~1000x under-send when an EU-formatted
+    // spreadsheet (comma decimal) is imported.
+    function parseAmountLoose(raw) {
+      let s = String(raw || "").trim().replace(/[$€£\s]/g, "");
+      if (!s) return NaN;
+      const lastDot = s.lastIndexOf(".");
+      const lastComma = s.lastIndexOf(",");
+      if (lastDot !== -1 && lastComma !== -1) {
+        // Both present: the later one is the decimal point.
+        if (lastComma > lastDot) {
+          // EU: '.' = thousands, ',' = decimal
+          s = s.replace(/\./g, "").replace(",", ".");
+        } else {
+          // US: ',' = thousands, '.' = decimal
+          s = s.replace(/,/g, "");
+        }
+      } else if (lastComma !== -1) {
+        // Only commas. Treat as decimal if it looks like one (e.g. "1234,56"),
+        // otherwise as thousands (e.g. "1,234"). If the part after the last
+        // comma is 1-2 digits, it's almost certainly a decimal.
+        const after = s.length - lastComma - 1;
+        if (after === 1 || after === 2) s = s.replace(/\./g, "").replace(",", ".");
+        else s = s.replace(/,/g, "");
+      }
+      // Only dots, or no separators: parseFloat handles it directly.
+      return parseFloat(s);
+    }
+
     function applyMapping(dataRows, addrCol, amtCol) {
       parsedRows = dataRows
         .map((row, i) => {
           const addr = String(row[addrCol] || "").trim();
-          const amtRaw = String(row[amtCol] || "").trim().replace(/[,$€£ ]/g, "");
-          const amt  = parseFloat(amtRaw);
+          const amtRaw = String(row[amtCol] || "").trim();
+          const amt  = parseAmountLoose(amtRaw);
 
           let valid = true, error = "";
           if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) { valid=false; error="Invalid address"; }
