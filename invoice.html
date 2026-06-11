@@ -993,7 +993,8 @@ function showStatus(msg, type) {
       const logs=await chunkedLogs({ address:PAYMENTS, topics:[PAYMENT_TOPIC, paymentId, null, pad(wallet)] }, fromBlock, latest);
       if (logs.length){
         const tx=logs[logs.length-1].transactionHash;
-        setBox(box,"var(--tdim)","1px solid rgba(0,212,170,0.35)","var(--teal)", paidHtml(tx));
+        setBox(box,"var(--tdim)","1px solid rgba(0,212,170,0.35)","var(--teal)",
+          paidHtml(tx, " &nbsp;&middot;&nbsp; (payment found; amount not verified — backend offline)"));
       } else {
         setBox(box,"var(--raised)","1px solid var(--border)","var(--muted)",
           "No matching payment found in the last "+SCAN_BLOCKS.toLocaleString()+" blocks.");
@@ -1013,16 +1014,37 @@ function showStatus(msg, type) {
       setBox(box,"var(--raised)","1px solid var(--border)","var(--muted)","Checking payment status...");
       if (btn) btn.disabled=true;
       try {
+        // Read the invoice total so the backend can tell us whether the
+        // payment actually covers it (not just whether *a* payment exists).
+        const totalText = (document.getElementById("preview-total")?.textContent || "").trim();
+        const expected  = parseFloat(totalText.replace(/[^0-9.]/g, "")) || 0;
+
         // Primary: live backend, full-history check
-        const url = API_BASE + "/v1/invoices/status?number=" + encodeURIComponent(invNum||"arcfx-payment")
+        let url = API_BASE + "/v1/invoices/status?number=" + encodeURIComponent(invNum||"arcfx-payment")
                   + "&recipient=" + encodeURIComponent(wallet);
+        if (expected > 0) url += "&expected=" + encodeURIComponent(expected);
         const res = await fetch(url);
         if (!res.ok) throw new Error("api status "+res.status);
         const data = await res.json();
         if (data.paid){
           const p = data.payment || {};
-          const amt = p.gross ? ' &nbsp;&middot;&nbsp; '+p.gross+' '+(p.token||'') : '';
-          setBox(box,"var(--tdim)","1px solid rgba(0,212,170,0.35)","var(--teal)", paidHtml(p.txHash, amt));
+          const recd = p.net != null ? p.net : p.gross;
+          const tok  = p.token || "";
+          if (data.covered === false){
+            // A payment exists but doesn't cover the invoice total — do NOT show "Paid".
+            const msg = "&#9888; Underpaid &mdash; received <strong>"+recd+" "+tok+"</strong> of <strong>"
+                      + expected.toFixed(2)+"</strong> for this invoice."
+                      + (p.txHash ? ' &nbsp;&middot;&nbsp; <a href="https://testnet.arcscan.app/tx/'+p.txHash+'" target="_blank" rel="noopener" style="color:#ff8da0;text-decoration:underline;">view transaction &#8599;</a>' : '');
+            setBox(box,"rgba(255,166,35,0.08)","1px solid rgba(255,166,35,0.35)","#fbbf6b", msg);
+          } else {
+            // covered === true (paid in full) OR null (no expected given → legacy behaviour)
+            const extra = recd ? ' &nbsp;&middot;&nbsp; '+recd+' '+tok : '';
+            const label = data.covered === true ? '&#10003; Paid in full' : '&#10003; Payment found';
+            const link = p.txHash
+              ? ' &nbsp;&middot;&nbsp; <a href="https://testnet.arcscan.app/tx/'+p.txHash+'" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:underline;">view transaction &#8599;</a>'
+              : '';
+            setBox(box,"var(--tdim)","1px solid rgba(0,212,170,0.35)","var(--teal)", label+extra+link);
+          }
         } else {
           setBox(box,"var(--raised)","1px solid var(--border)","var(--muted)",
             "No payment found yet for this invoice number and wallet. If you just paid, give it a minute and check again.");
