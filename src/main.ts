@@ -55,6 +55,15 @@ function showStatus(msg: string, type: "success"|"error"|"info"|""): void {
   if (gs) gs.style.display = msg ? "block" : "none";
 }
 
+// Clear the pre-connect global status banner. Used by flows (swap/bridge) that
+// write their final success/result HTML directly to their own status element,
+// so the transient "Confirm in MetaMask…" line in #global-status doesn't linger.
+function clearGlobalStatus(): void {
+  setHTML("global-status", "");
+  const gs = el("global-status");
+  if (gs) gs.style.display = "none";
+}
+
 async function connectWallet(): Promise<void> {
   if (!window.ethereum) {
     showStatus("MetaMask not found — install it from metamask.io", "error");
@@ -327,6 +336,7 @@ async function executeSwap(): Promise<void> {
       config: { kitKey: import.meta.env.VITE_KIT_KEY as string },
     });
     const fee = result.fees?.[0];
+    clearGlobalStatus();
     setHTML("swap-status", `
       <div class="status success">
         <div class="status-title">✅ Swap complete</div>
