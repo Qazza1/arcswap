@@ -356,7 +356,7 @@ async function executeSwap(): Promise<void> {
     if (err?.code === 4001) {
       showStatus("Transaction rejected.", "error");
     } else if (/no route|route or resource not found|route not found/i.test(msg)) {
-      showStatus(`${tokenIn} \u2192 ${tokenOut} isn't routable on Arc Testnet yet \u2014 Circle hasn't provisioned this swap direction. ${tokenOut} \u2192 ${tokenIn} works today, and you can also use the Bridge tab.`, "error");
+      showStatus(`${tokenIn} \u2192 ${tokenOut} isn't routable on Arc Testnet right now \u2014 Circle hasn't provisioned this swap direction. Try the reverse direction, a different token pair, or the Bridge tab.`, "error");
     } else {
       showStatus(`Swap failed: ${msg || "Unknown error"}`, "error");
     }
@@ -852,7 +852,24 @@ document.addEventListener("DOMContentLoaded", () => {
   el("amount-input")?.addEventListener("input", debounce(
     (e: Event) => estimateSwap((e.target as HTMLInputElement).value), 500
   ));
-  window.ethereum?.on("accountsChanged", (a: string[]) => { userAddress = a[0] ?? null; if (userAddress) loadBalances(); });
+  window.ethereum?.on("accountsChanged", (a: string[]) => {
+    userAddress = a[0] ?? null;
+    if (userAddress) {
+      // Switched to a different account — refresh balances for it.
+      const short = `${userAddress.slice(0,6)}…${userAddress.slice(-4)}`;
+      const btn = el("connect-btn");
+      if (btn) { btn.textContent = short; btn.classList.add("connected"); }
+      loadBalances();
+    } else {
+      // Disconnected all accounts — reset to the connect state instead of
+      // leaving a stale "connected" swap card that will fail on next action (M14).
+      const btn = el("connect-btn");
+      if (btn) { btn.textContent = "Connect wallet"; btn.classList.remove("connected"); }
+      el("swap-card")?.classList.add("hidden");
+      el("connect-card")?.classList.remove("hidden");
+      showStatus("Wallet disconnected. Connect again to continue.", "info");
+    }
+  });
   window.ethereum?.on("chainChanged", async (chainId: string) => {
     if (isBridging) return; // Bridge intentionally switches chains — ignore
 
@@ -887,8 +904,21 @@ document.addEventListener("DOMContentLoaded", () => {
   if (window.ethereum) {
     window.ethereum.request({ method: "eth_accounts" }).then(async (accounts: string[]) => {
       if (accounts && accounts.length > 0) {
-        // Wallet already authorized — reconnect silently
+        // Wallet already authorized — reconnect silently, but only show the swap
+        // UI if we're actually on Arc Testnet. Otherwise the balances read "—"
+        // and any action fails with confusing kit errors (M2).
         try {
+          let chainId = "";
+          try { chainId = await window.ethereum!.request({ method: "eth_chainId" }); } catch { chainId = ""; }
+          if (chainId && chainId.toLowerCase() !== ARC_TESTNET.chainId.toLowerCase()) {
+            // Authorized but on the wrong network — surface it instead of a broken swap card.
+            ethersProvider = new BrowserProvider(window.ethereum!);
+            userAddress    = accounts[0];
+            const btn = el("connect-btn");
+            if (btn) { btn.textContent = "Wrong network"; }
+            showStatus("You're connected but not on Arc Testnet. Click Connect to switch networks.", "error");
+            return;
+          }
           ethersProvider = new BrowserProvider(window.ethereum!);
           userAddress    = accounts[0];
           const short    = `${userAddress.slice(0,6)}…${userAddress.slice(-4)}`;
