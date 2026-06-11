@@ -78,7 +78,8 @@
     .stat-card-loading { font-family: "JetBrains Mono", monospace; font-size: 22px; color: #334155; letter-spacing: 2px; }
 
     /* Live feed section */
-    .feed-wrap { border: 1px solid #1e293b; border-radius: 10px; overflow: hidden; }
+    .feed-wrap { border: 1px solid #1e293b; border-radius: 10px; overflow-x: auto; }
+    @media (max-width: 640px) { .hide-sm { display: none !important; } }
     .feed-header { background: #0a0f1e; border-bottom: 1px solid #1e293b; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
     .feed-title { font-size: 13px; font-weight: 600; color: #f1f5f9; }
     .live-badge { display: flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 10px; color: #10b981; }

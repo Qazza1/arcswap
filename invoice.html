@@ -560,7 +560,8 @@ window.removeItem = function(i) {
 
 window.updateItem = function(i, field, val) {
   if (field === "qty" || field === "price") {
-    items[i][field] = parseFloat(val) || 0;
+    // Clamp to >= 0 so a negative qty/price can't produce a negative line or total.
+    items[i][field] = Math.max(0, parseFloat(val) || 0);
   } else {
     items[i][field] = val;
   }
@@ -644,6 +645,10 @@ function updatePreview() {
   document.getElementById("prev-number").textContent = invNum;
   document.getElementById("prev-date").textContent   = fmtDisplay(invDate);
   document.getElementById("prev-due").textContent    = fmtDisplay(invDue);
+  // Non-blocking warning if the due date is before the issue date.
+  if (invDate && invDue && invDue < invDate) {
+    showStatus("Heads up: the due date is before the issue date.", "error");
+  }
   document.getElementById("prev-token").textContent  = sym;
 
   // Branding: business logo + name (falls back to initial / placeholder)
@@ -726,7 +731,7 @@ window.copyPayLink = function() {
   const fromWallet = document.getElementById("from-wallet")?.value.trim() || "";
   const total      = getTotal();
   const invNum     = document.getElementById("inv-number")?.value || "INV-001";
-  if (!fromWallet) { showStatus("Enter your wallet address first.", "error"); return; }
+  if (!/^0x[0-9a-fA-F]{40}$/.test(fromWallet)) { showStatus("Enter a valid wallet address (0x + 40 hex characters) first.", "error"); return; }
   const link = buildPayLink(fromWallet, total, selectedToken, invNum);
   navigator.clipboard.writeText(link).then(() => {
     const btn = document.getElementById("copy-pay-btn");
@@ -738,7 +743,7 @@ window.openPayLink = function() {
   const fromWallet = document.getElementById("from-wallet")?.value.trim() || "";
   const total      = getTotal();
   const invNum     = document.getElementById("inv-number")?.value || "INV-001";
-  if (!fromWallet) { showStatus("Enter your wallet address first.", "error"); return; }
+  if (!/^0x[0-9a-fA-F]{40}$/.test(fromWallet)) { showStatus("Enter a valid wallet address (0x + 40 hex characters) first.", "error"); return; }
   window.open(buildPayLink(fromWallet, total, selectedToken, invNum), "_blank");
 };
 
@@ -746,6 +751,12 @@ window.openPayLink = function() {
 window.downloadPDF = function() {
   const { jsPDF } = window.jspdf;
   if (!jsPDF) { showStatus("PDF library not loaded yet. Try again.", "error"); return; }
+
+  const _walletCheck = document.getElementById("from-wallet")?.value.trim() || "";
+  if (!/^0x[0-9a-fA-F]{40}$/.test(_walletCheck)) {
+    showStatus("Enter a valid wallet address (0x + 40 hex characters) before downloading — it's printed on the invoice.", "error");
+    return;
+  }
 
   const fromName   = document.getElementById("from-name")?.value   || "Your Name";
   const fromEmail  = document.getElementById("from-email")?.value  || "";

@@ -65,7 +65,8 @@
     .btn-refresh:hover { border-color: var(--blue); color: var(--blue); }
 
     /* Table */
-    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: var(--rlg); overflow: hidden; }
+    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: var(--rlg); overflow-x: auto; }
+    @media (max-width: 640px) { .hide-sm { display: none !important; } }
     .history-table { width: 100%; border-collapse: collapse; }
     .history-table thead th { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--border); background: var(--raised); white-space: nowrap; }
     .history-table thead th:last-child { text-align: right; }
@@ -530,7 +531,15 @@ window.exportCSV = function() {
     ])
   ];
 
-  const csv  = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+  // CSV hygiene: escape embedded quotes (double them) and neutralize cells that
+  // start with =, +, -, @ (Excel/Sheets would execute these as formulas). Prefix
+  // a single quote so they're treated as text.
+  const csvCell = (val) => {
+    let s = String(val == null ? "" : val);
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return `"${s.replace(/"/g, '""')}"`;
+  };
+  const csv  = rows.map(r => r.map(csvCell).join(",")).join("\n");
   const blob = new Blob([csv], { type:"text/csv" });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
