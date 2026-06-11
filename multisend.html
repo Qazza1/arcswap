@@ -745,6 +745,8 @@
     const MULTISENDER_ABI = [
       "function multisendFree(address token, address[] recipients, uint256[] amounts) external",
       "function multisend(address token, address[] recipients, uint256[] amounts) external",
+      "function quoteTotal(uint256[] amounts, bool isPro) external pure returns (uint256 total, uint256 fee, uint256 totalWithFee)",
+      "function FEE_BPS() view returns (uint256)",
       "event Multisent(address indexed sender, address indexed token, uint256 totalAmount, uint256 recipientCount, uint256 fee, bool isPro)",
     ];
 
@@ -756,6 +758,7 @@
     let selectedTier  = "free";
     let recipients    = []; // [{address, amount}]
     let approvedAmount = 0n;
+    let feeBps = 15; // 0.15% default; refreshed from the contract on connect (FEE_BPS())
     let inputMode = "manual";
 
     // ─── DOM helpers ─────────────────────────────────────────────────────────
@@ -797,6 +800,14 @@
 
         hide("connect-section");
         show("app-section");
+
+        // Read the real fee rate from the contract once, for the live summary
+        // display (the approval itself uses quoteTotal(), so this is display-only).
+        try {
+          const msRead = new Contract(MULTISENDER_ADDRESS, MULTISENDER_ABI, signer);
+          feeBps = Number(await msRead.FEE_BPS());
+          updateSummary();
+        } catch { /* keep the 0.15% default */ }
 
         await loadBalance();
         updateSummary();
@@ -966,15 +977,16 @@
     function updateSummary() {
       const count  = recipients.length;
       const total  = recipients.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
-      const fee    = selectedTier === "pro" ? total * 0.001 : 0;
       const isPro  = selectedTier === "pro";
+      const fee    = isPro ? total * (feeBps / 10000) : 0;
+      const feePct = (feeBps / 100).toFixed(2); // e.g. 15 bps -> "0.15"
 
       txt("sum-recipients", count);
       txt("sum-total",      total.toFixed(4) + " " + selectedToken);
       txt("sum-fee",        fee > 0 ? fee.toFixed(4) + " " + selectedToken : "Free");
 
       el("tier-info").innerHTML = isPro
-        ? `<strong>Pro tier:</strong> Up to 500 recipients. A <strong>0.15% fee</strong> (${fee.toFixed(4)} ${selectedToken}) is added. Total needed: <strong>${(total+fee).toFixed(4)} ${selectedToken}</strong>.`
+        ? `<strong>Pro tier:</strong> Up to 500 recipients. A <strong>${feePct}% fee</strong> (${fee.toFixed(4)} ${selectedToken}) is added. Total needed: <strong>${(total+fee).toFixed(4)} ${selectedToken}</strong>.`
         : `<strong>Free tier:</strong> Up to 5 recipients — no fee. Total needed: <strong>${total.toFixed(4)} ${selectedToken}</strong>.`;
 
       // Update step indicators
@@ -1010,14 +1022,30 @@
       }
 
       const token   = TOKENS[selectedToken];
-      const total   = recipients.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
-      const fee     = selectedTier === "pro" ? total * 0.001 : 0;
-      const needed  = total + fee;
-      const neededWei = parseUnits(needed.toFixed(token.decimals), token.decimals);
+      const isPro   = selectedTier === "pro";
+      // Convert each amount to wei exactly as sendTokens does, then ask the
+      // CONTRACT what the total-with-fee is. Approving this exact value means
+      // the allowance can never drift from what the contract pulls (the old
+      // bug was a hardcoded 0.1% vs the contract's 0.15%), and it uses the
+      // contract's integer math so there's no float-rounding shortfall.
+      const amountsWei = recipients.map(r =>
+        parseUnits(parseFloat(r.amount).toFixed(token.decimals), token.decimals));
 
       const btn = el("btn-approve");
       btn.disabled = true; btn.textContent = "Approving…";
       showStatus("Confirm approval in MetaMask…", "info");
+
+      let neededWei;
+      try {
+        const msRead = new Contract(MULTISENDER_ADDRESS, MULTISENDER_ABI, signer);
+        const quote  = await msRead.quoteTotal(amountsWei, isPro);
+        neededWei    = quote.totalWithFee;   // exact value the contract will pull
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = `1. Approve ${selectedToken}`;
+        showStatus("Couldn't read the fee quote from the contract. Try again.", "error");
+        return;
+      }
 
       try {
         const tokenContract = new Contract(token.address, ERC20_ABI, signer);
