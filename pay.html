@@ -212,6 +212,7 @@ const toAddr   = params.get("to")     || "";
 const fixedAmt = params.get("amount") || "";
 const tokenPrm = (params.get("token") || "USDC").toUpperCase();
 const note     = params.get("note")   || "";
+const refParam = params.get("ref")    || "";
 
 // Escape any user-supplied string before it goes into innerHTML.
 // `note` comes straight from the URL and is attacker-controllable, so it must
@@ -342,6 +343,10 @@ window.generateLink = function() {
   if (amount) p.set("amount", amount);
   p.set("token", selectedToken);
   if (note) p.set("note", note);
+  // Unique reference so each generated link has its own on-chain paymentId
+  // (without this, every no-note payment collides on the same id). Invoice
+  // links are generated elsewhere and intentionally omit `ref`. (M21)
+  p.set("ref", `arcfx-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);
 
   const url = `${base}?${p.toString()}`;
 
@@ -476,7 +481,15 @@ async function connectAndPay() {
     } catch(e) {
       const code = e.code ?? e.error?.code ?? e.info?.error?.code;
       if (code === 4902 || (e.message||"").includes("4902")) {
+        // Chain not added yet — add it (this still confirms the switch).
         await provider.send("wallet_addEthereumChain", [ARC_TESTNET]);
+      } else {
+        // User rejected the switch (4001) or it failed — do NOT proceed on the
+        // wrong network. Abort with a clear message (M20).
+        const btn = document.getElementById("pay-connect")?.querySelector("button");
+        if (btn) btn.textContent = "Connect wallet to pay";
+        showPayStatus("Please switch to Arc Testnet to continue — the payment can't proceed on another network.", "error");
+        return;
       }
     }
 
@@ -550,9 +563,12 @@ async function sendPayment() {
       if (q.net < wantNet) gross = gross + 1n;
     } catch { /* quoteFee best-effort; the ceiling above already covers it */ }
 
-    // Build paymentId from note or fallback
-    const noteText = note || "arcfx-payment";
-    const paymentId = ethersId(noteText); // keccak256 of the note string
+    // Build paymentId. Prefer an explicit unique `ref` (generic links add one,
+    // so no-note payments don't all collide on keccak("arcfx-payment")). Invoice
+    // links carry no `ref` and keep keccak(note=invoiceNumber) so the invoice
+    // paid-check (which matches on the invoice number) still reconciles (M21).
+    const idSource  = refParam || note || "arcfx-payment";
+    const paymentId = ethersId(idSource); // keccak256 of the reference string
 
     // Step 1 — Approve ArcFXPayments to spend the grossed-up amount
     showPayStatus("Step 1/2 — Approve token spending in MetaMask…", "info");
@@ -612,6 +628,9 @@ document.getElementById("connect-btn")?.addEventListener("click", async () => {
       const code = e.code ?? e.error?.code ?? e.info?.error?.code;
       if (code===4902||(e.message||"").includes("4902")) {
         await provider.send("wallet_addEthereumChain", [ARC_TESTNET]);
+      } else {
+        // Switch rejected/failed — don't show a "connected" state on the wrong network.
+        return;
       }
     }
     signer      = await provider.getSigner();
