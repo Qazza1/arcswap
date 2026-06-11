@@ -681,6 +681,13 @@ window.updateFeeBreakdown = function() {
   set("fb-gross",`${gross.toFixed(2)} ${sym}`);
   set("fb-pct",  `(${(bps/100).toFixed(2)}%)`);
   box.style.display = "block";
+
+  // Reflect the typed amount on the Send button (L15) — only meaningful for
+  // custom-amount links (fixed-amount links already show it).
+  const payBtn = document.getElementById("pay-btn");
+  if (payBtn && !(fixedAmt && parseFloat(fixedAmt) > 0)) {
+    payBtn.textContent = `Send ${net.toFixed(2)} ${sym} →`;
+  }
 };
 // "Make another payment" — reload the same URL so the recipient/amount context
 // is preserved and the form resets cleanly (no stale success state).

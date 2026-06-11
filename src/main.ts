@@ -27,6 +27,7 @@ const ERC20_ABI = ["function balanceOf(address owner) view returns (uint256)", "
 let ethersProvider: BrowserProvider | null = null;
 let ethersSigner: any = null;
 let userAddress: string | null = null;
+const rawBalances: Record<string, string> = {}; // full-precision balances for MAX (L1)
 let tokenIn: TokenSymbol = "USDC";
 let tokenOut: TokenSymbol = "EURC";
 let isSwapping = false;
@@ -124,8 +125,11 @@ async function loadBalances(): Promise<void> {
       // Read decimals live (Arc docs recommend this); fall back to the literal.
       let dec: number = token.decimals;
       try { dec = Number(await c.decimals()); } catch { /* use literal */ }
+      // Keep the FULL-PRECISION value for MAX (the displayed value is rounded to
+      // 4dp and can exceed the real balance, making the swap revert — L1).
+      rawBalances[sym] = formatUnits(raw, dec);
       setText(`balance-${sym}`, parseFloat(formatUnits(raw, dec)).toFixed(4));
-    } catch { setText(`balance-${sym}`, "—"); }
+    } catch { setText(`balance-${sym}`, "—"); rawBalances[sym] = ""; }
   }
   updateBalanceLabels();
 }
@@ -369,9 +373,14 @@ async function executeSwap(): Promise<void> {
 }
 
 function setMaxAmount(): void {
-  const bal = el(`balance-${tokenIn}`)?.textContent;
   const inp = el<HTMLInputElement>("amount-input");
-  if (bal && bal !== "—" && inp) { inp.value = bal; estimateSwap(bal); }
+  if (!inp) return;
+  // Use the full-precision balance, not the 4dp display text (which can round
+  // UP and exceed the real balance, causing the swap to revert — L1).
+  const raw = rawBalances[tokenIn];
+  if (raw && raw !== "") { inp.value = raw; estimateSwap(raw); return; }
+  const bal = el(`balance-${tokenIn}`)?.textContent;
+  if (bal && bal !== "—") { inp.value = bal; estimateSwap(bal); }
 }
 
 function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): T {

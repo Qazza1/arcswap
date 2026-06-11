@@ -510,7 +510,7 @@
           <div id="csv-mode" style="display:none;">
             <textarea id="csv-input" class="csv-area"
               placeholder="0x1234...abcd, 100&#10;0x5678...efgh, 50&#10;0x9abc...ijkl, 75"></textarea>
-            <div class="csv-hint">One per line: <code style="color:var(--blue)">address, amount</code> — comma, tab or space separated.</div>
+            <div class="csv-hint">One per line: <code style="color:var(--blue)">address, amount</code> — comma or tab separated.</div>
             <button onclick="parseCSV()" style="margin-top:10px;background:var(--blue-dim);border:1px solid rgba(61,126,255,.3);color:var(--blue);border-radius:var(--rsm);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">
               Parse CSV →
             </button>
@@ -1698,39 +1698,9 @@
 
 
   <script>
-    // Address book import from sessionStorage (set by main page)
-    function checkAddressBookImport() {
-      const raw = sessionStorage.getItem("arcfx_ab_import");
-      if (!raw) return;
-      try {
-        const entries = JSON.parse(raw);
-        if (!entries.length) return;
-        const banner = document.getElementById("ab-import-banner");
-        const label  = document.getElementById("ab-import-label");
-        if (banner) banner.style.display = "flex";
-        if (label)  label.textContent = entries.length + " address book contact" + (entries.length !== 1 ? "s" : "") + " ready to import";
-      } catch {}
-    }
-
-    function importFromAddressBook() {
-      const raw = sessionStorage.getItem("arcfx_ab_import");
-      if (!raw) return;
-      try {
-        const entries = JSON.parse(raw);
-        entries.forEach(e => {
-          // Add each contact as a recipient row with amount 0
-          if (typeof addRecipient === "function") {
-            addRecipient(e.address, "", e.name);
-          }
-        });
-        sessionStorage.removeItem("arcfx_ab_import");
-        const banner = document.getElementById("ab-import-banner");
-        if (banner) banner.style.display = "none";
-      } catch {}
-    }
-
-    window.importFromAddressBook = importFromAddressBook;
-    document.addEventListener("DOMContentLoaded", checkAddressBookImport);
+    // (Removed dead address-book import block — it referenced UI elements that
+    // don't exist and called addRecipient() with the wrong signature. The
+    // Contacts tab is the working way to add saved contacts.)
   </script>
 </body>
 </html>
