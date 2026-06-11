@@ -9,6 +9,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
+    /* Hide the browser's default number-input spinner arrows (looked unfinished) */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg:       #060810;
@@ -246,7 +251,16 @@ function renderGenMode() {
         <div class="field">
           <label>Your wallet address</label>
           <input id="gen-address" class="mono-input" type="text" placeholder="0x... (connect wallet or paste manually)" autocomplete="off" />
-          <span class="field-hint">The address that will receive the payment.</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+            <span class="field-hint">The address that will receive the payment.</span>
+            <button type="button" id="contacts-toggle" onclick="toggleContactsPicker()"
+                    style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 11px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:border-color .15s,color .15s;"
+                    onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--text)'"
+                    onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+              📇 From contacts
+            </button>
+          </div>
+          <div id="contacts-picker" class="hidden" style="margin-top:8px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px;max-height:200px;overflow-y:auto;"></div>
         </div>
 
         <div class="amount-row">
@@ -369,6 +383,12 @@ function renderPayMode() {
         <div class="success-title">Payment sent!</div>
         <div class="success-sub" id="success-sub">—</div>
         <a id="success-link" href="#" target="_blank" rel="noopener" class="explorer-btn">View on ArcScan ↗</a>
+        <br><br>
+        <button onclick="payAgain()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:var(--rsm);padding:9px 20px;font-size:13px;cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s;"
+                onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--text)'"
+                onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+          Make another payment →
+        </button>
       </div>
     </div>
 
@@ -582,6 +602,50 @@ window.ethereum?.on("accountsChanged", (a) => { if (!a.length) window.location.r
 // expose for pay mode
 window.connectAndPay = connectAndPay;
 window.sendPayment   = sendPayment;
+// "Make another payment" — reload the same URL so the recipient/amount context
+// is preserved and the form resets cleanly (no stale success state).
+window.payAgain = function() { window.location.reload(); };
+
+// ── Contacts picker (generator: fill "Your wallet address" from saved contacts) ──
+// Reads the same localStorage address book used by the multisend page.
+window.toggleContactsPicker = function() {
+  const picker = document.getElementById("contacts-picker");
+  if (!picker) return;
+  const isHidden = picker.classList.contains("hidden");
+  if (!isHidden) { picker.classList.add("hidden"); return; }
+
+  let entries = [];
+  try { entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]"); } catch { entries = []; }
+
+  if (!entries.length) {
+    picker.innerHTML = `<div style="text-align:center;padding:16px;color:var(--subtle);font-size:12.5px;">
+      No saved contacts yet. Add them on the <a href="/multisend" style="color:var(--blue);">Multisend</a> page.
+    </div>`;
+  } else {
+    picker.innerHTML = entries.map(c => {
+      const name = escapeHtml(c.name || "Unnamed");
+      const addr = escapeHtml(c.address || "");
+      const shortA = addr ? `${addr.slice(0,8)}…${addr.slice(-6)}` : "";
+      return `<div onclick="pickContact('${addr}')"
+        style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:6px;cursor:pointer;transition:background .12s;"
+        onmouseover="this.style.background='var(--raised)'" onmouseout="this.style.background='transparent'">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--blue-dim);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${name.slice(0,1).toUpperCase()}</div>
+        <div style="min-width:0;">
+          <div style="font-size:13px;color:var(--text);font-weight:500;">${name}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--subtle);">${shortA}</div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  picker.classList.remove("hidden");
+};
+
+window.pickContact = function(addr) {
+  const input = document.getElementById("gen-address");
+  if (input) input.value = addr;
+  const picker = document.getElementById("contacts-picker");
+  if (picker) picker.classList.add("hidden");
+};
 </script>
 
 </body>
