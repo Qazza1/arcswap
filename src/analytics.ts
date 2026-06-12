@@ -70,43 +70,101 @@ async function fetchStats(): Promise<void> {
 
 // ── "Who you paid" bars (backend, scoped to connected wallet) ──────────────
 async function loadBreakdown(address: string | null): Promise<void> {
-  const body = el("bars-body");
+  const body    = el("bars-body");
+  const summary = el("spend-summary");
   if (!body) return;
 
+  const hideSummary = () => { if (summary) summary.style.display = "none"; };
+
   if (!address) {
+    hideSummary();
     body.innerHTML = `<div class="bars-empty">Connect your wallet to see who you've paid.</div>`;
     return;
   }
 
   try {
-    const res = await fetch(`${API_BASE}/v1/breakdown?payer=${encodeURIComponent(address)}&limit=10`);
+    const res = await fetch(`${API_BASE}/v1/breakdown?payer=${encodeURIComponent(address)}&limit=50`);
     if (!res.ok) throw new Error(`breakdown ${res.status}`);
     const d = await res.json();
     const recipients: Array<{ recipient: string; count: number; total: string; token: string }> =
       d.recipients || [];
 
     if (!recipients.length) {
+      hideSummary();
       body.innerHTML = `<div class="bars-empty">No payments from this wallet yet.</div>`;
       return;
     }
 
+    const fmtAmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // ── Your total spend summary (sum across all recipients) ──────────────
+    // Sum per token, since USDC and EURC must not be merged into one figure.
+    if (summary) {
+      const byToken: Record<string, number> = {};
+      let totalPayments = 0;
+      for (const r of recipients) {
+        const tk = r.token || "USDC";
+        byToken[tk] = (byToken[tk] || 0) + (Number(r.total) || 0);
+        totalPayments += Number(r.count) || 0;
+      }
+      const totalStr = Object.entries(byToken)
+        .map(([tk, v]) => `${fmtAmt(v)} ${tk}`)
+        .join(" · ");
+      const recipientWord = recipients.length === 1 ? "recipient" : "recipients";
+      const paymentWord   = totalPayments === 1 ? "payment" : "payments";
+      summary.innerHTML =
+        `<span class="ss-label">Your total spend</span>` +
+        `<span class="ss-val">${totalStr}</span>` +
+        `<span class="ss-meta">across ${recipients.length} ${recipientWord} · ${totalPayments} ${paymentWord}</span>`;
+      summary.style.display = "flex";
+    }
+
+    // ── Clickable / expandable per-recipient bars ─────────────────────────
+    // Remember which recipients were expanded so the 15s auto-refresh doesn't
+    // collapse a panel the user is reading.
+    const openAddrs = new Set<string>();
+    document.querySelectorAll(".bar-item.open").forEach(elm => {
+      const a = (elm as HTMLElement).dataset.addr;
+      if (a) openAddrs.add(a);
+    });
+
     const max = Math.max(...recipients.map(r => Number(r.total) || 0), 0.000001);
-    body.innerHTML = recipients.map(r => {
+    body.innerHTML = recipients.map((r, i) => {
       const total = Number(r.total) || 0;
       const pct   = Math.max(2, Math.round((total / max) * 100));
       const times = r.count === 1 ? "1 payment" : `${r.count} payments`;
       const tk    = r.token ? ` ${r.token}` : "";
+      const avg   = r.count > 0 ? total / r.count : 0;
+      const scanUrl = `https://testnet.arcscan.app/address/${r.recipient}`;
+      const openCls = openAddrs.has(r.recipient) ? " open" : "";
       return `
-        <div class="bar-row">
-          <span class="bar-name" title="${r.recipient}">${short(r.recipient)}</span>
-          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-          <span class="bar-val">${total.toFixed(2)}${tk} <span class="bar-count">· ${times}</span></span>
+        <div class="bar-item${openCls}" id="bar-item-${i}" data-addr="${r.recipient}">
+          <div class="bar-row" onclick="toggleBar(${i})">
+            <span class="bar-name" title="${r.recipient}">${short(r.recipient)}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+            <span class="bar-val">${fmtAmt(total)}${tk} <span class="bar-count">· ${times}</span><span class="bar-caret">▶</span></span>
+          </div>
+          <div class="bar-detail">
+            <div class="bar-detail-row"><span class="bd-k">Total paid</span><span class="bd-v">${fmtAmt(total)}${tk}</span></div>
+            <div class="bar-detail-row"><span class="bd-k">Payments</span><span class="bd-v">${r.count}</span></div>
+            <div class="bar-detail-row"><span class="bd-k">Average</span><span class="bd-v">${fmtAmt(avg)}${tk}</span></div>
+            <div class="bar-detail-row"><span class="bd-k">Address</span></div>
+            <div class="bar-detail-addr">${r.recipient}</div>
+            <a class="bar-detail-link" href="${scanUrl}" target="_blank" rel="noopener">View on ArcScan ↗</a>
+          </div>
         </div>`;
     }).join("");
   } catch {
+    hideSummary();
     body.innerHTML = `<div class="bars-empty">Could not load payment breakdown right now.</div>`;
   }
 }
+
+// Toggle the expanded detail for a recipient bar.
+(window as any).toggleBar = function(i: number) {
+  const item = document.getElementById(`bar-item-${i}`);
+  if (item) item.classList.toggle("open");
+};
 
 // ── Recent transaction feed (backend, full history, newest first) ──────────
 interface FeedPayment {
