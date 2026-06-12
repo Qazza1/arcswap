@@ -1351,6 +1351,10 @@
     // ── Mode switcher (extend existing setMode) ───────────────────────────
     // ── Contacts mode ────────────────────────────────────────────────────
     function renderContactsPanel() {
+      // Local escape helper — the module-script schedEsc is out of scope here
+      // (separate <script>), and calling it threw a ReferenceError that silently
+      // aborted this render, so saved contacts never appeared.
+      const esc = function(t){ return String(t).replace(/[&<>"]/g, function(c){ return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]; }); };
       const container = document.getElementById("contacts-list");
       if (!container) return;
       const entries = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]");
@@ -1362,9 +1366,9 @@
 
       let html = "";
       entries.forEach(function(e, i) {
-        const initial = schedEsc((e.name || "?").charAt(0).toUpperCase());
-        const addr    = schedEsc(e.address || "");
-        const name    = schedEsc(e.name || "");
+        const initial = esc((e.name || "?").charAt(0).toUpperCase());
+        const addr    = esc(e.address || "");
+        const name    = esc(e.name || "");
         html += "<div style=\"display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;\">";
         html += "<div style=\"width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;\">" + initial + "</div>";
         html += "<div style=\"flex:1;min-width:0;\">";
