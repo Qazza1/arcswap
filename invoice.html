@@ -984,7 +984,7 @@ function showStatus(msg, type) {
       const link = txHash
         ? ' &nbsp;&middot;&nbsp; <a href="https://testnet.arcscan.app/tx/'+txHash+'" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:underline;">view transaction &#8599;</a>'
         : '';
-      return '&#10003; Paid on-chain' + (extra||'') + link;
+      return '&#10003; Payment confirmed' + (extra||'') + link;
     }
 
     // Fallback: read-only on-chain scan over the last SCAN_BLOCKS (used only if the API is unreachable)

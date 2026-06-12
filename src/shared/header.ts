@@ -466,7 +466,11 @@ function renderContacts(): void {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx || '0', 10);
       const e = entries[idx];
-      if (e) navigator.clipboard.writeText(e.address).catch(() => {});
+      if (e) navigator.clipboard.writeText(e.address).then(() => {
+        const original = btn.textContent;
+        btn.textContent = '✓ Copied';
+        setTimeout(() => { btn.textContent = original || 'Copy'; }, 1500);
+      }).catch(() => {});
     });
   });
 }

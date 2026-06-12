@@ -257,6 +257,7 @@
     .status-box { margin-top: 14px; }
     .status { border-radius: var(--r-sm); padding: 12px 14px; font-size: 13px; line-height: 1.6; }
     .status.info    { background: var(--blue-dim); border: 1px solid rgba(61,126,255,.25); color: #7eb3ff; }
+    .status.info::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #3d7eff; margin-right: 8px; vertical-align: middle; animation: pulse 1.2s ease-in-out infinite; }
     .status.success { background: var(--green-dim); border: 1px solid rgba(0,212,170,.25); color: var(--green); }
     .status.error   { background: rgba(255,77,106,.07); border: 1px solid rgba(255,77,106,.25); color: var(--red); }
     .status-title { font-weight: 700; margin-bottom: 5px; }
@@ -332,8 +333,9 @@
     .preview-table thead th { background: var(--bg-raised); color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; padding: 8px 12px; text-align: left; font-family: "JetBrains Mono", monospace; position: sticky; top: 0; }
     .preview-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
     .preview-table tr:last-child td { border-bottom: none; }
+    .preview-table tr.row-ok { background: rgba(0,212,170,.04); box-shadow: inset 3px 0 0 rgba(0,212,170,.5); }
     .preview-table tr.row-ok:hover { background: var(--bg-raised); }
-    .preview-table tr.row-err { background: rgba(255,77,106,.05); }
+    .preview-table tr.row-err { background: rgba(255,77,106,.14); box-shadow: inset 3px 0 0 #ff4d6a; }
     .row-num { color: var(--muted); font-family: "JetBrains Mono", monospace; }
     .row-addr { font-family: "JetBrains Mono", monospace; color: var(--text); }
     .row-amt  { font-family: "JetBrains Mono", monospace; color: var(--text); text-align: right; }
@@ -828,7 +830,7 @@
       const token = TOKENS[selectedToken];
       const contract = new Contract(token.address, ERC20_ABI, provider);
       const bal = await contract.balanceOf(userAddress);
-      el("balance-val").textContent = parseFloat(formatUnits(bal, token.decimals)).toFixed(4);
+      el("balance-val").textContent = fmtAmt(parseFloat(formatUnits(bal, token.decimals)));
       el("balance-sym").textContent = selectedToken;
     }
 
@@ -998,13 +1000,13 @@
       const feePct = (feeBps / 100).toFixed(2); // e.g. 15 bps -> "0.15"
 
       txt("sum-recipients", count);
-      txt("sum-total",      total.toFixed(4) + " " + selectedToken);
-      txt("sum-fee",        fee > 0 ? fee.toFixed(4) + " " + selectedToken : "Free");
+      txt("sum-total",      fmtAmt(total) + " " + selectedToken);
+      txt("sum-fee",        fee > 0 ? fmtAmt(fee) + " " + selectedToken : "Free");
       txt("sum-fee-lbl",    isPro ? `ArcFX fee (${feePct}%)` : "ArcFX fee (Free tier)");
 
       el("tier-info").innerHTML = isPro
-        ? `<strong>Pro tier:</strong> Up to 500 recipients. A <strong>${feePct}% fee</strong> (${fee.toFixed(4)} ${selectedToken}) is added. Total needed: <strong>${(total+fee).toFixed(4)} ${selectedToken}</strong>.`
-        : `<strong>Free tier:</strong> Up to 5 recipients — no fee. Total needed: <strong>${total.toFixed(4)} ${selectedToken}</strong>.`;
+        ? `<strong>Pro tier:</strong> Up to 500 recipients. A <strong>${feePct}% fee</strong> (${fmtAmt(fee)} ${selectedToken}) is added. Total needed: <strong>${fmtAmt(total+fee)} ${selectedToken}</strong>.`
+        : `<strong>Free tier:</strong> Up to 5 recipients — no fee. Total needed: <strong>${fmtAmt(total)} ${selectedToken}</strong>.`;
 
       // Update step indicators
       setStep(count > 0 ? 2 : 1);
@@ -1072,8 +1074,8 @@
         const tokenRead = new Contract(token.address, ERC20_ABI, signer);
         const bal = await tokenRead.balanceOf(userAddress);
         if (bal < neededWei) {
-          const needFmt = parseFloat(formatUnits(neededWei, token.decimals)).toFixed(4);
-          const haveFmt = parseFloat(formatUnits(bal, token.decimals)).toFixed(4);
+          const needFmt = fmtAmt(parseFloat(formatUnits(neededWei, token.decimals)));
+          const haveFmt = fmtAmt(parseFloat(formatUnits(bal, token.decimals)));
           btn.disabled = false;
           btn.textContent = `1. Approve ${selectedToken}`;
           showStatus(`Insufficient balance: you need ${needFmt} ${selectedToken} (incl. fee) but have ${haveFmt}.`, "error");
@@ -1140,7 +1142,7 @@
         hide("main-card");
         show("success-card");
         el("success-sub").textContent =
-          `Sent ${total.toFixed(4)} ${selectedToken} to ${recipients.length} wallets in 1 transaction.`;
+          `Sent ${fmtAmt(total)} ${selectedToken} to ${recipients.length} wallets in 1 transaction.`;
         el("success-link").href = `https://testnet.arcscan.app/tx/${receipt.hash}`;
 
       } catch (err) {
@@ -1166,6 +1168,13 @@
     };
 
     // ─── Status ───────────────────────────────────────────────────────────────
+    // Display helper: thousands separators for amounts shown to the user (NOT for
+    // parseUnits contract inputs, which must stay raw). R1.
+    function fmtAmt(n, dp) {
+      const num = typeof n === "number" ? n : parseFloat(n);
+      if (!isFinite(num)) return String(n);
+      return num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: dp == null ? 4 : dp });
+    }
     function showStatus(msg, type) {
       const box = el("status-box");
       if (!box) return;
@@ -1305,7 +1314,7 @@
           '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-raised);border:1px solid ' + (due ? 'rgba(0,212,170,.3)' : 'var(--border)') + ';border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px;">' +
             '<div style="min-width:0;">' +
               '<div style="font-size:13.5px;font-weight:600;color:var(--text);">' + schedEsc(s.name) + badge + '</div>' +
-              '<div style="font-size:12px;color:var(--muted);margin-top:3px;">' + s.recipients.length + ' recipients &middot; ' + total.toFixed(2) + ' ' + schedEsc(s.token) + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);margin-top:3px;">' + s.recipients.length + ' recipients &middot; ' + fmtAmt(total, 2) + ' ' + schedEsc(s.token) + '</div>' +
             '</div>' +
             '<div style="display:flex;gap:8px;flex-shrink:0;">' +
               '<button class="sched-act" data-act="load" data-id="' + s.id + '" style="background:var(--blue-dim);border:1px solid rgba(61,126,255,.35);color:var(--blue);border-radius:var(--r-sm);padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">Load</button>' +
@@ -1627,7 +1636,7 @@
         <tr class="${r.valid ? "row-ok" : "row-err"}">
           <td class="row-num">${r.idx}</td>
           <td class="row-addr">${r.addr ? r.addr.slice(0,10)+"…"+r.addr.slice(-6) : "—"}</td>
-          <td class="row-amt">${r.valid ? r.amt.toFixed(4) : r.amtRaw || "—"}</td>
+          <td class="row-amt">${r.valid ? fmtAmt(r.amt) : r.amtRaw || "—"}</td>
           <td>${r.valid
             ? '<span class="row-status-ok">✓</span>'
             : `<span class="row-status-err">${r.error}</span>`

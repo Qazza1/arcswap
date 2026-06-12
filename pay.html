@@ -225,6 +225,13 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+// Display helper: thousands separators for amounts shown to the user (NOT for
+// parseUnits inputs, which must stay raw). R1.
+function fmtAmt(n, dp) {
+  const num = typeof n === "number" ? n : parseFloat(n);
+  if (!isFinite(num)) return String(n);
+  return num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: dp == null ? 4 : dp });
+}
 const isPayMode = isAddress(toAddr);
 
 if (isPayMode) {
@@ -409,7 +416,7 @@ function renderPayMode() {
 
         <!-- Amount display -->
         <div class="pay-amount-display">
-          <div class="pay-amount-val" id="pay-amount-display">${hasFixed ? parseFloat(fixedAmt).toFixed(2) : "—"}</div>
+          <div class="pay-amount-val" id="pay-amount-display">${hasFixed ? fmtAmt(parseFloat(fixedAmt), 2) : "—"}</div>
           <br>
           <div class="pay-amount-token">
             <div class="token-logo ${sym.toLowerCase()}">${sym==="USDC"?"$":"€"}</div>
@@ -454,7 +461,7 @@ function renderPayMode() {
             Balance: <strong id="pay-balance" style="color:var(--text);">—</strong> ${sym}
           </div>
           <button class="btn-primary" id="pay-btn" onclick="sendPayment()">
-            Send ${hasFixed ? parseFloat(fixedAmt).toFixed(2)+" " : ""}${sym} →
+            Send ${hasFixed ? fmtAmt(parseFloat(fixedAmt), 2)+" " : ""}${sym} →
           </button>
         </div>
 
@@ -504,7 +511,7 @@ async function connectAndPay() {
     const tok = TOKENS[selectedToken];
     const tc  = new Contract(tok.address, ERC20_ABI, provider);
     const bal = await tc.balanceOf(userAddress);
-    const balFmt = parseFloat(formatUnits(bal, tok.decimals)).toFixed(4);
+    const balFmt = fmtAmt(parseFloat(formatUnits(bal, tok.decimals)));
     const balEl = document.getElementById("pay-balance");
     if (balEl) balEl.textContent = balFmt;
 
@@ -593,7 +600,7 @@ async function sendPayment() {
     const grossF = parseFloat(formatUnits(gross, tok.decimals));
     const netF   = parseFloat(amount);
     const feeF   = grossF - netF;
-    if (sub)  sub.textContent = `${netF.toFixed(4)} ${selectedToken} delivered to recipient · you paid ${grossF.toFixed(4)} (incl. ${feeF.toFixed(4)} fee)`;
+    if (sub)  sub.textContent = `${fmtAmt(netF)} ${selectedToken} delivered to recipient · you paid ${fmtAmt(grossF)} (incl. ${fmtAmt(feeF)} fee)`;
     if (link) link.href = `https://testnet.arcscan.app/tx/${receipt.hash}`;
 
   } catch(err) {
@@ -676,9 +683,9 @@ window.updateFeeBreakdown = function() {
   const fee   = gross - net;
   const sym   = selectedToken;
   const set = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = v; };
-  set("fb-net",  `${net.toFixed(2)} ${sym}`);
-  set("fb-fee",  `${fee.toFixed(2)} ${sym}`);
-  set("fb-gross",`${gross.toFixed(2)} ${sym}`);
+  set("fb-net",  `${fmtAmt(net, 2)} ${sym}`);
+  set("fb-fee",  `${fmtAmt(fee, 2)} ${sym}`);
+  set("fb-gross",`${fmtAmt(gross, 2)} ${sym}`);
   set("fb-pct",  `(${(bps/100).toFixed(2)}%)`);
   box.style.display = "block";
 
@@ -686,7 +693,7 @@ window.updateFeeBreakdown = function() {
   // custom-amount links (fixed-amount links already show it).
   const payBtn = document.getElementById("pay-btn");
   if (payBtn && !(fixedAmt && parseFloat(fixedAmt) > 0)) {
-    payBtn.textContent = `Send ${net.toFixed(2)} ${sym} →`;
+    payBtn.textContent = `Send ${fmtAmt(net, 2)} ${sym} →`;
   }
 };
 // "Make another payment" — reload the same URL so the recipient/amount context
