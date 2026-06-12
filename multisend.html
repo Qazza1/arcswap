@@ -392,7 +392,7 @@
       </p>
       <div class="feature-pills">
         <div class="pill"><div class="pill-dot" style="background:var(--green)"></div> Free up to 5 recipients</div>
-        <div class="pill"><div class="pill-dot" style="background:var(--amber)"></div> Pro: up to 500 — 0.15% fee</div>
+        <div class="pill"><div class="pill-dot" style="background:var(--amber)"></div> Pro: up to 500 — 0.10% fee</div>
         <div class="pill"><div class="pill-dot" style="background:var(--blue)"></div> CSV upload supported</div>
         <div class="pill"><div class="pill-dot" style="background:var(--blue)"></div> One MetaMask signature</div>
       </div>
@@ -469,7 +469,7 @@
                   Free (≤5)
                 </button>
                 <button class="tier-btn pro" id="btn-pro" onclick="selectTier('pro')">
-                  Pro (≤500) — 0.15% fee
+                  Pro (≤500) — 0.10% fee
                 </button>
               </div>
             </div>
@@ -658,7 +658,7 @@
 
           <div class="tier-info" id="tier-info" style="margin-bottom:16px;">
             <strong>Free tier:</strong> Up to 5 recipients — no fee.
-            Switch to Pro for up to 500 recipients (0.15% fee).
+            Switch to Pro for up to 500 recipients (0.10% fee).
           </div>
 
           <div class="action-row">
@@ -765,7 +765,7 @@
     let selectedTier  = "free";
     let recipients    = []; // [{address, amount}]
     let approvedAmount = 0n;
-    let feeBps = 15; // 0.15% default; refreshed from the contract on connect (FEE_BPS())
+    let feeBps = 10; // 0.10% default (matches deployed FEE_BPS); refreshed from contract on connect
     let inputMode = "manual";
 
     // ─── DOM helpers ─────────────────────────────────────────────────────────
@@ -814,7 +814,7 @@
           const msRead = new Contract(MULTISENDER_ADDRESS, MULTISENDER_ABI, signer);
           feeBps = Number(await msRead.FEE_BPS());
           updateSummary();
-        } catch { /* keep the 0.15% default */ }
+        } catch { /* keep the 0.10% default */ }
 
         await loadBalance();
         updateSummary();
@@ -997,7 +997,7 @@
       const total  = recipients.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
       const isPro  = selectedTier === "pro";
       const fee    = isPro ? total * (feeBps / 10000) : 0;
-      const feePct = (feeBps / 100).toFixed(2); // e.g. 15 bps -> "0.15"
+      const feePct = (feeBps / 100).toFixed(2); // e.g. 10 bps -> "0.10"
 
       txt("sum-recipients", count);
       txt("sum-total",      fmtAmt(total) + " " + selectedToken);
@@ -1045,7 +1045,7 @@
       // Convert each amount to wei exactly as sendTokens does, then ask the
       // CONTRACT what the total-with-fee is. Approving this exact value means
       // the allowance can never drift from what the contract pulls (the old
-      // bug was a hardcoded 0.1% vs the contract's 0.15%), and it uses the
+      // bug was a hardcoded fee % out of sync with the contract), and it uses the
       // contract's integer math so there's no float-rounding shortfall.
       const amountsWei = recipients.map(r =>
         parseUnits(parseFloat(r.amount).toFixed(token.decimals), token.decimals));
@@ -1423,19 +1423,10 @@
       }
     };
 
-    window.setMode = function(mode) {
-      document.querySelectorAll(".upload-tab").forEach(b => b.classList.remove("active"));
-      const tab = document.getElementById("tab-"+mode);
-      if (tab) tab.classList.add("active");
-
-      document.getElementById("manual-mode").style.display   = mode==="manual"   ? "block" : "none";
-      document.getElementById("csv-mode").style.display      = mode==="csv"      ? "block" : "none";
-      document.getElementById("upload-mode").style.display   = mode==="upload"   ? "block" : "none";
-      const cm = document.getElementById("contacts-mode");
-      if (cm) cm.style.display = mode==="contacts" ? "block" : "none";
-      if (mode === "contacts") renderContactsPanel();
-    };
-    // Expose so the module-scope setMode (a separate <script>) can call it too.
+    // NOTE: setMode is defined in the module script above (it wins as the last
+    // window.setMode assignment since modules defer). This duplicate was removed
+    // to avoid two diverging definitions. renderContactsPanel is exposed below so
+    // that module-scope setMode can call it across script boundaries.
     window.renderContactsPanel = renderContactsPanel;
 
     // ── Drag and drop ──────────────────────────────────────────────────────
