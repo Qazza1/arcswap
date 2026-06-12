@@ -876,8 +876,8 @@
       if (um) um.style.display         = mode === "upload"   ? "block" : "none";
       const cm = document.getElementById("contacts-mode");
       if (cm) cm.style.display         = mode === "contacts" ? "block" : "none";
-      if (mode === "contacts" && typeof renderContactsPanel === "function") {
-        renderContactsPanel();
+      if (mode === "contacts" && typeof window.renderContactsPanel === "function") {
+        window.renderContactsPanel();
       }
     };
 
@@ -1426,6 +1426,8 @@
       if (cm) cm.style.display = mode==="contacts" ? "block" : "none";
       if (mode === "contacts") renderContactsPanel();
     };
+    // Expose so the module-scope setMode (a separate <script>) can call it too.
+    window.renderContactsPanel = renderContactsPanel;
 
     // ── Drag and drop ──────────────────────────────────────────────────────
     window.handleDragOver = function(e) {
