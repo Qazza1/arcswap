@@ -7,3 +7,8 @@ dist/
 artifacts/
 cache/
 typechain-types/
+
+# Foundry
+out/
+cache_forge/
+broadcast/
