@@ -24,6 +24,8 @@
     { "source": "/security",   "destination": "/security.html" },
     { "source": "/security/",  "destination": "/security.html" },
     { "source": "/ecosystem",  "destination": "/ecosystem.html" },
-    { "source": "/ecosystem/", "destination": "/ecosystem.html" }
+    { "source": "/ecosystem/", "destination": "/ecosystem.html" },
+    { "source": "/docs-api",   "destination": "/docs-api.html" },
+    { "source": "/docs-api/",  "destination": "/docs-api.html" }
   ]
 }

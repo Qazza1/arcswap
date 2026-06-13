@@ -29,6 +29,7 @@ export default defineConfig({
         pricing:     resolve(__dirname, "pricing.html"),
         security:  resolve(__dirname, "security.html"),
         ecosystem: resolve(__dirname, "ecosystem.html"),
+        "docs-api": resolve(__dirname, "docs-api.html"),
       },
     },
   },
