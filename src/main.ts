@@ -356,11 +356,14 @@ async function executeSwap(): Promise<void> {
     addClass("estimate-row", "hidden");
     await loadBalances();
   } catch (err: any) {
+    console.error("ARCFX SWAP ERROR:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
     const msg = String(err?.message ?? "");
     if (err?.code === 4001) {
       showStatus("Transaction rejected.", "error");
     } else if (/no route|route or resource not found|route not found/i.test(msg)) {
       showStatus(`${tokenIn} \u2192 ${tokenOut} isn't routable on Arc Testnet right now \u2014 Circle hasn't provisioned this swap direction. Try the reverse direction, a different token pair, or the Bridge tab.`, "error");
+    } else if (err?.code === 5002 || err?.name === "ONCHAIN_SIMULATION_FAILED") {
+      showStatus("This swap couldn't be completed right now \u2014 the FX route may be temporarily unavailable on testnet. Try a smaller amount, the reverse direction, or check back shortly.", "error");
     } else {
       showStatus(`Swap failed: ${msg || "Unknown error"}`, "error");
     }
