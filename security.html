@@ -132,7 +132,7 @@
       <div class="section-title">How the architecture works</div>
       <div class="section-body">
         <p>ArcFX is a frontend interface that connects your wallet directly to two smart contracts on Arc. There is no ArcFX server involved in transaction execution. When you make a payment, the flow is:</p>
-        <p><strong style="color:#f1f5f9;">Your wallet → ArcFXPayments.sol → Recipient wallet</strong><br>The smart contract deducts 0.15% to the treasury address and forwards the remainder to the recipient — all in one atomic transaction. If any step fails, the entire transaction reverts. You cannot lose funds to a partial execution.</p>
+        <p><strong style="color:#f1f5f9;">Your wallet → ArcFXPayments.sol → Recipient wallet</strong><br>The smart contract deducts 0.10% to the treasury address and forwards the remainder to the recipient — all in one atomic transaction. If any step fails, the entire transaction reverts. You cannot lose funds to a partial execution.</p>
         <p>For batch transfers via Multisender: <strong style="color:#f1f5f9;">Your wallet → ArcFXMultisender.sol → Up to 500 recipient wallets</strong><br>Executed in a single on-chain transaction. The contract validates all recipients before execution begins.</p>
       </div>
     </div>
@@ -144,12 +144,12 @@
       <div class="contract-card">
         <div class="contract-name">ArcFXPayments.sol</div>
         <div class="contract-addr">0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3</div>
-        <div class="contract-desc">Handles Pay Links and Invoice payments. Collects 0.15% protocol fee automatically. Emits PaymentExecuted event for every transaction. View on <a href="https://testnet.arcscan.app/address/0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3" target="_blank" rel="noopener" style="color:#2563eb;">ArcScan ↗</a></div>
+        <div class="contract-desc">Handles Pay Links and Invoice payments. Collects 0.10% protocol fee automatically. Emits PaymentExecuted event for every transaction. View on <a href="https://testnet.arcscan.app/address/0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3" target="_blank" rel="noopener" style="color:#2563eb;">ArcScan ↗</a></div>
       </div>
       <div class="contract-card">
         <div class="contract-name">ArcFXMultisender.sol</div>
         <div class="contract-addr">0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398</div>
-        <div class="contract-desc">Handles batch USDC/EURC transfers to up to 500 wallets in a single transaction. Free tier (≤5 recipients) and Pro tier (≤500). 0.15% fee on Pro batches. View on <a href="https://testnet.arcscan.app/address/0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398" target="_blank" rel="noopener" style="color:#2563eb;">ArcScan ↗</a></div>
+        <div class="contract-desc">Handles batch USDC/EURC transfers to up to 500 wallets in a single transaction. Free tier (≤5 recipients) and Pro tier (≤500). 0.10% fee on Pro batches. View on <a href="https://testnet.arcscan.app/address/0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398" target="_blank" rel="noopener" style="color:#2563eb;">ArcScan ↗</a></div>
       </div>
     </div>
 
@@ -159,7 +159,7 @@
       <div class="can-grid">
         <div class="can-card">
           <div class="can-title green">✓ What ArcFX can do</div>
-          <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Collect 0.15% fee when a payment executes</div>
+          <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Collect 0.10% fee when a payment executes</div>
           <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Read your wallet address and token balances</div>
           <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Request transaction approvals from your wallet</div>
           <div class="can-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Display your on-chain transaction history</div>
