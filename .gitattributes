@@ -1,0 +1,5 @@
+# Byte-exact reference copies of the deployed, ArcScan-verified contract sources.
+# Their line endings must never be normalised: Solidity's metadata hash is computed
+# over these exact bytes, so a CRLF conversion on checkout would change the hash and
+# break re-verification against the deployed bytecode.
+verified/*.sol -text
