@@ -535,7 +535,10 @@ function sumByToken(txs, dir) {
     if (t.isSwap || t.dir !== dir) continue;
     by.set(t.sym, (by.get(t.sym) || 0) + t.rawAmt);
   }
-  return [...by.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  // Filter on what will actually be displayed. A dust balance of 0.0004 is
+  // "> 0" but renders as "0.00", which reads as an empty row rather than a
+  // small one — the same noise we strip out of the period summary.
+  return [...by.entries()].filter(([, v]) => v >= 0.005).sort((a, b) => b[1] - a[1]);
 }
 
 function renderMoneyStat(id, rows, sign) {
@@ -961,9 +964,10 @@ function renderPnl() {
 
   const cells = [];
   for (const [sym, b] of byTok) {
-    // A token with no movement in the period contributes three tiles of zero
-    // and crowds out the numbers that matter. Leave it out.
-    if (b.in === 0 && b.out === 0) continue;
+    // A token with no meaningful movement contributes tiles of zero and crowds
+    // out the numbers that matter. Threshold on the displayed value, so dust
+    // that rounds to 0.00 is treated as no movement.
+    if (b.in < 0.005 && b.out < 0.005) continue;
     const net = b.in - b.out;
     cells.push(`<div class="pnl-cell">
       <div class="pnl-cell-val" style="color:${net >= 0 ? "#10b981" : "#ef4444"};">${money(net)}</div>
