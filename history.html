@@ -67,6 +67,32 @@
     .tx-category { background: transparent; border: 1px solid var(--border); border-radius: var(--rsm); color: var(--muted); font-size: 11.5px; font-family: "Space Grotesk", sans-serif; padding: 4px 6px; max-width: 165px; cursor: pointer; transition: all .15s; }
     .tx-category:hover, .tx-category:focus { border-color: var(--teal); color: var(--teal); outline: none; }
     .tx-category option { background: var(--card); color: var(--muted); }
+    .btn-sync { background: var(--tdim); border: 1px solid rgba(0,212,170,.35); color: var(--teal); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; }
+    .btn-sync:hover:not(:disabled) { background: rgba(0,212,170,.16); }
+    .btn-sync:disabled { opacity: .6; cursor: default; }
+
+    /* ── Accounting period + period summary ── */
+    .period-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; padding: 10px 14px; background: var(--card); border: 1px solid var(--border); border-radius: var(--rsm); }
+    .period-lbl { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+    .period-input { background: transparent; border: 1px solid var(--border); border-radius: var(--rsm); color: var(--text); font-size: 12px; font-family: "JetBrains Mono", monospace; padding: 5px 8px; cursor: pointer; }
+    .period-input:hover, .period-input:focus { border-color: var(--teal); outline: none; }
+    .period-sep { color: var(--muted); font-size: 12px; }
+    .period-preset { background: transparent; border: 1px solid var(--border); border-radius: var(--rsm); color: var(--muted); font-size: 11.5px; font-weight: 600; padding: 5px 10px; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; }
+    .period-preset:hover { border-color: var(--blue); color: var(--blue); }
+    .period-count { margin-left: auto; font-size: 11.5px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
+
+    .pnl { margin-bottom: 18px; padding: 16px 18px; background: var(--card); border: 1px solid var(--border); border-radius: var(--rsm); }
+    .pnl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+    .pnl-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .pnl-note { font-size: 11.5px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
+    .pnl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .pnl-cell { padding: 10px 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--rsm); }
+    .pnl-cell-val { font-size: 16px; font-weight: 600; font-family: "JetBrains Mono", monospace; margin-bottom: 3px; }
+    .pnl-cell-lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .pnl-cats { display: flex; flex-direction: column; gap: 5px; }
+    .pnl-cat { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .pnl-cat-name { color: var(--muted); }
+    .pnl-cat-val { font-family: "JetBrains Mono", monospace; color: var(--text); }
     .btn-refresh { display: flex; align-items: center; gap: 5px; background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; transition: all .15s; font-family: "Space Grotesk", sans-serif; }
     .btn-refresh:hover { border-color: var(--blue); color: var(--blue); }
 
@@ -182,6 +208,7 @@
     </div>
     <div class="toolbar-right">
       <button class="btn-refresh" onclick="refresh()">↻ Refresh</button>
+      <button class="btn-sync" id="sync-btn" onclick="syncCategories()" style="display:none;" title="Save your categories to your ArcFX account (one wallet signature)">☁ Sync</button>
       <select class="btn-export" id="export-select" onchange="exportLedger(this.value); this.selectedIndex=0;" title="Export for bookkeeping">
         <option value="">⬇ Export</option>
         <option value="detailed">Detailed ledger (all fields)</option>
@@ -189,6 +216,30 @@
         <option value="xero">Xero (bank statement)</option>
       </select>
     </div>
+  </div>
+
+  <!-- Accounting period: bookkeeping is done per period, never "everything since
+       inception", so exports and the summary below both honour this range. -->
+  <div class="period-bar" id="period-bar">
+    <span class="period-lbl">Accounting period</span>
+    <input type="date" class="period-input" id="period-from" onchange="applyPeriod()" />
+    <span class="period-sep">→</span>
+    <input type="date" class="period-input" id="period-to" onchange="applyPeriod()" />
+    <button class="period-preset" onclick="setPeriodPreset('ytd')">Year to date</button>
+    <button class="period-preset" onclick="setPeriodPreset('q')">This quarter</button>
+    <button class="period-preset" onclick="setPeriodPreset('m')">This month</button>
+    <button class="period-preset" onclick="setPeriodPreset('all')">All time</button>
+    <span class="period-count" id="period-count"></span>
+  </div>
+
+  <!-- Period summary: what an accountant actually needs to see -->
+  <div class="pnl" id="pnl" style="display:none;">
+    <div class="pnl-head">
+      <span class="pnl-title">Period summary</span>
+      <span class="pnl-note" id="pnl-note"></span>
+    </div>
+    <div class="pnl-grid" id="pnl-grid"></div>
+    <div class="pnl-cats" id="pnl-cats"></div>
   </div>
 
   <!-- Table -->
@@ -447,10 +498,12 @@ async function loadHistory() {
     }
 
     allTxs = processed;
-    loadCategories();
+    await loadCategories();
     await loadFeeBps();
     updateStats();
     renderTable();
+    renderPnl();
+    enrichPayers(); // fire-and-forget; re-renders itself once the payers land
 
   } catch (err) {
     setEmpty(`Could not load history. ${err.message}`);
@@ -476,7 +529,7 @@ function updateStats() {
 
 // ── Render ─────────────────────────────────────────────────────────────────
 function renderTable() {
-  const filtered = allTxs.filter(t => {
+  const filtered = periodTxs().filter(t => {
     if (filter === "all")  return true;
     if (filter === "swap") return t.isSwap;
     if (filter === "in")   return t.dir === "in"  && !t.isSwap;
@@ -594,9 +647,13 @@ function autoCategory(t) {
 // alone is not a stable key.
 const rowId = t => `${t.hash}|${t.dir}|${t.sym}`;
 
+const ARCFX_API = "https://arcfx-backend-production.up.railway.app";
+
 let catOverrides = {};
+let catDirty = new Set(); // changed locally, not yet pushed to the backend
 const catKey = () => `arcfx:categories:${(userAddress || "anon").toLowerCase()}`;
-function loadCategories() {
+
+function loadCategoriesLocal() {
   try { catOverrides = JSON.parse(localStorage.getItem(catKey()) || "{}"); }
   catch { catOverrides = {}; }
 }
@@ -605,10 +662,101 @@ function saveCategories() {
 }
 function categoryOf(t) { return catOverrides[rowId(t)] || autoCategory(t); }
 
+// Categories persist locally on every edit (instant, no wallet prompt) and are
+// pushed to the backend in one signed batch. Signing per-keystroke would mean a
+// wallet popup for every dropdown change.
+async function loadCategories() {
+  loadCategoriesLocal();
+  if (!userAddress) return;
+  try {
+    const r = await fetch(`${ARCFX_API}/v1/categories?wallet=${userAddress}`);
+    if (!r.ok) return;
+    const j = await r.json();
+    // Local edits that haven't synced yet must win, or the user loses work.
+    catOverrides = { ...(j.categories || {}), ...pickDirty() };
+    saveCategories();
+  } catch { /* offline — localStorage already loaded */ }
+  updateSyncButton();
+}
+function pickDirty() {
+  const out = {};
+  for (const id of catDirty) out[id] = catOverrides[id] ?? "";
+  return out;
+}
+
 window.setCategory = function(id, value) {
   if (value) catOverrides[id] = value; else delete catOverrides[id];
+  catDirty.add(id);
   saveCategories();
+  updateSyncButton();
 };
+
+function updateSyncButton() {
+  const b = el("sync-btn");
+  if (!b) return;
+  const n = catDirty.size;
+  b.style.display = n ? "inline-block" : "none";
+  b.textContent = `☁ Sync ${n} categor${n === 1 ? "y" : "ies"}`;
+}
+
+window.syncCategories = async function() {
+  if (!userAddress || !signer) { alert("Connect your wallet first."); return; }
+  if (!catDirty.size) return;
+  const b = el("sync-btn");
+  const updates = pickDirty();
+  try {
+    if (b) { b.disabled = true; b.textContent = "Signing…"; }
+    // The digest must match the backend's canonicalisation exactly: entries
+    // sorted by key, then JSON.stringify of [key, value] pairs.
+    const canonical = JSON.stringify(Object.keys(updates).sort().map(k => [k, updates[k]]));
+    const digest = await sha256Hex(canonical);
+    const ts = Date.now();
+    const message = `ArcFX category update\nwallet: ${userAddress.toLowerCase()}\ndigest: ${digest}\nts: ${ts}`;
+    const signature = await signer.signMessage(message);
+
+    if (b) b.textContent = "Saving…";
+    const r = await fetch(`${ARCFX_API}/v1/categories`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet: userAddress, updates, ts, signature }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+    catDirty.clear();
+    if (b) b.textContent = "✓ Saved";
+    setTimeout(updateSyncButton, 1500);
+  } catch (e) {
+    alert(`Could not sync categories: ${e.message || e}`);
+    if (b) updateSyncButton();
+  } finally {
+    if (b) b.disabled = false;
+  }
+};
+
+async function sha256Hex(s) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// On-chain, a received payment appears to come from the ArcFXPayments contract.
+// Only the indexed PaymentExecuted event knows who actually paid, so fill the
+// counterparty in from the backend where we can.
+async function enrichPayers() {
+  if (!userAddress) return;
+  try {
+    const r = await fetch(`${ARCFX_API}/v1/payments?recipient=${userAddress}&limit=100`);
+    if (!r.ok) return;
+    const j = await r.json();
+    const byHash = new Map((j.payments || []).map(p => [String(p.txHash).toLowerCase(), p.payer]));
+    let n = 0;
+    for (const t of allTxs) {
+      if (t.dir !== "in") continue;
+      const payer = byHash.get(String(t.hash).toLowerCase());
+      if (payer) { t.counterparty = String(payer).toLowerCase(); t.payerResolved = true; n++; }
+    }
+    if (n) { renderTable(); renderPnl(); }
+  } catch { /* backend unreachable — addresses stay as the contract */ }
+}
 
 // ── Dates ─────────────────────────────────────────────────────────────────
 // Each package wants its own format. ISO for our own export, US for QuickBooks,
@@ -694,13 +842,123 @@ function downloadCsv(rows, suffix) {
   URL.revokeObjectURL(url);
 }
 
+// ── Accounting period ─────────────────────────────────────────────────────
+// Books are kept per period. Everything below — the table, the summary and all
+// three exports — reads from the same windowed set, so what you see is what you
+// export. Undated rows are excluded from a bounded period rather than guessed at.
+let periodFrom = null, periodTo = null;
+
+function inPeriod(t) {
+  if (!periodFrom && !periodTo) return true;
+  const d = isoDate(t);
+  if (!d) return false;
+  if (periodFrom && d < periodFrom) return false;
+  if (periodTo && d > periodTo) return false;
+  return true;
+}
+function periodTxs() { return allTxs.filter(inPeriod); }
+
+window.applyPeriod = function() {
+  periodFrom = el("period-from")?.value || null;
+  periodTo   = el("period-to")?.value   || null;
+  renderTable();
+  renderPnl();
+};
+
+window.setPeriodPreset = function(kind) {
+  const now = new Date(), y = now.getFullYear();
+  const iso = d => d.toISOString().slice(0, 10);
+  let from = "", to = "";
+  if (kind === "ytd") { from = `${y}-01-01`; to = iso(now); }
+  else if (kind === "q") {
+    const q = Math.floor(now.getMonth() / 3);
+    from = iso(new Date(Date.UTC(y, q * 3, 1)));
+    to   = iso(new Date(Date.UTC(y, q * 3 + 3, 0)));
+  } else if (kind === "m") {
+    from = iso(new Date(Date.UTC(y, now.getMonth(), 1)));
+    to   = iso(new Date(Date.UTC(y, now.getMonth() + 1, 0)));
+  }
+  const f = el("period-from"), t = el("period-to");
+  if (f) f.value = from;
+  if (t) t.value = to;
+  window.applyPeriod();
+};
+
+// Money is per-currency: USDC and EURC are never summed into one number.
+function periodTotals(txs) {
+  const byTok = new Map(); // sym -> { in, out, fees }
+  const byCat = new Map(); // category -> Map(sym -> signed total)
+  for (const t of txs) {
+    for (const leg of ledgerLegs(t)) {
+      const cat = leg.category || categoryOf(t);
+      if (!byTok.has(leg.sym)) byTok.set(leg.sym, { in: 0, out: 0, fees: 0 });
+      const b = byTok.get(leg.sym);
+      if (leg.amt >= 0) b.in += leg.amt; else b.out += -leg.amt;
+      if (cat === "Fees") b.fees += Math.abs(leg.amt);
+      if (!byCat.has(cat)) byCat.set(cat, new Map());
+      const cm = byCat.get(cat);
+      cm.set(leg.sym, (cm.get(leg.sym) || 0) + leg.amt);
+    }
+  }
+  return { byTok, byCat };
+}
+
+const money = n => (n < 0 ? "−" : "") + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function renderPnl() {
+  const box = el("pnl");
+  if (!box) return;
+  const txs = periodTxs();
+  const cnt = el("period-count");
+  if (cnt) cnt.textContent = allTxs.length ? `${txs.length} of ${allTxs.length} transactions in period` : "";
+  if (!txs.length) { box.style.display = "none"; return; }
+  box.style.display = "block";
+
+  const { byTok, byCat } = periodTotals(txs);
+  const note = el("pnl-note");
+  if (note) note.textContent = (periodFrom || periodTo)
+    ? `${periodFrom || "start"} → ${periodTo || "today"}`
+    : "all time";
+
+  const cells = [];
+  for (const [sym, b] of byTok) {
+    const net = b.in - b.out;
+    cells.push(`<div class="pnl-cell">
+      <div class="pnl-cell-val" style="color:${net >= 0 ? "#10b981" : "#ef4444"};">${money(net)}</div>
+      <div class="pnl-cell-lbl">${sym} net</div></div>`);
+    cells.push(`<div class="pnl-cell">
+      <div class="pnl-cell-val" style="color:#10b981;">${money(b.in)}</div>
+      <div class="pnl-cell-lbl">${sym} in</div></div>`);
+    cells.push(`<div class="pnl-cell">
+      <div class="pnl-cell-val" style="color:#ef4444;">${money(b.out)}</div>
+      <div class="pnl-cell-lbl">${sym} out</div></div>`);
+    if (b.fees > 0) cells.push(`<div class="pnl-cell">
+      <div class="pnl-cell-val" style="color:#f59e0b;">${money(b.fees)}</div>
+      <div class="pnl-cell-lbl">${sym} fees</div></div>`);
+  }
+  el("pnl-grid").innerHTML = cells.join("");
+
+  const rows = [...byCat.entries()]
+    .map(([cat, m]) => [cat, [...m.entries()].map(([s, v]) => `${money(v)} ${s}`).join("  ·  ")])
+    .sort((a, b) => a[0].localeCompare(b[0]));
+  el("pnl-cats").innerHTML = rows
+    .map(([cat, val]) => `<div class="pnl-cat"><span class="pnl-cat-name">${cat}</span><span class="pnl-cat-val">${val}</span></div>`)
+    .join("");
+}
+
 window.exportLedger = function(format) {
   if (!format) return;
-  if (allTxs.length === 0) { alert("No transactions to export. Connect wallet first."); return; }
+  const rowsSrc = periodTxs();
+  if (rowsSrc.length === 0) {
+    alert(allTxs.length
+      ? "No transactions in the selected accounting period."
+      : "No transactions to export. Connect wallet first.");
+    return;
+  }
 
   if (format === "detailed") {
     const rows = [["Date","Description","Category","Direction","Token","Amount","Counterparty","Block","Transaction Hash","ArcScan URL"]];
-    for (const t of allTxs) {
+    for (const t of rowsSrc) {
       for (const leg of ledgerLegs(t)) {
         rows.push([
           isoDate(t),
@@ -723,7 +981,7 @@ window.exportLedger = function(format) {
   if (format === "quickbooks") {
     // QuickBooks 3-column bank format: Date, Description, Amount.
     const rows = [["Date","Description","Amount"]];
-    for (const t of allTxs) {
+    for (const t of rowsSrc) {
       for (const leg of ledgerLegs(t)) {
         rows.push([usDate(t), `${leg.desc} [${leg.category || categoryOf(t)}]`, leg.amt.toFixed(6)]);
       }
@@ -735,7 +993,7 @@ window.exportLedger = function(format) {
   if (format === "xero") {
     // Xero bank statement import: Date, Amount, Payee, Description, Reference.
     const rows = [["Date","Amount","Payee","Description","Reference"]];
-    for (const t of allTxs) {
+    for (const t of rowsSrc) {
       for (const leg of ledgerLegs(t)) {
         rows.push([
           ukDate(t),
