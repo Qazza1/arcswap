@@ -26,6 +26,12 @@
  * ───────────────────────────────────────────────────────────────────────────
  */
 
+// Importing the shared session here is deliberate: every page mounts this
+// header, so this single import is what gives all of them silent wallet
+// restore, a working Connect button and chain guarding — without each page
+// re-implementing it and drifting out of sync.
+import { arcfxWallet } from './wallet';
+
 export type PageKey =
   | 'index' | 'app' | 'trade' | 'multisend' | 'pay' | 'invoice' | 'history'
   | 'analytics' | 'docs' | 'docs-api' | 'developers' | 'pricing' | 'ecosystem' | 'security'
@@ -55,7 +61,7 @@ const PRODUCT_STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boole
   { label: 'Gas token',   value: 'USDC' },
   { label: 'Avg fee',     value: '$0.0002',       valueColor: '#00d4aa' },
   { label: 'Arc raised',  value: '$222M at $3B' },
-  { label: 'Tools',       value: '6 live' },
+  { label: 'Tools',       value: '7 live' },
 ];
 
 // MARKETING mode: leads with business trust facts, testnet status moved to end (no dot)
@@ -64,7 +70,7 @@ const MARKETING_STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boo
   { label: 'Settlement',       value: '&lt; 1 second', valueColor: '#00d4aa' },
   { label: 'Avg fee',          value: '$0.0002',       valueColor: '#00d4aa' },
   { label: 'Gas token',        value: 'USDC' },
-  { label: 'Tools',            value: '6 live' },
+  { label: 'Tools',            value: '7 live' },
   { label: 'Arc Testnet',      value: 'Live' },
 ];
 
@@ -402,50 +408,27 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
   const saveBtn = document.getElementById('arcfx-contact-save');
   if (saveBtn) saveBtn.addEventListener('click', saveContact);
 
-  // Connect wallet button — calls global connectWallet() if it exists,
-  // otherwise does nothing. Page-specific TS modules (e.g. main.ts) expose
-  // connectWallet on window, OR pages define their own inline connectWallet()
-  // that queries this button by id='connect-btn' to update its text.
+  // Connect wallet button. The shared session (src/shared/wallet.ts) owns
+  // prompting, the Arc chain switch, silent restore and painting this button —
+  // importing it above is what gives every page a session that survives
+  // navigation. A page that defines its own window.connectWallet still wins,
+  // so pages with bespoke flows (pay, trade) keep control.
   const connectBtn = document.getElementById('connect-btn');
   if (connectBtn) {
     connectBtn.addEventListener('click', () => {
       const fn = (window as any).connectWallet;
       if (typeof fn === 'function') { fn(); return; }
-      // Fallback: pages without page-specific wallet logic (info pages, dashboard)
-      // still get a basic connect so the button is never a dead end.
-      const eth = (window as any).ethereum;
-      if (eth) {
-        eth.request({ method: 'eth_requestAccounts' })
-          .then((a: string[]) => {
-            if (a && a.length) {
-              try { localStorage.setItem('arcfx_returning', '1'); } catch (e) { /* blocked */ }
-              connectBtn.textContent = `${a[0].slice(0, 6)}...${a[0].slice(-4)}`;
-            }
-          })
-          .catch(() => {});
-      }
+      arcfxWallet.connect().catch(() => { /* dismissed */ });
     });
   }
 
-  // Auto-display connected wallet address (origin-scoped — only shows for
-  // users who have explicitly connected to arcfx.app before). NOTE: we don't
-  // set textContent here if a page-level script already auto-reconnects —
-  // the page's own connectWallet() will update the button text instead.
-  const eth = (window as any).ethereum;
-  if (eth && connectBtn) {
-    eth.request({ method: 'eth_accounts' })
-      .then((accounts: string[]) => {
-        if (accounts && accounts.length > 0) {
-          // Remember that this user has connected before — the marketing nav
-          // reads this to show "Back to app" instead of "Launch ArcFX".
-          try { localStorage.setItem('arcfx_returning', '1'); } catch (e) { /* blocked */ }
-          if (connectBtn.textContent === 'Connect wallet') {
-            connectBtn.textContent = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
-          }
-        }
-      })
-      .catch(() => { /* no-op */ });
-  }
+  // The marketing nav reads this to show "Back to app" instead of "Launch
+  // ArcFX" for people who have connected before.
+  arcfxWallet.onChange((s) => {
+    if (s.connected) {
+      try { localStorage.setItem('arcfx_returning', '1'); } catch (e) { /* storage blocked */ }
+    }
+  });
 }
 
 // ── Contacts rendering (uses existing arcfx_address_book localStorage) ─────
