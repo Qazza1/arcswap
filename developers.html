@@ -149,6 +149,17 @@
             <span class="mono" id="base-url-text">https://arcfx-backend-production.up.railway.app</span>
           </div>
           <div class="note" style="margin-top:16px;"><strong>Testnet.</strong> The API currently serves Arc Testnet data. Amounts are in human-readable units (e.g. <code>1.000000</code> USDC).</div>
+
+          <h3>Agent payments (x402)</h3>
+          <p>ArcFX also speaks <strong>x402</strong>, the HTTP 402 payment standard. An agent requests an invoice, receives <code>402 Payment Required</code> with the payment requirements, signs a gasless EIP-3009 authorization, and repeats the request with a <code>PAYMENT-SIGNATURE</code> header. No API key is involved — the signature is the authorization.</p>
+          <ul>
+            <li><code>GET /v1/x402/discovery</code> — scheme, network, asset and the EIP-712 domain to sign against</li>
+            <li><code>GET /v1/x402/invoice/:number</code> — returns <code>402</code> unpaid; returns the receipt once paid</li>
+            <li><code>POST /v1/x402/verify</code> and <code>POST /v1/x402/settle</code> — facilitator-shaped endpoints</li>
+          </ul>
+          <div class="note" style="margin-top:16px;">
+            <strong>See it run.</strong> The <a href="/agent" style="color:#a855f7;">agent payments page</a> performs the whole exchange live and prints the real request and response at every step.
+          </div>
         </section>
 
         <!-- AUTH -->

@@ -89,6 +89,12 @@
     .pnl-cell { padding: 10px 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--rsm); }
     .pnl-cell-val { font-size: 16px; font-weight: 600; font-family: "JetBrains Mono", monospace; margin-bottom: 3px; }
     .pnl-cell-lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .pnl-fees { margin-bottom: 14px; }
+    .pnl-fee { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 12px; background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.2); border-radius: var(--rsm); font-size: 12.5px; }
+    .pnl-fee + .pnl-fee { margin-top: 6px; }
+    .pnl-fee-name { color: #f59e0b; font-weight: 600; }
+    .pnl-fee-val { font-family: "JetBrains Mono", monospace; color: var(--text); }
+    .pnl-fee-rate { color: var(--muted); font-size: 11.5px; }
     .pnl-cats { display: flex; flex-direction: column; gap: 5px; }
     .pnl-cat { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
     .pnl-cat-name { color: var(--muted); }
@@ -239,6 +245,7 @@
       <span class="pnl-note" id="pnl-note"></span>
     </div>
     <div class="pnl-grid" id="pnl-grid"></div>
+    <div class="pnl-fees" id="pnl-fees" style="display:none;"></div>
     <div class="pnl-cats" id="pnl-cats"></div>
   </div>
 
@@ -804,7 +811,10 @@ function ledgerLegs(t) {
       return [
         { amt: -(units - feeU) / scale, sym: t.sym, desc: `Payment ${t.sym} via ArcFX Pay` },
         { amt: -feeU / scale, sym: t.sym, desc: `ArcFX protocol fee (${(feeBps / 100).toFixed(2)}%)`,
-          category: "Fees", payee: "ArcFX treasury" },
+          category: "Fees", payee: "ArcFX treasury",
+          // Flagged so the period summary can separate protocol fees from
+          // anything the user has manually filed under "Fees".
+          isProtocolFee: true, feeBase: (units - feeU) / scale },
       ];
     }
   }
@@ -886,15 +896,19 @@ window.setPeriodPreset = function(kind) {
 
 // Money is per-currency: USDC and EURC are never summed into one number.
 function periodTotals(txs) {
-  const byTok = new Map(); // sym -> { in, out, fees }
+  const byTok = new Map(); // sym -> { in, out, fees, protocolFees, feeBase }
   const byCat = new Map(); // category -> Map(sym -> signed total)
   for (const t of txs) {
     for (const leg of ledgerLegs(t)) {
       const cat = leg.category || categoryOf(t);
-      if (!byTok.has(leg.sym)) byTok.set(leg.sym, { in: 0, out: 0, fees: 0 });
+      if (!byTok.has(leg.sym)) byTok.set(leg.sym, { in: 0, out: 0, fees: 0, protocolFees: 0, feeBase: 0 });
       const b = byTok.get(leg.sym);
       if (leg.amt >= 0) b.in += leg.amt; else b.out += -leg.amt;
       if (cat === "Fees") b.fees += Math.abs(leg.amt);
+      if (leg.isProtocolFee) {
+        b.protocolFees += Math.abs(leg.amt);
+        b.feeBase += leg.feeBase || 0; // net actually delivered, the base the rate applies to
+      }
       if (!byCat.has(cat)) byCat.set(cat, new Map());
       const cm = byCat.get(cat);
       cm.set(leg.sym, (cm.get(leg.sym) || 0) + leg.amt);
@@ -937,6 +951,30 @@ function renderPnl() {
       <div class="pnl-cell-lbl">${sym} fees</div></div>`);
   }
   el("pnl-grid").innerHTML = cells.join("");
+
+  // Protocol fees get their own line rather than sitting anonymously among the
+  // category totals: it is the one cost ArcFX itself charges, and the effective
+  // rate is the number a business actually wants to check.
+  const feeRows = [];
+  for (const [sym, b] of byTok) {
+    if (b.protocolFees <= 0) continue;
+    const effective = b.feeBase > 0 ? (b.protocolFees / b.feeBase) * 100 : null;
+    feeRows.push(
+      `<div class="pnl-fee">
+         <span class="pnl-fee-name">Protocol fees paid</span>
+         <span class="pnl-fee-val">${money(b.protocolFees)} ${sym}${
+           effective !== null
+             ? ` <span class="pnl-fee-rate">· ${effective.toFixed(3)}% effective on ${money(b.feeBase)} ${sym}</span>`
+             : ""
+         }</span>
+       </div>`
+    );
+  }
+  const feeBox = el("pnl-fees");
+  if (feeBox) {
+    feeBox.innerHTML = feeRows.join("");
+    feeBox.style.display = feeRows.length ? "" : "none";
+  }
 
   const rows = [...byCat.entries()]
     .map(([cat, m]) => [cat, [...m.entries()].map(([s, v]) => `${money(v)} ${s}`).join("  ·  ")])
