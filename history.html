@@ -360,6 +360,7 @@ async function loadHistory() {
         dir,
         from, to,
         amtNum,
+        dec, // kept so fee splitting can work in exact integer units
       });
     }
 
@@ -413,7 +414,7 @@ async function loadHistory() {
       const buckets = new Map(); // key: dir|sym -> { dir, sym, sum, count, other }
       for (const g of group) {
         const key = `${g.dir}|${g.sym}`;
-        const b = buckets.get(key) || { dir: g.dir, sym: g.sym, sum: 0, count: 0, other: g.dir === "out" ? g.to : g.from };
+        const b = buckets.get(key) || { dir: g.dir, sym: g.sym, sum: 0, count: 0, dec: g.dec, other: g.dir === "out" ? g.to : g.from };
         b.sum += g.amtNum;
         b.count += 1;
         buckets.set(key, b);
@@ -429,7 +430,7 @@ async function loadHistory() {
             amtDisplay: `\u2212${fmt(b.sum)}`, amtClass: "amt-out", sym: b.sym,
             isSwap: false, dir: "out",
             counterparty: many ? "" : b.other,
-            rawAmt: b.sum,
+            rawAmt: b.sum, dec: b.dec,
           });
         } else {
           processed.push({
@@ -439,7 +440,7 @@ async function loadHistory() {
             amtDisplay: `+${fmt(b.sum)}`, amtClass: "amt-in", sym: b.sym,
             isSwap: false, dir: "in",
             counterparty: many ? "" : b.other,
-            rawAmt: b.sum,
+            rawAmt: b.sum, dec: b.dec,
           });
         }
       }
@@ -447,6 +448,7 @@ async function loadHistory() {
 
     allTxs = processed;
     loadCategories();
+    await loadFeeBps();
     updateStats();
     renderTable();
 
@@ -619,6 +621,16 @@ const ukDate  = t => { const d = tsDate(t); return d ? `${pad2(d.getDate())}/${p
 
 const shortAddr = a => (a ? `${a.slice(0,6)}...${a.slice(-4)}` : "multiple recipients");
 
+// Protocol fee rate, read from the contract on load (anti-drift) so the ledger
+// never hardcodes a rate the chain has moved past. Falls back to the deployed 10.
+let feeBps = 10;
+async function loadFeeBps() {
+  try {
+    const c = new Contract(PAYMENTS_ADDR, ["function FEE_BPS() view returns (uint256)"], provider);
+    feeBps = Number(await c.FEE_BPS());
+  } catch { /* keep the default */ }
+}
+
 // A swap moves money twice. Accounting software needs both legs or the
 // conversion silently misstates the balance, so expand it into an out-leg and
 // an in-leg. Everything else is a single signed movement.
@@ -630,6 +642,24 @@ function ledgerLegs(t) {
       { amt:  t.swapIn.amt,  sym: t.swapIn.sym,  desc: `FX conversion in - ${pair}`  },
     ];
   }
+
+  // pay() pulls one gross transferFrom off the payer, then fans out net to the
+  // recipient and the fee to treasury. Booking that single gross line as one
+  // expense overstates the vendor cost and hides the fee entirely, so split it.
+  // Integer unit math mirrors the contract's own floor division exactly.
+  if (t.dir === "out" && (t.counterparty || "").toLowerCase() === PAYMENTS_ADDR && feeBps > 0) {
+    const scale = Math.pow(10, t.dec ?? 6);
+    const units = Math.round(t.rawAmt * scale);
+    const feeU  = Math.floor((units * feeBps) / 10000);
+    if (feeU > 0) {
+      return [
+        { amt: -(units - feeU) / scale, sym: t.sym, desc: `Payment ${t.sym} via ArcFX Pay` },
+        { amt: -feeU / scale, sym: t.sym, desc: `ArcFX protocol fee (${(feeBps / 100).toFixed(2)}%)`,
+          category: "Fees", payee: "ArcFX treasury" },
+      ];
+    }
+  }
+
   const verb = t.dir === "out" ? "to" : "from";
   return [{
     amt: t.dir === "out" ? -t.rawAmt : t.rawAmt,
@@ -668,21 +698,23 @@ window.exportLedger = function(format) {
   if (allTxs.length === 0) { alert("No transactions to export. Connect wallet first."); return; }
 
   if (format === "detailed") {
-    const rows = [
-      ["Date","Type","Category","Direction","Token","Amount","Counterparty","Block","Transaction Hash","ArcScan URL"],
-      ...allTxs.map(t => [
-        isoDate(t),
-        t.type,
-        categoryOf(t),
-        t.isSwap ? "swap" : t.dir,
-        t.sym,
-        t.isSwap ? t.amtDisplay : (t.dir === "out" ? -t.rawAmt : t.rawAmt),
-        t.counterparty || "",
-        t.block,
-        t.hash,
-        `https://testnet.arcscan.app/tx/${t.hash}`,
-      ])
-    ];
+    const rows = [["Date","Description","Category","Direction","Token","Amount","Counterparty","Block","Transaction Hash","ArcScan URL"]];
+    for (const t of allTxs) {
+      for (const leg of ledgerLegs(t)) {
+        rows.push([
+          isoDate(t),
+          leg.desc,
+          leg.category || categoryOf(t),
+          leg.amt < 0 ? "out" : "in",
+          leg.sym,
+          leg.amt.toFixed(6),
+          leg.payee || t.counterparty || "",
+          t.block,
+          t.hash,
+          `https://testnet.arcscan.app/tx/${t.hash}`,
+        ]);
+      }
+    }
     downloadCsv(rows, "ledger");
     return;
   }
@@ -692,7 +724,7 @@ window.exportLedger = function(format) {
     const rows = [["Date","Description","Amount"]];
     for (const t of allTxs) {
       for (const leg of ledgerLegs(t)) {
-        rows.push([usDate(t), `${leg.desc} [${categoryOf(t)}]`, leg.amt.toFixed(6)]);
+        rows.push([usDate(t), `${leg.desc} [${leg.category || categoryOf(t)}]`, leg.amt.toFixed(6)]);
       }
     }
     downloadCsv(rows, "quickbooks");
@@ -707,8 +739,8 @@ window.exportLedger = function(format) {
         rows.push([
           ukDate(t),
           leg.amt.toFixed(6),
-          t.counterparty ? shortAddr(t.counterparty) : (t.isSwap ? "FX conversion" : "Multiple recipients"),
-          `${leg.desc} [${categoryOf(t)}]`,
+          leg.payee || (t.counterparty ? shortAddr(t.counterparty) : (t.isSwap ? "FX conversion" : "Multiple recipients")),
+          `${leg.desc} [${leg.category || categoryOf(t)}]`,
           t.hash,
         ]);
       }
