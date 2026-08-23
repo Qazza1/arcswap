@@ -169,6 +169,21 @@
 
   <!-- Shared header module — single source of truth across all pages.
        Edit /src/shared/header.ts to change the nav/stats-bar everywhere. -->
+  <!-- Fill the sender wallet from the connected session. This page has no
+       wallet flow of its own, so previously you had to paste your own address
+       even though the nav already knew it. -->
+  <script type="module">
+    import { arcfxWallet } from '/src/shared/wallet.ts';
+    arcfxWallet.onChange(state => {
+      if (!state.connected || !state.address) return;
+      const input = document.getElementById('from-wallet');
+      if (input && !input.value.trim()) {
+        input.value = state.address;
+        if (typeof window.updatePreview === 'function') window.updatePreview();
+      }
+    });
+  </script>
+
   <script type="module">
     import { arcfxMountHeader } from '/src/shared/header.ts';
     arcfxMountHeader({
