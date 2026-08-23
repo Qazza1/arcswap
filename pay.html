@@ -212,6 +212,11 @@ const toAddr   = params.get("to")     || "";
 const fixedAmt = params.get("amount") || "";
 const tokenPrm = (params.get("token") || "USDC").toUpperCase();
 const note     = params.get("note")   || "";
+// FX quote carried over from the invoice, so the payer sees the rate the
+// invoice was quoted at. Indicative only — settlement is still in `token`.
+const fxRate   = parseFloat(params.get("fxRate") || "");
+const fxToken  = (params.get("fxToken") || "").toUpperCase();
+const fxAt     = params.get("fxAt") || "";
 const refParam = params.get("ref")    || "";
 
 // Escape any user-supplied string before it goes into innerHTML.
@@ -422,6 +427,12 @@ function renderPayMode() {
             <div class="token-logo ${sym.toLowerCase()}">${sym==="USDC"?"$":"€"}</div>
             ${sym}
           </div>
+          ${hasFixed && isFinite(fxRate) && fxRate > 0 && (fxToken === "USDC" || fxToken === "EURC") ? `
+          <div style="margin-top:10px;font-size:12px;color:#64748b;line-height:1.6;">
+            ≈ ${fmtAmt(parseFloat(fixedAmt) / fxRate, 2)} ${fxToken}
+            &nbsp;·&nbsp; 1 ${fxToken} = ${fxRate.toFixed(4)} ${sym}
+            <br><span style="font-size:11px;color:#475569;">Indicative FX quote${fxAt ? " from " + new Date(fxAt).toLocaleDateString() : ""} — settles in ${sym}</span>
+          </div>` : ""}
         </div>
 
         ${!hasFixed ? `

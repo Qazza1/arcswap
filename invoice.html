@@ -316,6 +316,12 @@
               <span>Total due</span>
               <span class="val" id="preview-total" style="color:var(--blue)">0.00 USDC</span>
             </div>
+            <!-- Live FX equivalent, so a EURC invoice can be quoted to a payer
+                 holding USDC (and vice versa). Rate comes from Circle StableFX. -->
+            <div class="total-row fx-row" id="fx-row" style="display:none;font-size:12.5px;color:var(--muted);padding-top:6px;">
+              <span id="fx-label">Approx. equivalent</span>
+              <span class="val" id="fx-value" style="font-family:'JetBrains Mono',monospace;">—</span>
+            </div>
           </div>
         </div>
       </div>
@@ -651,6 +657,12 @@ function updatePreview() {
   }
   document.getElementById("prev-token").textContent  = sym;
 
+  // Live FX equivalent. Defined in a module script, so it may not exist yet on
+  // the first render — and it must never block the preview.
+  if (typeof window.arcfxRenderFx === "function") {
+    window.arcfxRenderFx(sym, total).catch(() => {});
+  }
+
   // Branding: business logo + name (falls back to initial / placeholder)
   const logoBox = document.getElementById("prev-logo-box");
   const brand   = document.getElementById("prev-brand");
@@ -723,6 +735,15 @@ function buildPayLink(wallet, amount, sym, invoiceNum) {
   if (amount > 0) p.set("amount", amount.toFixed(2));
   p.set("token", sym);
   if (invoiceNum) p.set("note", invoiceNum);
+  // Carry the FX quote through to the pay page so a payer holding the other
+  // token sees the rate the invoice was quoted at, not a fresh one that may
+  // have moved. Indicative only — settlement is still in `token`.
+  const fx = window.arcfxLastFx;
+  if (fx && fx.denomToken === sym && Math.abs(fx.denomAmount - amount) < 0.005) {
+    p.set("fxRate", fx.rate.toFixed(6));
+    p.set("fxToken", fx.otherToken);
+    p.set("fxAt", fx.quotedAt);
+  }
   return `${base}?${p.toString()}`;
 }
 
@@ -968,6 +989,92 @@ function showStatus(msg, type) {
 
   <!-- On-chain Paid status (read-only; matches keccak256(invoiceNumber) + recipient) -->
   <!-- Paid status: live backend (full history) with on-chain fallback -->
+  <!-- ── Live FX quote (Circle StableFX via App Kit) ──────────────────────────
+       An invoice is denominated in one token, but the payer may hold the other.
+       This quotes the equivalent so the invoice can state both, and records the
+       rate that was quoted. Bare specifiers resolve through Vite, same as
+       src/main.ts, so this reuses the App Kit integration already in the app. -->
+  <script type="module">
+    // App Kit is a large dependency and most invoices never ask for a quote, so
+    // it is imported on first use rather than on page load. A static import here
+    // pulled the whole SDK into the invoice bundle.
+    let kitPromise = null;
+    function loadKit() {
+      if (!kitPromise) {
+        kitPromise = Promise.all([
+          import("@circle-fin/app-kit"),
+          import("@circle-fin/adapter-viem-v2"),
+        ]).then(([appKit, adapter]) => ({
+          kit: new appKit.AppKit(),
+          createViemAdapterFromProvider: adapter.createViemAdapterFromProvider,
+        }));
+      }
+      return kitPromise;
+    }
+
+    const REF = "100";           // reference amount used to discover the rate
+    const FX_TTL_MS = 60_000;    // quotes go stale fast; re-quote rather than cache long
+    let fxCache = null;
+
+    // App Kit quotes exact-input only. To price "how much USDC for €500", we
+    // discover the rate from a reference swap and divide, rather than pretend
+    // we have an exact-output quote.
+    async function rateFor(tokenIn, tokenOut) {
+      const now = Date.now();
+      if (fxCache && fxCache.tokenIn === tokenIn && fxCache.tokenOut === tokenOut && now - fxCache.at < FX_TTL_MS) {
+        return fxCache.rate;
+      }
+      if (!window.ethereum) return null;
+      const { kit, createViemAdapterFromProvider } = await loadKit();
+      const adapter = await createViemAdapterFromProvider({ provider: window.ethereum });
+      const est = await kit.estimateSwap({
+        from: { adapter, chain: "Arc_Testnet" },
+        tokenIn, tokenOut, amountIn: REF,
+        config: { kitKey: import.meta.env.VITE_KIT_KEY },
+      });
+      const out = parseFloat(est?.estimatedOutput?.amount ?? "");
+      if (!isFinite(out) || out <= 0) return null;
+      const rate = out / parseFloat(REF);
+      fxCache = { tokenIn, tokenOut, rate, at: now };
+      return rate;
+    }
+
+    // Returns what a payer holding `otherToken` would need to send to settle an
+    // invoice denominated as `amount` of `denomToken`.
+    window.arcfxFxEquivalent = async function (denomToken, amount) {
+      const amt = parseFloat(amount);
+      if (!isFinite(amt) || amt <= 0) return null;
+      const other = denomToken === "USDC" ? "EURC" : "USDC";
+      try {
+        // rate = units of denomToken per 1 unit of other token
+        const rate = await rateFor(other, denomToken);
+        if (!rate) return null;
+        return {
+          otherToken: other,
+          amount: amt / rate,
+          rate,                      // denomToken per 1 otherToken
+          quotedAt: new Date().toISOString(),
+        };
+      } catch {
+        return null; // no route on testnet, or wallet not connected
+      }
+    };
+
+    // Rendered by the main script whenever the total or token changes.
+    window.arcfxRenderFx = async function (denomToken, amount) {
+      const row = document.getElementById("fx-row");
+      const val = document.getElementById("fx-value");
+      const lab = document.getElementById("fx-label");
+      if (!row || !val) return;
+      const q = await window.arcfxFxEquivalent(denomToken, amount);
+      if (!q) { row.style.display = "none"; window.arcfxLastFx = null; return; }
+      window.arcfxLastFx = { ...q, denomToken, denomAmount: parseFloat(amount) };
+      if (lab) lab.textContent = `Payer sends approx. (${q.otherToken})`;
+      val.textContent = `${q.amount.toFixed(2)} ${q.otherToken}  ·  1 ${q.otherToken} = ${q.rate.toFixed(4)} ${denomToken}`;
+      row.style.display = "";
+    };
+  </script>
+
   <script type="module">
     import { JsonRpcProvider, id as ethersId } from "https://esm.sh/ethers@6";
 
