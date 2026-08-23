@@ -61,6 +61,12 @@
     .toolbar-right { display: flex; gap: 8px; align-items: center; }
     .btn-export { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; transition: all .15s; font-family: "Space Grotesk", sans-serif; }
     .btn-export:hover { border-color: var(--teal); color: var(--teal); }
+    /* The export control is a <select>, so undo the flex layout it inherits. */
+    select.btn-export { display: inline-block; appearance: none; -webkit-appearance: none; }
+    select.btn-export option { background: var(--card); color: var(--muted); }
+    .tx-category { background: transparent; border: 1px solid var(--border); border-radius: var(--rsm); color: var(--muted); font-size: 11.5px; font-family: "Space Grotesk", sans-serif; padding: 4px 6px; max-width: 165px; cursor: pointer; transition: all .15s; }
+    .tx-category:hover, .tx-category:focus { border-color: var(--teal); color: var(--teal); outline: none; }
+    .tx-category option { background: var(--card); color: var(--muted); }
     .btn-refresh { display: flex; align-items: center; gap: 5px; background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; transition: all .15s; font-family: "Space Grotesk", sans-serif; }
     .btn-refresh:hover { border-color: var(--blue); color: var(--blue); }
 
@@ -176,7 +182,12 @@
     </div>
     <div class="toolbar-right">
       <button class="btn-refresh" onclick="refresh()">↻ Refresh</button>
-      <button class="btn-export" onclick="exportCSV()">⬇ Export CSV</button>
+      <select class="btn-export" id="export-select" onchange="exportLedger(this.value); this.selectedIndex=0;" title="Export for bookkeeping">
+        <option value="">⬇ Export</option>
+        <option value="detailed">Detailed ledger (all fields)</option>
+        <option value="quickbooks">QuickBooks (3-column)</option>
+        <option value="xero">Xero (bank statement)</option>
+      </select>
     </div>
   </div>
 
@@ -192,9 +203,10 @@
       <thead>
         <tr>
           <th>Transaction</th>
-          <th>Block</th>
+          <th>Date</th>
           <th class="hide-sm">Token</th>
           <th>Amount</th>
+          <th class="hide-sm">Category</th>
           <th>Hash</th>
         </tr>
       </thead>
@@ -380,13 +392,17 @@ async function loadHistory() {
         const outItem = group.find(g => g.dir === "out");
         const inItem  = group.find(g => g.dir === "in");
         processed.push({
-          hash: t.hash, block: t.block,
+          hash: t.hash, block: t.block, ts: t.ts,
           type: "Swap", icon: "\u21c4", iconClass: "icon-swap",
           amtDisplay: `${fmt(outItem.amtNum)} \u2192 ${fmt(inItem.amtNum)}`,
           amtClass: "amt-swap",
           sym: `${outItem.sym} \u2192 ${inItem.sym}`,
           isSwap: true, dir: t.dir, counterparty: "",
           rawAmt: outItem.amtNum,
+          // Structured legs: a swap is two movements, and accounting exports
+          // need both or the conversion misstates the balance.
+          swapOut: { sym: outItem.sym, amt: outItem.amtNum },
+          swapIn:  { sym: inItem.sym,  amt: inItem.amtNum  },
         });
         continue;
       }
@@ -407,7 +423,7 @@ async function loadHistory() {
         const many = b.count > 1;
         if (b.dir === "out") {
           processed.push({
-            hash: t.hash, block: t.block,
+            hash: t.hash, block: t.block, ts: t.ts,
             type: many ? `Sent (\u00d7${b.count})` : "Sent",
             icon: "\u2191", iconClass: "icon-out",
             amtDisplay: `\u2212${fmt(b.sum)}`, amtClass: "amt-out", sym: b.sym,
@@ -417,7 +433,7 @@ async function loadHistory() {
           });
         } else {
           processed.push({
-            hash: t.hash, block: t.block,
+            hash: t.hash, block: t.block, ts: t.ts,
             type: many ? `Received (\u00d7${b.count})` : "Received",
             icon: "\u2193", iconClass: "icon-in",
             amtDisplay: `+${fmt(b.sum)}`, amtClass: "amt-in", sym: b.sym,
@@ -430,6 +446,7 @@ async function loadHistory() {
     }
 
     allTxs = processed;
+    loadCategories();
     updateStats();
     renderTable();
 
@@ -499,10 +516,18 @@ function renderTable() {
             </div>
           </div>
         </td>
-        <td><div class="tx-block">${t.block.toLocaleString()}</div></td>
+        <td>
+          <div class="tx-block">${isoDate(t) || "—"}</div>
+          <div style="font-size:11px;color:var(--muted);">Block ${t.block.toLocaleString()}</div>
+        </td>
         <td class="hide-sm"><div style="font-size:12px;color:var(--muted);">${t.sym}</div></td>
         <td>
           <div class="tx-amount ${t.amtClass}">${t.amtDisplay}</div>
+        </td>
+        <td class="hide-sm">
+          <select class="tx-category" onchange="setCategory('${rowId(t)}', this.value)">
+            ${CATEGORIES.map(c => `<option value="${c}"${c === categoryOf(t) ? " selected" : ""}>${c}</option>`).join("")}
+          </select>
         </td>
         <td>
           <button class="tx-receipt-btn" onclick="downloadReceipt('${t.hash}')" title="Download PDF receipt">🧾</button>
@@ -527,38 +552,169 @@ window.refresh = function() {
   else connectWallet();
 };
 
-// ── Export CSV ────────────────────────────────────────────────────────────
-window.exportCSV = function() {
-  if (allTxs.length === 0) { alert("No transactions to export. Connect wallet first."); return; }
+// ── Accounting layer ──────────────────────────────────────────────────────
+// Turns raw transfers into bookkeeping-ready rows: a real date, a counterparty,
+// a category, and exports in the column shapes QuickBooks and Xero ingest.
 
-  const rows = [
-    ["Type", "Token", "Amount", "Block", "Transaction Hash", "ArcScan URL"],
-    ...allTxs.map(t => [
-      t.type,
-      t.sym,
-      t.amtDisplay.replace(/[+−]/g, ""),
-      t.block,
-      t.hash,
-      `https://testnet.arcscan.app/tx/${t.hash}`,
-    ])
-  ];
+const PAYMENTS_ADDR    = "0xc37d88f17573f13f7a27d33a502f5f1fb7d545d3";
+const MULTISENDER_ADDR = "0xf7aeb369bb50b7d9e2dde7d3ac386b5ed6e71398";
 
-  // CSV hygiene: escape embedded quotes (double them) and neutralize cells that
-  // start with =, +, -, @ (Excel/Sheets would execute these as formulas). Prefix
-  // a single quote so they're treated as text.
-  const csvCell = (val) => {
-    let s = String(val == null ? "" : val);
-    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
-    return `"${s.replace(/"/g, '""')}"`;
-  };
-  const csv  = rows.map(r => r.map(csvCell).join(",")).join("\n");
-  const blob = new Blob([csv], { type:"text/csv" });
+const CATEGORIES = [
+  "Uncategorised",
+  "Client payment",
+  "Other income",
+  "Payroll",
+  "Contractor",
+  "Vendor / supplies",
+  "Software / subscriptions",
+  "Fees",
+  "FX / conversion",
+  "Owner draw",
+  "Internal transfer",
+];
+
+// Best guess from what the chain already tells us. Any row can be overridden by
+// hand; overrides win and persist per wallet.
+function autoCategory(t) {
+  if (t.isSwap) return "FX / conversion";
+  const cp = (t.counterparty || "").toLowerCase();
+  // A real multisend pays each recipient with its own transferFrom, so it
+  // arrives as N out-legs with no single counterparty — match the batch shape,
+  // not just the contract address.
+  if (t.dir === "out" && /×\d/.test(t.type)) return "Payroll";
+  if (t.dir === "out" && cp === MULTISENDER_ADDR) return "Payroll";
+  if (t.dir === "out" && cp === PAYMENTS_ADDR)    return "Vendor / supplies";
+  if (t.dir === "in"  && cp === PAYMENTS_ADDR)    return "Client payment";
+  return t.dir === "in" ? "Other income" : "Uncategorised";
+}
+
+// One tx can emit several rows (one per direction+token bucket), so the hash
+// alone is not a stable key.
+const rowId = t => `${t.hash}|${t.dir}|${t.sym}`;
+
+let catOverrides = {};
+const catKey = () => `arcfx:categories:${(userAddress || "anon").toLowerCase()}`;
+function loadCategories() {
+  try { catOverrides = JSON.parse(localStorage.getItem(catKey()) || "{}"); }
+  catch { catOverrides = {}; }
+}
+function saveCategories() {
+  try { localStorage.setItem(catKey(), JSON.stringify(catOverrides)); } catch {}
+}
+function categoryOf(t) { return catOverrides[rowId(t)] || autoCategory(t); }
+
+window.setCategory = function(id, value) {
+  if (value) catOverrides[id] = value; else delete catOverrides[id];
+  saveCategories();
+};
+
+// ── Dates ─────────────────────────────────────────────────────────────────
+// Each package wants its own format. ISO for our own export, US for QuickBooks,
+// UK/AU for Xero's bank-statement import.
+const tsDate  = t => (t.ts ? new Date(t.ts) : null);
+const pad2    = n => String(n).padStart(2, "0");
+const isoDate = t => { const d = tsDate(t); return d ? d.toISOString().slice(0, 10) : ""; };
+const usDate  = t => { const d = tsDate(t); return d ? `${pad2(d.getMonth()+1)}/${pad2(d.getDate())}/${d.getFullYear()}` : ""; };
+const ukDate  = t => { const d = tsDate(t); return d ? `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}` : ""; };
+
+const shortAddr = a => (a ? `${a.slice(0,6)}...${a.slice(-4)}` : "multiple recipients");
+
+// A swap moves money twice. Accounting software needs both legs or the
+// conversion silently misstates the balance, so expand it into an out-leg and
+// an in-leg. Everything else is a single signed movement.
+function ledgerLegs(t) {
+  if (t.isSwap) {
+    const pair = `${t.swapOut.sym} to ${t.swapIn.sym}`;
+    return [
+      { amt: -t.swapOut.amt, sym: t.swapOut.sym, desc: `FX conversion out - ${pair}` },
+      { amt:  t.swapIn.amt,  sym: t.swapIn.sym,  desc: `FX conversion in - ${pair}`  },
+    ];
+  }
+  const verb = t.dir === "out" ? "to" : "from";
+  return [{
+    amt: t.dir === "out" ? -t.rawAmt : t.rawAmt,
+    sym: t.sym,
+    desc: `${t.type} ${t.sym} ${verb} ${shortAddr(t.counterparty)}`,
+  }];
+}
+
+// CSV hygiene: escape embedded quotes (double them) and neutralize cells that
+// start with =, +, -, @ (Excel/Sheets would execute these as formulas). Prefix
+// a single quote so they're treated as text.
+const csvCell = (val) => {
+  let s = String(val == null ? "" : val);
+  // A plain negative number is data, not a formula. Prefixing it would break
+  // numeric import in QuickBooks and Xero — every outgoing amount would land as
+  // text or zero — so guard only genuine formula starts.
+  const isNumeric = /^-?\d+(\.\d+)?$/.test(s);
+  if (!isNumeric && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return `"${s.replace(/"/g, '""')}"`;
+};
+
+function downloadCsv(rows, suffix) {
+  // CRLF + BOM so Excel and QuickBooks read the file without mangling it.
+  const csv  = String.fromCharCode(0xFEFF) + rows.map(r => r.map(csvCell).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
   a.href     = url;
-  a.download = `arcfx-history-${userAddress?.slice(0,8) || "wallet"}-${new Date().toISOString().split("T")[0]}.csv`;
+  a.download = `arcfx-${suffix}-${userAddress?.slice(0,8) || "wallet"}-${new Date().toISOString().split("T")[0]}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+window.exportLedger = function(format) {
+  if (!format) return;
+  if (allTxs.length === 0) { alert("No transactions to export. Connect wallet first."); return; }
+
+  if (format === "detailed") {
+    const rows = [
+      ["Date","Type","Category","Direction","Token","Amount","Counterparty","Block","Transaction Hash","ArcScan URL"],
+      ...allTxs.map(t => [
+        isoDate(t),
+        t.type,
+        categoryOf(t),
+        t.isSwap ? "swap" : t.dir,
+        t.sym,
+        t.isSwap ? t.amtDisplay : (t.dir === "out" ? -t.rawAmt : t.rawAmt),
+        t.counterparty || "",
+        t.block,
+        t.hash,
+        `https://testnet.arcscan.app/tx/${t.hash}`,
+      ])
+    ];
+    downloadCsv(rows, "ledger");
+    return;
+  }
+
+  if (format === "quickbooks") {
+    // QuickBooks 3-column bank format: Date, Description, Amount.
+    const rows = [["Date","Description","Amount"]];
+    for (const t of allTxs) {
+      for (const leg of ledgerLegs(t)) {
+        rows.push([usDate(t), `${leg.desc} [${categoryOf(t)}]`, leg.amt.toFixed(6)]);
+      }
+    }
+    downloadCsv(rows, "quickbooks");
+    return;
+  }
+
+  if (format === "xero") {
+    // Xero bank statement import: Date, Amount, Payee, Description, Reference.
+    const rows = [["Date","Amount","Payee","Description","Reference"]];
+    for (const t of allTxs) {
+      for (const leg of ledgerLegs(t)) {
+        rows.push([
+          ukDate(t),
+          leg.amt.toFixed(6),
+          t.counterparty ? shortAddr(t.counterparty) : (t.isSwap ? "FX conversion" : "Multiple recipients"),
+          `${leg.desc} [${categoryOf(t)}]`,
+          t.hash,
+        ]);
+      }
+    }
+    downloadCsv(rows, "xero");
+  }
 };
 
 
