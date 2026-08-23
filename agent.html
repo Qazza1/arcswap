@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcFX Agent Payments — x402 on Arc</title>
+  <meta name="description" content="Pay an ArcFX invoice over HTTP 402. An AI agent signs a gasless EIP-3009 authorization; ArcFX verifies and settles it on Arc. Watch every step of the protocol." />
+  <link rel="canonical" href="https://arcfx.app/agent" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="ArcFX" />
+  <meta property="og:url" content="https://arcfx.app/agent" />
+  <meta property="og:title" content="ArcFX Agent Payments — x402 on Arc" />
+  <meta property="og:description" content="Pay an ArcFX invoice over HTTP 402 with a gasless EIP-3009 authorization, settled on Arc." />
+  <meta property="og:image" content="https://arcfx.app/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@arcfxapp" />
+  <meta name="twitter:title" content="ArcFX Agent Payments — x402 on Arc" />
+  <meta name="twitter:description" content="Pay an ArcFX invoice over HTTP 402 with a gasless EIP-3009 authorization, settled on Arc." />
+  <meta name="twitter:image" content="https://arcfx.app/og-image.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:"Inter",system-ui,sans-serif;background:#0a0f1e;color:#e2e8f0;line-height:1.6;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;}
+    .page{max-width:900px;margin:0 auto;padding:64px 28px 100px;}
+    .eyebrow{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;color:#a855f7;text-transform:uppercase;letter-spacing:0.14em;margin-bottom:14px;}
+    h1{font-size:clamp(32px,4vw,48px);font-weight:700;color:#f1f5f9;letter-spacing:-1px;line-height:1.15;margin-bottom:14px;}
+    .sub{font-size:16px;color:#475569;line-height:1.7;max-width:640px;margin-bottom:40px;}
+
+    .section-title{font-size:18px;font-weight:700;color:#f1f5f9;letter-spacing:-0.3px;margin:44px 0 16px;padding-bottom:12px;border-bottom:1px solid #1e293b;}
+
+    .card{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:22px;margin-bottom:16px;}
+    .card-title{font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:4px;}
+    .card-desc{font-size:13px;color:#475569;line-height:1.7;margin-bottom:16px;}
+
+    .field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px;}
+    label{display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;}
+    input{width:100%;background:#0a0f1e;border:1px solid #1e293b;border-radius:6px;color:#f1f5f9;font-family:"JetBrains Mono",monospace;font-size:13px;padding:10px 12px;}
+    input:focus{outline:none;border-color:#a855f7;}
+
+    .btn{display:inline-flex;align-items:center;gap:8px;background:#a855f7;border:none;color:#fff;font-size:13.5px;font-weight:600;padding:10px 18px;border-radius:6px;cursor:pointer;font-family:"Inter",sans-serif;transition:background .15s;}
+    .btn:hover:not(:disabled){background:#9333ea;}
+    .btn:disabled{opacity:.45;cursor:default;}
+    .btn-ghost{background:transparent;border:1px solid #1e293b;color:#94a3b8;}
+    .btn-ghost:hover:not(:disabled){border-color:#a855f7;color:#a855f7;background:transparent;}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+
+    /* Protocol steps */
+    .steps{display:flex;flex-direction:column;gap:0;margin-bottom:8px;}
+    .step{display:grid;grid-template-columns:34px 1fr;gap:14px;padding:16px 0;border-bottom:1px solid #131c33;}
+    .step:last-child{border-bottom:none;}
+    .step-num{width:28px;height:28px;border-radius:50%;background:#0a0f1e;border:1px solid #1e293b;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:12px;color:#475569;}
+    .step.active .step-num{border-color:#a855f7;color:#a855f7;}
+    .step.done .step-num{border-color:#10b981;color:#10b981;}
+    .step.failed .step-num{border-color:#ef4444;color:#ef4444;}
+    .step-name{font-size:13.5px;font-weight:600;color:#f1f5f9;margin-bottom:2px;}
+    .step-note{font-size:12.5px;color:#475569;line-height:1.6;}
+    .step.done .step-note{color:#10b981;}
+    .step.failed .step-note{color:#ef4444;}
+
+    pre{background:#060a15;border:1px solid #1e293b;border-radius:8px;padding:14px;overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.65;color:#94a3b8;margin-top:10px;}
+    .wire{margin-top:14px;}
+    .wire-label{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:#475569;text-transform:uppercase;letter-spacing:0.1em;}
+
+    .badge{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10.5px;padding:3px 8px;border-radius:100px;border:1px solid #1e293b;color:#64748b;}
+    .badge.ok{border-color:rgba(16,185,129,.4);color:#10b981;}
+    .badge.warn{border-color:rgba(245,158,11,.4);color:#f59e0b;}
+
+    .info{background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.25);border-radius:8px;padding:13px 16px;font-size:13px;color:#c4b5fd;line-height:1.7;margin-bottom:16px;}
+    .warn-box{background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:13px 16px;font-size:13px;color:#fcd34d;line-height:1.7;margin-bottom:16px;}
+
+    .page-footer{margin-top:60px;padding-top:24px;border-top:1px solid #1e293b;display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;font-size:12.5px;color:#334155;}
+    .page-footer a{color:#475569;}
+    .page-footer a:hover{color:#a855f7;}
+  </style>
+</head>
+<body>
+  <!-- Header mount points — populated by /src/shared/header.ts -->
+  <div id="arcfx-stats-bar"></div>
+  <div id="arcfx-nav"></div>
+
+  <script type="module">
+    import { arcfxMountHeader } from '/src/shared/header.ts';
+    arcfxMountHeader({ pageKey: 'agent', activeLink: 'developers', activeTool: null, mode: 'product' });
+  </script>
+
+  <div class="page">
+
+    <div class="eyebrow">Agentic payments</div>
+    <h1>An agent can pay<br>your invoice over HTTP.</h1>
+    <p class="sub">
+      ArcFX speaks <strong style="color:#cbd5e1;">x402</strong> — the HTTP 402 payment standard Circle
+      co-founded. A client asks for an invoice, gets <code style="font-family:'JetBrains Mono',monospace;color:#a855f7;">402 Payment Required</code>,
+      signs a gasless authorization, and asks again. No account, no API key, no card.
+      Every step of the exchange is shown below exactly as it happens on the wire.
+    </p>
+
+    <div class="info">
+      This runs against <strong>Arc Testnet</strong> with test USDC. Payment uses
+      <strong>EIP-3009</strong> <code style="font-family:'JetBrains Mono',monospace;">transferWithAuthorization</code>,
+      so the payer signs an authorization instead of sending a transaction — the signature moves the money,
+      and it costs the signer no gas.
+    </div>
+
+    <!-- ── Server capabilities ── -->
+    <div class="section-title">1 · What the server accepts</div>
+    <div class="card">
+      <div class="card-title">Discovery</div>
+      <div class="card-desc">
+        Before paying anything, a client asks what this server takes. This is a live call to
+        <code style="font-family:'JetBrains Mono',monospace;">/v1/x402/discovery</code>.
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="btn-discover" onclick="loadDiscovery()">Fetch capabilities</button>
+        <span id="discovery-badge"></span>
+      </div>
+      <div class="wire" id="discovery-wire" style="display:none;">
+        <div class="wire-label">GET /v1/x402/discovery</div>
+        <pre id="discovery-out">—</pre>
+      </div>
+    </div>
+
+    <!-- ── The exchange ── -->
+    <div class="section-title">2 · Pay an invoice</div>
+    <div class="card">
+      <div class="card-title">Invoice to settle</div>
+      <div class="card-desc">
+        Any invoice number and recipient. The amount is what the agent will be asked to authorize.
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label for="inv-number">Invoice number</label>
+          <input id="inv-number" value="INV-AGENT-001" spellcheck="false" />
+        </div>
+        <div>
+          <label for="inv-amount">Amount (USDC)</label>
+          <input id="inv-amount" value="1.50" spellcheck="false" />
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label for="inv-recipient">Recipient wallet</label>
+        <input id="inv-recipient" placeholder="0x…" spellcheck="false" />
+      </div>
+
+      <div class="warn-box" id="wallet-warn" style="display:none;">
+        Connect a wallet holding Arc Testnet USDC to sign the authorization.
+        Get test funds from <a href="https://faucet.circle.com" target="_blank" rel="noopener" style="color:#fcd34d;text-decoration:underline;">faucet.circle.com</a>.
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="btn-run" onclick="runFlow()">Run the x402 exchange</button>
+        <button class="btn btn-ghost" id="btn-reset" onclick="resetFlow()">Reset</button>
+        <span id="run-badge"></span>
+      </div>
+    </div>
+
+    <!-- ── Protocol trace ── -->
+    <div class="card">
+      <div class="card-title">Protocol trace</div>
+      <div class="card-desc">Each step is the real request and response, not a simulation.</div>
+
+      <div class="steps" id="steps">
+        <div class="step" id="s1">
+          <div class="step-num">1</div>
+          <div>
+            <div class="step-name">Request the resource</div>
+            <div class="step-note" id="s1-note">Client asks for the invoice with no payment attached.</div>
+          </div>
+        </div>
+        <div class="step" id="s2">
+          <div class="step-num">2</div>
+          <div>
+            <div class="step-name">Server answers 402 Payment Required</div>
+            <div class="step-note" id="s2-note">Response carries the payment requirements the client must meet.</div>
+          </div>
+        </div>
+        <div class="step" id="s3">
+          <div class="step-num">3</div>
+          <div>
+            <div class="step-name">Agent signs an EIP-3009 authorization</div>
+            <div class="step-note" id="s3-note">A signature over the transfer — not a transaction. Costs no gas.</div>
+          </div>
+        </div>
+        <div class="step" id="s4">
+          <div class="step-num">4</div>
+          <div>
+            <div class="step-name">Retry with PAYMENT-SIGNATURE</div>
+            <div class="step-note" id="s4-note">Same request, now carrying the base64 payment payload.</div>
+          </div>
+        </div>
+        <div class="step" id="s5">
+          <div class="step-num">5</div>
+          <div>
+            <div class="step-name">Server verifies and settles</div>
+            <div class="step-note" id="s5-note">Signature, amount, expiry, recipient and nonce are all checked on-chain.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wire" id="wire-402" style="display:none;">
+        <div class="wire-label">← 402 response body</div>
+        <pre id="out-402">—</pre>
+      </div>
+      <div class="wire" id="wire-auth" style="display:none;">
+        <div class="wire-label">signed authorization</div>
+        <pre id="out-auth">—</pre>
+      </div>
+      <div class="wire" id="wire-final" style="display:none;">
+        <div class="wire-label" id="final-label">← final response</div>
+        <pre id="out-final">—</pre>
+      </div>
+    </div>
+
+    <!-- ── For agent builders ── -->
+    <div class="section-title">3 · Do it from code</div>
+    <div class="card">
+      <div class="card-desc">
+        The same exchange with <code style="font-family:'JetBrains Mono',monospace;">curl</code>. The first call
+        returns the requirements; the second carries the signed payload.
+      </div>
+      <pre id="curl-snippet">—</pre>
+    </div>
+
+    <div class="page-footer">
+      <span>x402 on Arc Testnet · settlement in USDC via EIP-3009</span>
+      <div style="display:flex;gap:20px;">
+        <a href="/invoice">Create an invoice →</a>
+        <a href="/developers">API docs →</a>
+        <a href="https://testnet.arcscan.app" target="_blank" rel="noopener">ArcScan ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { BrowserProvider, getAddress, hexlify, randomBytes, parseUnits } from "https://esm.sh/ethers@6";
+
+    const API = "https://arcfx-backend-production.up.railway.app";
+    const ARC_CHAIN_ID = "0x4CEF52"; // 5042002
+
+    const el = (id) => document.getElementById(id);
+    const show = (id) => { const n = el(id); if (n) n.style.display = ""; };
+    const hide = (id) => { const n = el(id); if (n) n.style.display = "none"; };
+    const pretty = (o) => JSON.stringify(o, null, 2);
+
+    function setStep(id, state, note) {
+      const n = el(id);
+      if (!n) return;
+      n.classList.remove("active", "done", "failed");
+      if (state) n.classList.add(state);
+      if (note) { const t = el(id + "-note"); if (t) t.textContent = note; }
+    }
+
+    window.resetFlow = function () {
+      ["s1", "s2", "s3", "s4", "s5"].forEach((s) => setStep(s, null));
+      el("s1-note").textContent = "Client asks for the invoice with no payment attached.";
+      el("s2-note").textContent = "Response carries the payment requirements the client must meet.";
+      el("s3-note").textContent = "A signature over the transfer — not a transaction. Costs no gas.";
+      el("s4-note").textContent = "Same request, now carrying the base64 payment payload.";
+      el("s5-note").textContent = "Signature, amount, expiry, recipient and nonce are all checked on-chain.";
+      hide("wire-402"); hide("wire-auth"); hide("wire-final");
+      el("run-badge").innerHTML = "";
+    };
+
+    window.loadDiscovery = async function () {
+      const btn = el("btn-discover");
+      btn.disabled = true;
+      el("discovery-badge").innerHTML = '<span class="badge">fetching…</span>';
+      try {
+        const r = await fetch(`${API}/v1/x402/discovery`);
+        const j = await r.json();
+        show("discovery-wire");
+        el("discovery-out").textContent = pretty(j);
+        const mode = j.settlement === "relayed" ? "relayed settlement" : "client-submitted settlement";
+        el("discovery-badge").innerHTML = `<span class="badge ok">HTTP ${r.status} · ${mode}</span>`;
+      } catch (e) {
+        el("discovery-badge").innerHTML = '<span class="badge warn">backend unreachable</span>';
+        show("discovery-wire");
+        el("discovery-out").textContent = String(e?.message || e);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    function buildUrl() {
+      const number = encodeURIComponent(el("inv-number").value.trim() || "INV-AGENT-001");
+      const recipient = el("inv-recipient").value.trim();
+      const amount = el("inv-amount").value.trim();
+      return `${API}/v1/x402/invoice/${number}?recipient=${recipient}&amount=${amount}`;
+    }
+
+    function renderCurl() {
+      const url = buildUrl();
+      el("curl-snippet").textContent =
+        `# 1 — ask for the resource, get the requirements\n` +
+        `curl -i "${url}"\n\n` +
+        `# 2 — retry with the signed payload\n` +
+        `curl -i "${url}" \\\n` +
+        `  -H "PAYMENT-SIGNATURE: <base64 payment payload>"`;
+    }
+    ["inv-number", "inv-recipient", "inv-amount"].forEach((id) => {
+      el(id)?.addEventListener("input", renderCurl);
+    });
+    renderCurl();
+
+    window.runFlow = async function () {
+      const btn = el("btn-run");
+      window.resetFlow();
+
+      const recipient = el("inv-recipient").value.trim();
+      const amount = el("inv-amount").value.trim();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(recipient)) {
+        el("run-badge").innerHTML = '<span class="badge warn">enter a valid recipient address</span>';
+        return;
+      }
+      if (!(parseFloat(amount) > 0)) {
+        el("run-badge").innerHTML = '<span class="badge warn">enter a positive amount</span>';
+        return;
+      }
+      btn.disabled = true;
+      const url = buildUrl();
+
+      try {
+        // ── 1 & 2: unpaid request → 402 with requirements ──────────────────
+        setStep("s1", "active");
+        const first = await fetch(url);
+        const firstBody = await first.json();
+        setStep("s1", "done", `Sent GET with no payment header.`);
+
+        if (first.status !== 402) {
+          // Already paid, or the server declined for another reason.
+          setStep("s2", "done", `Server answered HTTP ${first.status} — nothing to pay.`);
+          show("wire-final");
+          el("final-label").textContent = `← HTTP ${first.status}`;
+          el("out-final").textContent = pretty(firstBody);
+          el("run-badge").innerHTML = `<span class="badge ok">HTTP ${first.status}</span>`;
+          return;
+        }
+
+        const req = firstBody?.accepts?.[0];
+        if (!req) throw new Error("402 response carried no payment requirements");
+        setStep("s2", "done", `HTTP 402 · wants ${req.maxAmountRequired} atomic units of ${req.asset.slice(0, 10)}…`);
+        show("wire-402");
+        el("out-402").textContent = pretty(firstBody);
+
+        // ── 3: sign the EIP-3009 authorization ─────────────────────────────
+        // Steps 1–2 above need no wallet, so they always run: the 402 challenge
+        // is the interesting part for a visitor who is only reading. Only the
+        // signature needs a wallet, so that is where we stop if there isn't one.
+        if (!window.ethereum) {
+          show("wallet-warn");
+          setStep("s3", "failed", "No wallet detected — connect one to sign the authorization.");
+          el("run-badge").innerHTML = '<span class="badge warn">challenge received · wallet needed to sign</span>';
+          return;
+        }
+
+        setStep("s3", "active", "Waiting for your wallet…");
+        const provider = new BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        try {
+          await provider.send("wallet_switchEthereumChain", [{ chainId: ARC_CHAIN_ID }]);
+        } catch { /* already on Arc, or the user declined the switch */ }
+        const signer = await provider.getSigner();
+        const from = await signer.getAddress();
+
+        const now = Math.floor(Date.now() / 1000);
+        const authorization = {
+          from,
+          to: getAddress(req.payTo),
+          value: String(req.maxAmountRequired),
+          validAfter: String(now - 60),
+          validBefore: String(now + (req.maxTimeoutSeconds || 300)),
+          nonce: hexlify(randomBytes(32)),
+        };
+
+        // The domain comes from the server's own requirements, so the client
+        // never has to guess the token's EIP-712 parameters.
+        const domain = {
+          name: req.extra?.name || "USDC",
+          version: req.extra?.version || "2",
+          chainId: parseInt(String(req.network).split(":")[1], 10),
+          verifyingContract: getAddress(req.asset),
+        };
+        const types = {
+          TransferWithAuthorization: [
+            { name: "from", type: "address" },
+            { name: "to", type: "address" },
+            { name: "value", type: "uint256" },
+            { name: "validAfter", type: "uint256" },
+            { name: "validBefore", type: "uint256" },
+            { name: "nonce", type: "bytes32" },
+          ],
+        };
+
+        const signature = await signer.signTypedData(domain, types, {
+          from: authorization.from,
+          to: authorization.to,
+          value: BigInt(authorization.value),
+          validAfter: BigInt(authorization.validAfter),
+          validBefore: BigInt(authorization.validBefore),
+          nonce: authorization.nonce,
+        });
+
+        setStep("s3", "done", `Signed by ${from.slice(0, 6)}…${from.slice(-4)} — no transaction sent, no gas spent.`);
+        show("wire-auth");
+        el("out-auth").textContent = pretty({ domain, authorization, signature });
+
+        // ── 4: retry carrying the payload ──────────────────────────────────
+        const payload = {
+          x402Version: firstBody.x402Version ?? 1,
+          scheme: req.scheme,
+          network: req.network,
+          payload: { signature, authorization },
+        };
+        const header = btoa(JSON.stringify(payload));
+        setStep("s4", "active", `Retrying with a ${header.length}-character PAYMENT-SIGNATURE header…`);
+
+        const second = await fetch(url, { headers: { "PAYMENT-SIGNATURE": header } });
+        const secondBody = await second.json();
+        setStep("s4", "done", `Retried with the signed payload.`);
+
+        // ── 5: outcome ─────────────────────────────────────────────────────
+        show("wire-final");
+        el("final-label").textContent = `← HTTP ${second.status}`;
+        el("out-final").textContent = pretty(secondBody);
+
+        if (second.ok && secondBody.paid) {
+          setStep("s5", "done", `Settled on Arc · tx ${String(secondBody.txHash || "").slice(0, 12)}…`);
+          el("run-badge").innerHTML = '<span class="badge ok">payment settled</span>';
+        } else if (secondBody.verified && !secondBody.settled) {
+          // Signature was good; the server just has no relayer to broadcast it.
+          setStep("s5", "done", `Verified, not broadcast — ${secondBody.reason}`);
+          el("run-badge").innerHTML = '<span class="badge warn">verified · settlement not configured</span>';
+        } else {
+          setStep("s5", "failed", secondBody.error || `HTTP ${second.status}`);
+          el("run-badge").innerHTML = `<span class="badge warn">HTTP ${second.status}</span>`;
+        }
+      } catch (e) {
+        const msg = e?.shortMessage || e?.message || String(e);
+        const activeStep = ["s1", "s2", "s3", "s4", "s5"].find((s) => el(s)?.classList.contains("active")) || "s5";
+        setStep(activeStep, "failed", msg);
+        el("run-badge").innerHTML = '<span class="badge warn">' + (msg.length > 60 ? msg.slice(0, 60) + "…" : msg) + "</span>";
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    // Prefill the recipient with the connected wallet, so the demo is one click
+    // away from being runnable.
+    (async () => {
+      if (!window.ethereum) { show("wallet-warn"); return; }
+      try {
+        const accounts = await window.ethereum.request({ method: "eth_accounts" });
+        if (accounts?.length && !el("inv-recipient").value) {
+          el("inv-recipient").value = getAddress(accounts[0]);
+          renderCurl();
+        }
+      } catch { /* wallet not connected yet — the user can paste an address */ }
+    })();
+  </script>
+</body>
+</html>
