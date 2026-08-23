@@ -555,9 +555,10 @@ async function sendPayment() {
     // is never short by dust.
     const wantNet = parseUnits(parseFloat(amount).toFixed(tok.decimals), tok.decimals);
 
-    // feeBps read live from the contract (anti-drift); falls back to 10 (0.10%).
-    let bps = 10n;
-    try { bps = BigInt(await payments.FEE_BPS()); } catch { bps = 10n; }
+    // feeBps read live from the contract (anti-drift); falls back to 15 (0.15%),
+    // which is what ArcFXPayments actually has deployed. The Multisender is 10.
+    let bps = 15n;
+    try { bps = BigInt(await payments.FEE_BPS()); } catch { bps = 15n; }
     const DENOM = 10000n;
     // gross = ceil(wantNet * DENOM / (DENOM - bps))
     const denomNet = DENOM - bps;
@@ -661,12 +662,12 @@ window.sendPayment   = sendPayment;
 
 // Fee breakdown (live): shows "recipient receives / fee / you pay" so the
 // payer sees the gross-up upfront. Fee rate read from the contract once.
-let payFeeBps = 10n;
+let payFeeBps = 15n;
 async function loadPayFeeBps() {
   try {
     const p = new Contract(PAYMENTS_ADDRESS, PAYMENTS_ABI, provider || new BrowserProvider(window.ethereum));
     payFeeBps = BigInt(await p.FEE_BPS());
-  } catch { payFeeBps = 10n; }
+  } catch { payFeeBps = 15n; }
   updateFeeBreakdown();
 }
 window.updateFeeBreakdown = function() {

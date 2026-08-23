@@ -622,8 +622,9 @@ const ukDate  = t => { const d = tsDate(t); return d ? `${pad2(d.getDate())}/${p
 const shortAddr = a => (a ? `${a.slice(0,6)}...${a.slice(-4)}` : "multiple recipients");
 
 // Protocol fee rate, read from the contract on load (anti-drift) so the ledger
-// never hardcodes a rate the chain has moved past. Falls back to the deployed 10.
-let feeBps = 10;
+// never hardcodes a rate the chain has moved past. Falls back to 15, which is
+// what ArcFXPayments has deployed — note the Multisender is a separate 10.
+let feeBps = 15;
 async function loadFeeBps() {
   try {
     const c = new Contract(PAYMENTS_ADDR, ["function FEE_BPS() view returns (uint256)"], provider);
