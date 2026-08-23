@@ -13,6 +13,8 @@
     { "source": "/invoice/",   "destination": "/invoice.html" },
     { "source": "/history",    "destination": "/history.html" },
     { "source": "/history/",   "destination": "/history.html" },
+    { "source": "/agent",      "destination": "/agent.html" },
+    { "source": "/agent/",     "destination": "/agent.html" },
     { "source": "/analytics",  "destination": "/analytics.html" },
     { "source": "/analytics/", "destination": "/analytics.html" },
     { "source": "/docs",        "destination": "/docs.html" },

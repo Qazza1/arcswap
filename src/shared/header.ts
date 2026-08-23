@@ -28,7 +28,8 @@
 
 export type PageKey =
   | 'index' | 'app' | 'trade' | 'multisend' | 'pay' | 'invoice' | 'history'
-  | 'analytics' | 'docs' | 'docs-api' | 'developers' | 'pricing' | 'ecosystem' | 'security';
+  | 'analytics' | 'docs' | 'docs-api' | 'developers' | 'pricing' | 'ecosystem' | 'security'
+  | 'agent';
 
 export type ActiveLink =
   | 'trade' | 'tools' | 'analytics' | 'history' | 'pricing' | 'ecosystem' | 'security'

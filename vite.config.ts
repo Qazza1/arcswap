@@ -23,6 +23,7 @@ export default defineConfig({
         pay:       resolve(__dirname, "pay.html"),
         invoice:   resolve(__dirname, "invoice.html"),
         history:   resolve(__dirname, "history.html"),
+        agent:     resolve(__dirname, "agent.html"),
         analytics: resolve(__dirname, "analytics.html"),
         docs:        resolve(__dirname, "docs.html"),
         developers:  resolve(__dirname, "developers.html"),
