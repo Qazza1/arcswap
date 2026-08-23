@@ -51,6 +51,13 @@
     .stat-val.red   { color: var(--red); }
     .stat-val.blue  { color: var(--blue); }
     .stat-lbl { font-size: 11.5px; color: var(--muted); }
+    /* Per-currency rows inside a stat card — one line per token, never summed. */
+    .stat-money-row { display: flex; align-items: baseline; gap: 6px; }
+    .stat-money-row + .stat-money-row { margin-top: 2px; }
+    .stat-money { font-family: "JetBrains Mono", monospace; font-size: 22px; font-weight: 500; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+    .stat-money-sym { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); }
+    /* Multi-currency cards size to their content rather than one big number. */
+    .stat-val:has(.stat-money-row) { font-size: inherit; margin-bottom: 6px; }
 
     /* Toolbar */
     .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
@@ -518,20 +525,37 @@ async function loadHistory() {
 }
 
 // ── Stats ──────────────────────────────────────────────────────────────────
-function updateStats() {
-  const txs      = allTxs.length;
-  // "Total received/sent" sums stablecoins (USDC+EURC). cirBTC is a different
-  // unit (BTC-denominated), so it's excluded from these fiat totals — it still
-  // shows in the transaction list and the swaps count.
-  const isStable = t => t.sym === "USDC" || t.sym === "EURC";
-  const received = allTxs.filter(t => t.dir==="in"  && !t.isSwap && isStable(t)).reduce((s,t) => s+t.rawAmt, 0);
-  const sent     = allTxs.filter(t => t.dir==="out" && !t.isSwap && isStable(t)).reduce((s,t) => s+t.rawAmt, 0);
-  const swaps    = allTxs.filter(t => t.isSwap).length;
+// Totals are kept per currency and never cross-added. USDC and EURC are
+// different units of account: adding 60 EURC to 121 USDC produces "181", a
+// quantity that exists in neither currency. These cards read from the same
+// period-windowed set as the table and the summary, so all three agree.
+function sumByToken(txs, dir) {
+  const by = new Map();
+  for (const t of txs) {
+    if (t.isSwap || t.dir !== dir) continue;
+    by.set(t.sym, (by.get(t.sym) || 0) + t.rawAmt);
+  }
+  return [...by.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+}
 
-  txt("stat-txs",      txs > 0 ? txs : "0");
-  txt("stat-received", received > 0 ? `+${received.toFixed(2)}` : "0.00");
-  txt("stat-sent",     sent     > 0 ? `−${sent.toFixed(2)}`    : "0.00");
-  txt("stat-swaps",    swaps > 0 ? swaps : "0");
+function renderMoneyStat(id, rows, sign) {
+  const node = el(id);
+  if (!node) return;
+  if (!rows.length) { node.innerHTML = `<span class="stat-money">0.00</span>`; return; }
+  node.innerHTML = rows
+    .map(([sym, v]) =>
+      `<div class="stat-money-row"><span class="stat-money">${sign}${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span><span class="stat-money-sym">${sym}</span></div>`
+    )
+    .join("");
+}
+
+function updateStats() {
+  const txs = periodTxs();
+  txt("stat-txs", txs.length > 0 ? txs.length : "0");
+  renderMoneyStat("stat-received", sumByToken(txs, "in"), "+");
+  renderMoneyStat("stat-sent", sumByToken(txs, "out"), "−");
+  const swaps = txs.filter(t => t.isSwap).length;
+  txt("stat-swaps", swaps > 0 ? swaps : "0");
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────
@@ -871,6 +895,7 @@ function periodTxs() { return allTxs.filter(inPeriod); }
 window.applyPeriod = function() {
   periodFrom = el("period-from")?.value || null;
   periodTo   = el("period-to")?.value   || null;
+  updateStats();   // the cards are period-scoped too, or they contradict the summary
   renderTable();
   renderPnl();
 };
@@ -936,6 +961,9 @@ function renderPnl() {
 
   const cells = [];
   for (const [sym, b] of byTok) {
+    // A token with no movement in the period contributes three tiles of zero
+    // and crowds out the numbers that matter. Leave it out.
+    if (b.in === 0 && b.out === 0) continue;
     const net = b.in - b.out;
     cells.push(`<div class="pnl-cell">
       <div class="pnl-cell-val" style="color:${net >= 0 ? "#10b981" : "#ef4444"};">${money(net)}</div>
