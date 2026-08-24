@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.35; // L-01: pinned version — no floating ^ (original was ^0.8.20)
 
 /**
  * ArcFXPayments — On-chain settlement for Pay Links and Invoices.
@@ -124,6 +124,19 @@ contract ArcFXPayments {
 
         require(net > 0, "Net amount too small");
 
+        // ── H-02: CEI pattern — emit event before external interactions ────────
+        // If any subsequent transfer reverts, the whole transaction (including
+        // this event) is rolled back, so no phantom events are ever recorded.
+        emit PaymentExecuted(
+            paymentId,
+            msg.sender,
+            recipient,
+            token,
+            gross,
+            fee,
+            net
+        );
+
         // ── Settlement ────────────────────────────────────────────────────────
         // Pull full gross from payer in one transferFrom
         bool pulled = erc20.transferFrom(msg.sender, address(this), gross);
@@ -139,17 +152,6 @@ contract ArcFXPayments {
             bool sentFee = _safeTransfer(erc20, treasury, fee);
             require(sentFee, "Fee transfer failed");
         }
-
-        // ── Emit ──────────────────────────────────────────────────────────────
-        emit PaymentExecuted(
-            paymentId,
-            msg.sender,
-            recipient,
-            token,
-            gross,
-            fee,
-            net
-        );
     }
 
     // ── View helpers ──────────────────────────────────────────────────────────
@@ -191,16 +193,16 @@ contract ArcFXPayments {
 
     // ── Admin ─────────────────────────────────────────────────────────────────
 
-    function setTreasury(address _new) external onlyOwner {
-        require(_new != address(0), "Invalid treasury address");
-        emit TreasuryUpdated(treasury, _new);
-        treasury = _new;
+    function setTreasury(address newTreasury) external onlyOwner { // L-02: mixedCase param
+        require(newTreasury != address(0), "Invalid treasury address");
+        emit TreasuryUpdated(treasury, newTreasury);
+        treasury = newTreasury;
     }
 
-    function transferOwnership(address _new) external onlyOwner {
-        require(_new != address(0), "Invalid address");
-        emit OwnershipTransferred(owner, _new);
-        owner = _new;
+    function transferOwnership(address newOwner) external onlyOwner { // L-02: mixedCase param
+        require(newOwner != address(0), "Invalid address");
+        emit OwnershipTransferred(owner, newOwner);
+        owner = newOwner;
     }
 
     /**
@@ -210,6 +212,6 @@ contract ArcFXPayments {
         IERC20 erc20 = IERC20(token);
         uint256 bal  = erc20.balanceOf(address(this));
         require(bal > 0, "Nothing to withdraw");
-        erc20.transfer(owner, bal);
+        require(erc20.transfer(owner, bal), "Withdraw failed"); // H-01: checked return value
     }
 }

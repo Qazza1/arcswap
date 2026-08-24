@@ -6,6 +6,7 @@
 import { AppKit } from "@circle-fin/app-kit";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 import { BrowserProvider, Contract, formatUnits } from "ethers";
+import { arcfxWallet, type WalletState } from "./shared/wallet";
 
 const ARC_TESTNET = {
   chainId: "0x4CEF52",
@@ -65,6 +66,41 @@ function clearGlobalStatus(): void {
   if (gs) gs.style.display = "none";
 }
 
+/**
+ * Reflect the shared wallet session into the swap UI.
+ *
+ * The session itself lives in src/shared/wallet.ts — this page used to run its
+ * own eth_requestAccounts and its own chain switch, which is why the nav could
+ * show an address while Trade still displayed the connect card.
+ */
+async function adoptSession(state: WalletState): Promise<void> {
+  const btn = el("connect-btn");
+  if (!state.connected || !state.address) {
+    ethersProvider = null; ethersSigner = null; userAddress = null;
+    el("swap-card")?.classList.add("hidden");
+    el("connect-card")?.classList.remove("hidden");
+    return;
+  }
+  if (!state.onArc) {
+    // Authorized but on the wrong network — surface it instead of a swap card
+    // whose balances read "—" and whose actions fail with opaque kit errors.
+    ethersProvider = new BrowserProvider(window.ethereum!);
+    userAddress    = state.address;
+    if (btn) btn.textContent = "Wrong network";
+    el("swap-card")?.classList.add("hidden");
+    el("connect-card")?.classList.remove("hidden");
+    showStatus("You're connected but not on Arc Testnet. Click Connect to switch networks.", "error");
+    return;
+  }
+  ethersProvider = new BrowserProvider(window.ethereum!);
+  userAddress    = state.address;
+  removeClass("swap-card", "hidden");
+  addClass("connect-card", "hidden");
+  const execBtn = el("execute-swap-btn");
+  if (execBtn) execBtn.textContent = `Swap ${tokenIn} → ${tokenOut}`;
+  await loadBalances();
+}
+
 async function connectWallet(): Promise<void> {
   if (!window.ethereum) {
     showStatus("MetaMask not found — install it from metamask.io", "error");
@@ -73,39 +109,9 @@ async function connectWallet(): Promise<void> {
   const btn = el("connect-btn");
   try {
     if (btn) btn.textContent = "Connecting…";
-    ethersProvider = new BrowserProvider(window.ethereum);
-    const accounts: string[] = await ethersProvider.send("eth_requestAccounts", []);
-    userAddress = accounts[0];
-
-    try {
-      await ethersProvider.send("wallet_switchEthereumChain", [{ chainId: ARC_TESTNET.chainId }]);
-    } catch (e: any) {
-      const code = e.code ?? e.error?.code ?? e.info?.error?.code;
-      const msg  = e.message ?? "";
-      const is4902 = code === 4902 || msg.includes("4902") || msg.includes("wallet_addEthereumChain");
-      if (is4902) {
-        try {
-          await ethersProvider.send("wallet_addEthereumChain", [ARC_TESTNET]);
-        } catch (addErr: any) {
-          // If network already exists with same RPC, just switch to it
-          const addMsg = addErr.message ?? "";
-          if (addMsg.includes("already") || addMsg.includes("same RPC") || addMsg.includes("existing")) {
-            await ethersProvider.send("wallet_switchEthereumChain", [{ chainId: ARC_TESTNET.chainId }]);
-          } else throw addErr;
-        }
-      } else throw e;
-    }
-
-    const short = `${userAddress.slice(0, 6)}…${userAddress.slice(-4)}`;
-    if (btn) { btn.textContent = short; btn.classList.add("connected"); }
-    removeClass("swap-card", "hidden");
-    addClass("connect-card", "hidden");
-    // Update execute-swap-btn label to show current token pair
-    const execBtn = el("execute-swap-btn");
-    if (execBtn) execBtn.textContent = `Swap ${tokenIn} → ${tokenOut}`;
-    showStatus("Connected to Arc Testnet ✓", "success");
-    await loadBalances();
-
+    const state = await arcfxWallet.connect();
+    await adoptSession(state);
+    if (state.onArc) showStatus("Connected to Arc Testnet ✓", "success");
   } catch (err: any) {
     if (btn) btn.textContent = "Connect wallet";
     if (err.code === 4001) {
@@ -872,39 +878,15 @@ document.addEventListener("DOMContentLoaded", () => {
   el("amount-input")?.addEventListener("input", debounce(
     (e: Event) => estimateSwap((e.target as HTMLInputElement).value), 500
   ));
-  window.ethereum?.on("accountsChanged", (a: string[]) => {
-    userAddress = a[0] ?? null;
-    if (userAddress) {
-      // Switched to a different account — refresh balances for it.
-      const short = `${userAddress.slice(0,6)}…${userAddress.slice(-4)}`;
-      const btn = el("connect-btn");
-      if (btn) { btn.textContent = short; btn.classList.add("connected"); }
-      loadBalances();
-    } else {
-      // Disconnected all accounts — reset to the connect state instead of
-      // leaving a stale "connected" swap card that will fail on next action (M14).
-      const btn = el("connect-btn");
-      if (btn) { btn.textContent = "Connect wallet"; btn.classList.remove("connected"); }
-      el("swap-card")?.classList.add("hidden");
-      el("connect-card")?.classList.remove("hidden");
-      showStatus("Wallet disconnected. Connect again to continue.", "info");
-    }
-  });
-  window.ethereum?.on("chainChanged", async (chainId: string) => {
-    if (isBridging) return; // Bridge intentionally switches chains — ignore
-
-    // Switched back to Arc Testnet — reinitialize silently, no reload
-    if (chainId === "0x4CEF52") {
-      try {
-        ethersProvider = new BrowserProvider(window.ethereum!);
-        ethersSigner   = await ethersProvider.getSigner();
-        userAddress    = await ethersSigner.getAddress();
-        await loadBalances();
-        showStatus("Reconnected to Arc Testnet ✓", "success");
-      } catch { window.location.reload(); }
-    } else {
-      window.location.reload();
-    }
+  // Account and chain changes arrive through the shared session, which also
+  // performs the silent restore on load — so Trade never asks for a connection
+  // the nav already holds.
+  arcfxWallet.onChange(state => {
+    if (isBridging) return; // the bridge switches chains on purpose
+    adoptSession(state).catch(err => {
+      console.error("[trade] could not adopt wallet session:", err);
+      showStatus("Wallet session could not be restored. Click connect to retry.", "error");
+    });
   });
 
   // Bridge events
@@ -920,39 +902,6 @@ document.addEventListener("DOMContentLoaded", () => {
   (window as any).toggleTokenMenu = toggleTokenMenu;
   (window as any).loadHistory = loadHistory;
 
-  // Auto-reconnect if wallet was previously connected (silent — no popup)
-  if (window.ethereum) {
-    window.ethereum.request({ method: "eth_accounts" }).then(async (accounts: string[]) => {
-      if (accounts && accounts.length > 0) {
-        // Wallet already authorized — reconnect silently, but only show the swap
-        // UI if we're actually on Arc Testnet. Otherwise the balances read "—"
-        // and any action fails with confusing kit errors (M2).
-        try {
-          let chainId = "";
-          try { chainId = await window.ethereum!.request({ method: "eth_chainId" }); } catch { chainId = ""; }
-          if (chainId && chainId.toLowerCase() !== ARC_TESTNET.chainId.toLowerCase()) {
-            // Authorized but on the wrong network — surface it instead of a broken swap card.
-            ethersProvider = new BrowserProvider(window.ethereum!);
-            userAddress    = accounts[0];
-            const btn = el("connect-btn");
-            if (btn) { btn.textContent = "Wrong network"; }
-            showStatus("You're connected but not on Arc Testnet. Click Connect to switch networks.", "error");
-            return;
-          }
-          ethersProvider = new BrowserProvider(window.ethereum!);
-          userAddress    = accounts[0];
-          const short    = `${userAddress.slice(0,6)}…${userAddress.slice(-4)}`;
-          const btn      = el("connect-btn");
-          if (btn) { btn.textContent = short; btn.classList.add("connected"); }
-          const execBtn  = el("execute-swap-btn");
-          if (execBtn)   execBtn.textContent = `Swap ${tokenIn} → ${tokenOut}`;
-          el("connect-card")?.classList.add("hidden");
-          el("swap-card")?.classList.remove("hidden");
-          await loadBalances();
-        } catch { /* silent fail — user will connect manually */ }
-      }
-    }).catch(() => {});
-  }
 });
 
 declare global {

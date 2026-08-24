@@ -336,6 +336,7 @@
 
 <script type="module">
 import { BrowserProvider, Contract, formatUnits } from "https://esm.sh/ethers@6";
+import { arcfxWallet } from "/src/shared/wallet.ts";
 
 // ── Config ─────────────────────────────────────────────────────────────────
 const USDC   = "0x3600000000000000000000000000000000000000";
@@ -371,34 +372,8 @@ const show  = id => { const n = el(id); if (n) n.classList.remove("hidden"); };
 const hide  = id => { const n = el(id); if (n) n.classList.add("hidden"); };
 
 // ── Wallet ─────────────────────────────────────────────────────────────────
-async function connectWallet() {
-  if (!window.ethereum) { alert("MetaMask not found."); return; }
-  try {
-    setLoading("Connecting…");
-    provider = new BrowserProvider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    try {
-      await provider.send("wallet_switchEthereumChain", [{ chainId: ARC_TESTNET.chainId }]);
-    } catch(e) {
-      const c = e.code ?? e.error?.code ?? e.info?.error?.code;
-      if (c === 4902 || (e.message||"").includes("4902")) {
-        await provider.send("wallet_addEthereumChain", [ARC_TESTNET]);
-      }
-    }
-    signer      = await provider.getSigner();
-    userAddress = await signer.getAddress();
-
-    const short = `${userAddress.slice(0,8)}…${userAddress.slice(-6)}`;
-    const cb = el("connect-btn");
-    if (cb) { cb.textContent = short; cb.classList.add("connected"); }
-    const wd = el("wallet-display");
-    if (wd) { wd.textContent = short; wd.style.display = "block"; }
-
-    await loadHistory();
-  } catch(err) {
-    setEmpty(`Connection failed: ${err.message}`);
-  }
-}
+// Connection lives in the shared session now — see window.connectWallet and
+// the arcfxWallet.onChange subscription at the bottom of this module.
 
 // ── Load history ───────────────────────────────────────────────────────────
 async function loadHistory() {
@@ -1222,40 +1197,58 @@ function setEmpty(msg) {
   }
 }
 
-// ── Wire up nav button ────────────────────────────────────────────────────
-el("connect-btn")?.addEventListener("click", connectWallet);
-window.connectWallet = connectWallet;
+// ── Wallet session ─────────────────────────────────────────────────────────
+// This page used to run its own eth_accounts restore, its own accountsChanged
+// and chainChanged handlers, and bind its own click listener to #connect-btn —
+// which the shared header also binds. That meant two things: a click fired
+// connect twice (the wallet rejects the second as "already processing"), and
+// the page kept a private idea of whether a wallet was attached, so the nav
+// could show an address while the page still demanded a connection.
+//
+// The shared session now owns all of it. This page only says what to do when
+// the session changes.
+async function adoptSession(state) {
+  if (!state.connected || !window.ethereum) {
+    provider = signer = userAddress = null;
+    setEmpty("Connect your wallet to view your transaction history.");
+    return;
+  }
+  if (!state.onArc) {
+    provider = signer = userAddress = null;
+    setEmpty("Switch to Arc Testnet to view your history.");
+    return;
+  }
+  provider    = new BrowserProvider(window.ethereum);
+  signer      = await provider.getSigner();
+  userAddress = state.address;
 
-window.ethereum?.on("accountsChanged", accounts => {
-  if (!accounts.length) window.location.reload();
-  else { userAddress = accounts[0]; loadHistory(); }
-});
-window.ethereum?.on("chainChanged", () => window.location.reload());
+  const short = `${userAddress.slice(0, 8)}…${userAddress.slice(-6)}`;
+  const wd = el("wallet-display");
+  if (wd) { wd.textContent = short; wd.style.display = "block"; }
 
-// Auto-reconnect on load if the wallet is already authorized for this site.
-// Uses eth_accounts (NOT eth_requestAccounts) so it never triggers a popup —
-// if the wallet isn't connected yet, this stays silent and the connect button
-// remains for a manual click.
-async function tryAutoConnect() {
-  if (!window.ethereum) return;
-  try {
-    const accounts = await window.ethereum.request({ method: "eth_accounts" });
-    if (accounts && accounts.length) {
-      provider    = new BrowserProvider(window.ethereum);
-      signer      = await provider.getSigner();
-      userAddress = await signer.getAddress();
-
-      const short = `${userAddress.slice(0,8)}…${userAddress.slice(-6)}`;
-      const cb = el("connect-btn");
-      if (cb) { cb.textContent = short; cb.classList.add("connected"); }
-      const wd = el("wallet-display");
-      if (wd) { wd.textContent = short; wd.style.display = "block"; }
-
-      await loadHistory();
-    }
-  } catch { /* silent — user can still click Connect */ }
+  await loadHistory();
 }
-tryAutoConnect();
+
+// Fires immediately with the restored session, and again whenever the user
+// switches account or network in their wallet.
+arcfxWallet.onChange(state => {
+  adoptSession(state).catch(err => {
+    console.error("[history] could not adopt wallet session:", err);
+    setEmpty("Wallet session could not be restored. Click connect to retry.");
+  });
+});
+
+// The header's Connect button delegates here; it does not bind a second listener.
+window.connectWallet = async function () {
+  try {
+    setLoading("Connecting…");
+    const state = await arcfxWallet.connect();
+    if (!state.onArc) { setEmpty("Switch to Arc Testnet to continue."); return; }
+    await adoptSession(state);
+  } catch (err) {
+    setEmpty(`Connection failed: ${err?.message || err}`);
+  }
+};
 
 </script>
 

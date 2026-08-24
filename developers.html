@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- Instrument register:light, near-monochrome, colour reserved for state.
+     Tokens: src/shared/tokens.css -->
+<html lang="en" data-register="app">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,15 +13,25 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg:#060810; --bg-card:#0b0f1a; --bg-raised:#101420; --bg-deep:#050709;
-      --border:#1a2035; --border-med:#252d45; --text:#e8edf8; --muted:#94a3b8;
-      --subtle:#64748b; --dim:#334155;
-      --blue:#2563eb; --blue-bright:#3d7eff; --blue-dim:rgba(61,126,255,0.1);
-      --teal:#00d4aa; --teal-dim:rgba(0,212,170,0.08);
+      --bg:         var(--fx-bg);
+      --bg-card:    var(--fx-surface);
+      --bg-raised:  var(--fx-sunken);
+      --bg-deep:    var(--fx-sunken);
+      --border:     var(--fx-line);
+      --border-med: var(--fx-line);
+      --text:       var(--fx-ink);
+      --muted:      var(--fx-muted);
+      --subtle:     var(--fx-muted);
+      --dim:        var(--fx-muted);
+      --blue:       var(--fx-accent);
+      --blue-bright:var(--fx-accent);
+      --blue-dim:   var(--fx-sunken);
+      --teal:       var(--fx-ok);
+      --teal-dim:   var(--fx-ok-bg);
       --r-sm:6px; --r-lg:12px; --r-xl:16px;
     }
     * { box-sizing:border-box; margin:0; padding:0; }
-    html,body { background:var(--bg); color:var(--text); font-family:"Inter",system-ui,sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased; }
+    html,body { background:var(--bg); color:var(--text); font-family:var(--fx-body); line-height:1.6; -webkit-font-smoothing:antialiased; }
     a { text-decoration:none; color:inherit; }
     .mono { font-family:"JetBrains Mono",monospace; }
 
@@ -56,10 +68,10 @@
     .endpoint { border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:20px; background:var(--bg-card); }
     .endpoint-head { display:flex; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
     .method { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:600; padding:3px 9px; border-radius:5px; letter-spacing:0.04em; }
-    .method-get { background:var(--teal-dim); color:var(--teal); border:1px solid rgba(0,212,170,0.3); }
+    .method-get { background:var(--teal-dim); color:var(--teal); border:1px solid var(--fx-ok-bg); }
     .endpoint-path { font-family:"JetBrains Mono",monospace; font-size:13.5px; color:var(--text); }
     .badge-auth { margin-left:auto; font-family:"JetBrains Mono",monospace; font-size:10px; padding:3px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:0.05em; }
-    .badge-key { background:var(--blue-dim); color:var(--blue-bright); border:1px solid rgba(61,126,255,0.3); }
+    .badge-key { background:var(--blue-dim); color:var(--blue-bright); border:1px solid var(--fx-sunken); }
     .badge-public { background:rgba(148,163,184,0.1); color:var(--muted); border:1px solid var(--border-med); }
     .endpoint-body { padding:18px; }
     .endpoint-desc { font-size:14px; color:var(--muted); margin-bottom:16px; }
@@ -70,10 +82,10 @@
     table.params td.pname { font-family:"JetBrains Mono",monospace; color:var(--text); white-space:nowrap; }
     table.params td.ptype { font-family:"JetBrains Mono",monospace; color:var(--teal); font-size:12px; }
 
-    pre { background:var(--bg-deep); border:1px solid var(--border); border-radius:var(--r-sm); padding:14px; overflow-x:auto; font-family:"JetBrains Mono",monospace; font-size:12.5px; line-height:1.6; color:#c9d4e8; margin-bottom:16px; }
-    pre .c-key { color:#7dd3fc; }
-    pre .c-str { color:#86efac; }
-    pre .c-num { color:#fda4af; }
+    pre { background:var(--bg-deep); border:1px solid var(--border); border-radius:var(--r-sm); padding:14px; overflow-x:auto; font-family:"JetBrains Mono",monospace; font-size:12.5px; line-height:1.6; color:#1F2328; margin-bottom:16px; }
+    pre .c-key { color:#0550AE; }
+    pre .c-str { color:#0A3069; }
+    pre .c-num { color:#953800; }
 
     /* Try it */
     .tryit { border-top:1px dashed var(--border-med); margin-top:8px; padding-top:16px; }
@@ -81,16 +93,16 @@
     .tryit-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
     .tryit-input { flex:1; min-width:200px; background:var(--bg-deep); border:1px solid var(--border); border-radius:var(--r-sm); padding:9px 12px; color:var(--text); font-family:"JetBrains Mono",monospace; font-size:12.5px; }
     .tryit-input:focus { outline:none; border-color:var(--blue-bright); }
-    .tryit-btn { background:var(--blue); color:#fff; border:0; border-radius:var(--r-sm); padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:background .15s; white-space:nowrap; }
+    .tryit-btn { background:var(--blue); color:var(--fx-on-accent); border:0; border-radius:var(--r-sm); padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:background .15s; white-space:nowrap; }
     .tryit-btn:hover { background:var(--blue-bright); }
     .tryit-btn:disabled { opacity:0.5; cursor:not-allowed; }
     .tryit-out { display:none; }
     .tryit-out.show { display:block; }
     .tryit-status { font-family:"JetBrains Mono",monospace; font-size:11.5px; margin-bottom:6px; }
     .tryit-status.ok { color:var(--teal); }
-    .tryit-status.err { color:#f87171; }
+    .tryit-status.err { color:var(--fx-bad); }
 
-    .note { background:var(--teal-dim); border:1px solid rgba(0,212,170,0.25); border-radius:var(--r-sm); padding:12px 14px; font-size:13px; color:var(--muted); margin-bottom:16px; }
+    .note { background:var(--teal-dim); border:1px solid var(--fx-ok-bg); border-radius:var(--r-sm); padding:12px 14px; font-size:13px; color:var(--muted); margin-bottom:16px; }
     .note strong { color:var(--teal); }
 
     @media (max-width:760px) {
@@ -98,6 +110,12 @@
       .dev-side { position:static; flex-direction:row; flex-wrap:wrap; margin-bottom:24px; }
       .dev-hero h1 { font-size:30px; }
     }
+    /* Hover belongs in the stylesheet. These were inline onmouseover handlers
+       writing a dark blue onto style — which is also why they could not be
+       overridden by the register. */
+    .cta-primary:hover, a.cta-primary:hover { background:var(--fx-ink); }
+    .cta-secondary:hover, a.cta-secondary:hover { border-color:var(--fx-ink); color:var(--fx-ink); }
+
   </style>
 </head>
 <body>
@@ -109,12 +127,12 @@
       <div class="dev-eyebrow">Developers</div>
       <h1>Build on ArcFX</h1>
       <p>A REST API for stablecoin payments on Arc. Query payments, poll invoice status, and read on-chain settlement data — backed by live event tracking via Circle's Smart Contract Platform.</p>
-      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:20px;border-color:var(--border-med);">
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:20px;border-color:var(--fx-muted);">
         <div>
           <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;">API Reference</div>
           <div style="font-size:13px;color:var(--muted);">Full endpoint docs — authentication, request/response schemas, rate limits, and error codes.</div>
         </div>
-        <a href="/docs-api" style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--r-sm);background:var(--blue);color:#fff;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;transition:background .15s;" onmouseover="this.style.background='var(--blue-bright)'" onmouseout="this.style.background='var(--blue)'">View docs &rarr;</a>
+        <a href="/docs-api" style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--r-sm);background:var(--blue);color:var(--fx-on-accent);font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;transition:background .15s;">View docs &rarr;</a>
       </div>
     </div>
 
@@ -158,7 +176,7 @@
             <li><code>POST /v1/x402/verify</code> and <code>POST /v1/x402/settle</code> — facilitator-shaped endpoints</li>
           </ul>
           <div class="note" style="margin-top:16px;">
-            <strong>See it run.</strong> The <a href="/agent" style="color:#a855f7;">agent payments page</a> performs the whole exchange live and prints the real request and response at every step.
+            <strong>See it run.</strong> The <a href="/agent" style="color:var(--fx-accent);">agent payments page</a> performs the whole exchange live and prints the real request and response at every step.
           </div>
         </section>
 
@@ -386,7 +404,7 @@
           <p>Authenticated endpoints return <code>401</code> when the key is missing, malformed, or invalid:</p>
           <pre>{
   <span class="c-key">"error"</span>: <span class="c-str">"missing_api_key"</span>,
-  <span class="c-key">"message"</span>: <span class="c-str">"Provide your key as: Authorization: Bearer &lt;key&gt;"</span>
+  <span class="c-key">"message"</span>: <span class="c-str">"Provide your key as:Authorization: Bearer &lt;key&gt;"</span>
 }</pre>
           <p>Other error codes: <code>invalid_api_key</code> (bad or revoked key), <code>400</code> for missing required parameters.</p>
         </section>
@@ -397,7 +415,7 @@
 
   <script type="module">
     import { arcfxMountHeader } from '/src/shared/header.ts';
-    arcfxMountHeader({ pageKey: 'developers', activeLink: 'developers', activeTool: null });
+    arcfxMountHeader({ pageKey:'developers', activeLink: 'developers', activeTool: null });
   </script>
 
   <script>
@@ -465,7 +483,7 @@
         bodyEl.innerHTML = syntaxHighlight(pretty);
       } catch (err) {
         statusEl.className = 'tryit-status err';
-        statusEl.textContent = 'Request failed: ' + err.message;
+        statusEl.textContent = 'Request failed:' + err.message;
       } finally {
         btn.disabled = false;
       }
@@ -507,14 +525,14 @@
           if (res.ok && data.key) {
             status.className = 'tryit-status ok';
             status.textContent = 'Key created — copy it now, it won\'t be shown again:';
-            body.innerHTML = syntaxHighlight(JSON.stringify({ id: data.id, key: data.key }, null, 2));
+            body.innerHTML = syntaxHighlight(JSON.stringify({ id:data.id, key: data.key }, null, 2));
           } else {
             status.className = 'tryit-status err';
             status.textContent = (data.message || ('Error ' + res.status));
           }
         } catch (err) {
           status.className = 'tryit-status err';
-          status.textContent = 'Request failed: ' + err.message;
+          status.textContent = 'Request failed:' + err.message;
         } finally {
           keyBtn.disabled = false;
         }

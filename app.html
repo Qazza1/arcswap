@@ -288,6 +288,7 @@
 
   <script type="module">
     import { arcfxMountHeader } from '/src/shared/header.ts';
+    import { arcfxWallet } from '/src/shared/wallet.ts';
     arcfxMountHeader({ pageKey: 'app', activeLink: null, activeTool: null });
     try { localStorage.setItem('arcfx_returning', '1'); } catch (e) {}
 
@@ -481,6 +482,20 @@
 
     function refreshAll(addr){ if (addr){ hydrate(addr); loadActivity(addr); checkNetwork(); } }
 
+    // Disconnecting has to put the dashboard back to its signed-out state,
+    // otherwise the previous account's balances stay on screen.
+    function clearBalances(){
+      currentAddr = null;
+      var ctx = document.getElementById('ctxWallet');
+      if (ctx) ctx.textContent = 'Connect a wallet to see your balances.';
+      var hist = document.getElementById('histLink'); if (hist) hist.style.display = 'none';
+      var refresh = document.getElementById('refreshBtn'); if (refresh) refresh.style.display = 'none';
+      ['statBalance','statBalanceSub','statSent','statSentSub'].forEach(function(id){
+        var n = document.getElementById(id);
+        if (n) n.textContent = '—';
+      });
+    }
+
     // ── Protocol stats (live backend, full history; not wallet-specific) ──
     var ARCFX_API = "https://arcfx-backend-production.up.railway.app";
     async function loadProtocolStats(){
@@ -500,26 +515,23 @@
     }
 
     // ── Wiring ──
+    // The session belongs to src/shared/wallet.ts: it restores an existing
+    // authorization silently on load and tells us about account and chain
+    // changes. This page only reacts. Running our own eth_accounts here is what
+    // used to make the dashboard ask for a connection the nav already had.
     (function () {
       loadProtocolStats();            // protocol stats don't need a wallet
-      var eth = window.ethereum;
-      if (!eth) return;
-      checkNetwork();
-      eth.request({ method:'eth_accounts' }).then(function(a){ if (a && a.length) refreshAll(a[0]); }).catch(function(){});
 
-      var cb = document.getElementById('connect-btn');
-      if (cb) cb.addEventListener('click', function(){
-        eth.request({ method:'eth_requestAccounts' }).then(function(a){ if (a && a.length) refreshAll(a[0]); }).catch(function(){});
+      arcfxWallet.onChange(function (state) {
+        checkNetwork();
+        if (state.connected && state.address) refreshAll(state.address);
+        else clearBalances();
       });
+
       var sw = document.getElementById('switchNetBtn');
       if (sw) sw.addEventListener('click', switchNetwork);
       var rf = document.getElementById('refreshBtn');
       if (rf) rf.addEventListener('click', function(){ refreshAll(currentAddr); });
-
-      if (eth.on){
-        eth.on('accountsChanged', function(a){ if (a && a.length) refreshAll(a[0]); else location.reload(); });
-        eth.on('chainChanged', function(){ checkNetwork(); refreshAll(currentAddr); });
-      }
     })();
   </script>
 

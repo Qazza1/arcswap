@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<!-- Instrument register:light, near-monochrome, colour reserved for state.
+     Tokens: src/shared/tokens.css -->
+<html lang="en" data-register="app">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -28,69 +30,69 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:"Inter",system-ui,sans-serif;background:#0a0f1e;color:#e2e8f0;line-height:1.6;-webkit-font-smoothing:antialiased;}
+    body{font-family:var(--fx-body);background:var(--fx-bg);color:var(--fx-ink);line-height:1.6;-webkit-font-smoothing:antialiased;}
     a{text-decoration:none;}
-    nav{position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;}
+    nav{position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:0 24px;background:var(--fx-bg);border-bottom:1px solid var(--fx-line);}
     .page{max-width:1000px;margin:0 auto;padding:64px 28px 100px;}
-    .eyebrow{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:0.14em;margin-bottom:14px;}
-    h1{font-size:clamp(32px,4vw,48px);font-weight:700;color:#f1f5f9;letter-spacing:-1px;line-height:1.15;margin-bottom:14px;}
-    .sub{font-size:16px;color:#475569;line-height:1.7;max-width:560px;margin-bottom:56px;}
+    .eyebrow{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;color:var(--fx-accent);text-transform:uppercase;letter-spacing:0.14em;margin-bottom:14px;}
+    h1{font-size:clamp(32px,4vw,48px);font-weight:700;color:var(--fx-ink);letter-spacing:-1px;line-height:1.15;margin-bottom:14px;}
+    .sub{font-size:16px;color:var(--fx-muted);line-height:1.7;max-width:560px;margin-bottom:56px;}
     /* Pricing cards */
-    .plans{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#1e293b;border:1px solid #1e293b;border-radius:12px;overflow:hidden;margin-bottom:64px;}
+    .plans{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--fx-line);border:1px solid var(--fx-line);border-radius:12px;overflow:hidden;margin-bottom:64px;}
     @media(max-width:768px){.plans{grid-template-columns:1fr;}}
-    .plan{background:#0f172a;padding:32px 28px;display:flex;flex-direction:column;}
-    .plan.featured{background:#0c1628;position:relative;}
-    .plan-label{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:16px;}
-    .plan-price{font-size:42px;font-weight:700;color:#f1f5f9;letter-spacing:-1.5px;margin-bottom:4px;font-family:"JetBrains Mono",monospace;}
-    .plan-price span{font-size:16px;color:#475569;font-weight:400;letter-spacing:0;}
-    .plan-desc{font-size:13.5px;color:#475569;line-height:1.7;margin-bottom:28px;flex:1;}
+    .plan{background:var(--fx-surface);padding:32px 28px;display:flex;flex-direction:column;}
+    .plan.featured{background:var(--fx-sunken);position:relative;}
+    .plan-label{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;color:var(--fx-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:16px;}
+    .plan-price{font-size:42px;font-weight:700;color:var(--fx-ink);letter-spacing:-1.5px;margin-bottom:4px;font-family:"JetBrains Mono",monospace;}
+    .plan-price span{font-size:16px;color:var(--fx-muted);font-weight:400;letter-spacing:0;}
+    .plan-desc{font-size:13.5px;color:var(--fx-muted);line-height:1.7;margin-bottom:28px;flex:1;}
     .plan-features{display:flex;flex-direction:column;gap:10px;margin-bottom:28px;}
-    .feature{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#94a3b8;}
-    .feature svg{flex-shrink:0;margin-top:2px;color:#10b981;}
+    .feature{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--fx-muted);}
+    .feature svg{flex-shrink:0;margin-top:2px;color:var(--fx-ok);}
     .plan-cta{display:block;text-align:center;padding:12px;border-radius:7px;font-size:14px;font-weight:600;transition:all .15s;cursor:pointer;font-family:inherit;}
-    .cta-primary{background:#2563eb;color:#fff;border:none;}
-    .cta-primary:hover{background:#1d4ed8;}
-    .cta-ghost{background:transparent;color:#475569;border:1px solid #1e293b;}
-    .cta-ghost:hover{border-color:#2563eb;color:#2563eb;}
-    .featured-badge{position:absolute;top:0;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:3px 12px;border-radius:0 0 6px 6px;letter-spacing:0.06em;text-transform:uppercase;}
+    .cta-primary{background:var(--fx-accent);color:var(--fx-on-accent);border:none;}
+    .cta-primary:hover{background:var(--fx-accent);}
+    .cta-ghost{background:transparent;color:var(--fx-muted);border:1px solid var(--fx-line);}
+    .cta-ghost:hover{border-color:var(--fx-accent);color:var(--fx-accent);}
+    .featured-badge{position:absolute;top:0;left:50%;transform:translateX(-50%);background:var(--fx-accent);color:var(--fx-on-accent);font-size:10px;font-weight:700;padding:3px 12px;border-radius:0 0 6px 6px;letter-spacing:0.06em;text-transform:uppercase;}
     /* Fee calculator */
-    .calc{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:32px;margin-bottom:64px;}
-    .calc-title{font-size:17px;font-weight:600;color:#f1f5f9;margin-bottom:6px;}
-    .calc-sub{font-size:13px;color:#475569;margin-bottom:24px;}
+    .calc{background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:12px;padding:32px;margin-bottom:64px;}
+    .calc-title{font-size:17px;font-weight:600;color:var(--fx-ink);margin-bottom:6px;}
+    .calc-sub{font-size:13px;color:var(--fx-muted);margin-bottom:24px;}
     .calc-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center;}
     @media(max-width:600px){.calc-row{grid-template-columns:1fr;}}
-    .calc-input-wrap{background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:8px;}
-    .calc-input{background:transparent;border:none;outline:none;font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:500;color:#f1f5f9;width:100%;}
-    .calc-label{font-size:11px;color:#334155;font-family:"JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
-    .calc-result{background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:16px;}
-    .calc-result-val{font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:500;color:#10b981;}
-    .calc-result-label{font-size:11px;color:#334155;margin-top:4px;}
-    .calc-arrow{text-align:center;color:#334155;font-size:20px;}
+    .calc-input-wrap{background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:8px;}
+    .calc-input{background:transparent;border:none;outline:none;font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:500;color:var(--fx-ink);width:100%;}
+    .calc-label{font-size:11px;color:var(--fx-muted);font-family:"JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
+    .calc-result{background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:16px;}
+    .calc-result-val{font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:500;color:var(--fx-ok);}
+    .calc-result-label{font-size:11px;color:var(--fx-muted);margin-top:4px;}
+    .calc-arrow{text-align:center;color:var(--fx-muted);font-size:20px;}
     /* FAQ */
-    .faq-title{font-size:22px;font-weight:700;color:#f1f5f9;letter-spacing:-0.5px;margin-bottom:24px;}
-    .faq-item{border-bottom:1px solid #1e293b;padding:20px 0;}
-    .faq-q{font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:8px;}
-    .faq-a{font-size:13.5px;color:#475569;line-height:1.7;}
+    .faq-title{font-size:22px;font-weight:700;color:var(--fx-ink);letter-spacing:-0.5px;margin-bottom:24px;}
+    .faq-item{border-bottom:1px solid var(--fx-line);padding:20px 0;}
+    .faq-q{font-size:14px;font-weight:600;color:var(--fx-ink);margin-bottom:8px;}
+    .faq-a{font-size:13.5px;color:var(--fx-muted);line-height:1.7;}
     /* Section divider */
-    .section-title{font-size:20px;font-weight:700;color:#f1f5f9;letter-spacing:-0.3px;margin-bottom:24px;}
+    .section-title{font-size:20px;font-weight:700;color:var(--fx-ink);letter-spacing:-0.3px;margin-bottom:24px;}
     /* Compare table */
     .compare{width:100%;border-collapse:collapse;margin-bottom:64px;font-size:13.5px;}
-    .compare th{text-align:left;padding:12px 16px;font-size:10px;font-family:"JetBrains Mono",monospace;font-weight:600;color:#334155;text-transform:uppercase;letter-spacing:0.1em;background:#060b18;border-bottom:1px solid #1e293b;}
-    .compare td{padding:14px 16px;border-bottom:1px solid #0f172a;color:#94a3b8;vertical-align:top;}
-    .compare tr:hover td{background:#0d1525;}
-    .compare td:first-child{color:#f1f5f9;font-weight:500;}
-    .compare td.green{color:#10b981;font-weight:600;}
-    .compare td.muted{color:#334155;}
+    .compare th{text-align:left;padding:12px 16px;font-size:10px;font-family:"JetBrains Mono",monospace;font-weight:600;color:var(--fx-muted);text-transform:uppercase;letter-spacing:0.1em;background:var(--fx-sunken);border-bottom:1px solid var(--fx-line);}
+    .compare td{padding:14px 16px;border-bottom:1px solid var(--fx-surface);color:var(--fx-muted);vertical-align:top;}
+    .compare tr:hover td{background:var(--fx-sunken);}
+    .compare td:first-child{color:var(--fx-ink);font-weight:500;}
+    .compare td.green{color:var(--fx-ok);font-weight:600;}
+    .compare td.muted{color:var(--fx-muted);}
       @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   
     /* Stats bar */
-    .stats-bar { background:#08090f; border-bottom:1px solid #1e293b; height:36px; display:flex; align-items:center; }
+    .stats-bar { background:var(--fx-bg); border-bottom:1px solid var(--fx-line); height:36px; display:flex; align-items:center; }
     .stats-bar-inner { display:flex; align-items:center; justify-content:center; gap:0; width:100%; padding:0 24px; }
     .stats-bar-item { display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
-    .stats-bar-dot { width:5px; height:5px; border-radius:50%; background:#00d4aa; box-shadow:0 0 5px #00d4aa; animation:pulse 2s ease-in-out infinite; }
-    .stats-bar-label { font-family:"JetBrains Mono",monospace; font-size:11px; color:#475569; }
-    .stats-bar-val { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500; color:#e2e8f0; }
-    .stats-bar-sep { width:1px; height:14px; background:#1e293b; margin:0 20px; flex-shrink:0; }
+    .stats-bar-dot { width:5px; height:5px; border-radius:50%; background:var(--fx-ok-bg); box-shadow:0 0 5px var(--fx-ok-bg); animation:pulse 2s ease-in-out infinite; }
+    .stats-bar-label { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--fx-muted); }
+    .stats-bar-val { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500; color:var(--fx-ink); }
+    .stats-bar-sep { width:1px; height:14px; background:var(--fx-line); margin:0 20px; flex-shrink:0; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   </style>
 </head>
@@ -104,7 +106,7 @@
   <script type="module">
     import { arcfxMountHeader } from '/src/shared/header.ts';
     arcfxMountHeader({
-      pageKey: 'pricing',
+      pageKey:'pricing',
       activeLink: 'pricing',
       activeTool: null,
       mode: 'product'
@@ -118,8 +120,8 @@
     <h1>Simple, transparent pricing.<br>No surprises.</h1>
     <p class="sub">A 0.15% protocol fee on payments processed, and 0.10% on Multisend batches. No monthly fees for the UI tools. Pay only for what you use — all settled in USDC on-chain.</p>
 
-    <!-- Clarifier: pricing is usage-based, not a plan to choose -->
-    <div style="background:#0c1628;border:1px solid #1e293b;border-left:3px solid #2563eb;border-radius:8px;padding:14px 18px;margin-bottom:32px;font-size:13px;color:#94a3b8;line-height:1.7;">
+    <!-- Clarifier:pricing is usage-based, not a plan to choose -->
+    <div style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-left:3px solid var(--fx-ink);border-radius:8px;padding:14px 18px;margin-bottom:32px;font-size:13px;color:var(--fx-muted);line-height:1.7;">
       ArcFX is one product — there's no signup or plan to choose. The tiers below describe how fees apply at different usage levels. The 0.15% payment fee is added on top of the payment on-chain the moment a payment is sent, so the recipient always receives the full amount. Multisend batches are charged 0.10% by a separate contract.
     </div>
 
@@ -138,8 +140,8 @@
           <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Multisend up to 5 wallets (free)</div>
           <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Transaction history + CSV export</div>
           <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Address book</div>
-          <div class="feature" style="color:#334155;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>API access</div>
-          <div class="feature" style="color:#334155;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Webhooks</div>
+          <div class="feature" style="color:var(--fx-muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E6E6E" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>API access</div>
+          <div class="feature" style="color:var(--fx-muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E6E6E" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Webhooks</div>
         </div>
         <a href="/" class="plan-cta cta-ghost">Open ArcFX →</a>
       </div>
@@ -148,7 +150,7 @@
       <div class="plan featured">
         <div class="featured-badge">Most popular</div>
         <div class="plan-label" style="margin-top:16px;">Pro</div>
-        <div class="plan-price" style="color:#2563eb;">0.15%<span> per payment</span></div>
+        <div class="plan-price" style="color:var(--fx-accent);">0.15%<span> per payment</span></div>
         <p class="plan-desc">For businesses that process regular USDC/EURC payments, payroll, or invoices. Pay only when you transact.</p>
         <div class="plan-features">
           <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Free</div>
@@ -156,11 +158,11 @@
           <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>0.15% fee on payments only</div>
           <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Fee collected on-chain automatically</div>
           <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>No monthly subscription</div>
-          <div class="feature" style="color:#334155;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Safe / Multi-sig <span style="font-size:11px;">(on the roadmap)</span></div>
-          <div class="feature" style="color:#334155;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>API access</div>
-          <div class="feature" style="color:#334155;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Webhooks</div>
+          <div class="feature" style="color:var(--fx-muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E6E6E" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Safe / Multi-sig <span style="font-size:11px;">(on the roadmap)</span></div>
+          <div class="feature" style="color:var(--fx-muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E6E6E" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>API access</div>
+          <div class="feature" style="color:var(--fx-muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E6E6E" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Webhooks</div>
         </div>
-        <a href="/" class="plan-cta cta-primary" style="background:#2563eb;color:#fff;border:none;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Open ArcFX →</a>
+        <a href="/" class="plan-cta cta-primary" style="background:var(--fx-accent);color:var(--fx-on-accent);border:none;">Open ArcFX →</a>
       </div>
 
       <!-- API / Enterprise -->
@@ -192,7 +194,7 @@
           <div class="calc-label">You send</div>
           <div class="calc-input-wrap">
             <input class="calc-input" id="calc-amount" type="number" value="1000" min="0" oninput="calcFee()" />
-            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#334155;">USDC</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--fx-muted);">USDC</span>
           </div>
         </div>
         <div class="calc-arrow">→</div>
@@ -200,7 +202,7 @@
           <div class="calc-label">Fee (0.15%, paid by sender)</div>
           <div class="calc-result">
             <div class="calc-result-val" id="calc-fee">1.50 USDC</div>
-            <div class="calc-result-label">You pay <span id="calc-net" style="color:#f1f5f9;font-weight:600;">1001.50 USDC</span> · recipient receives the full amount</div>
+            <div class="calc-result-label">You pay <span id="calc-net" style="color:var(--fx-ink);font-weight:600;">1001.50 USDC</span> · recipient receives the full amount</div>
           </div>
         </div>
       </div>
@@ -223,33 +225,33 @@
           <td>ArcFX</td>
           <td class="green">$15.00 (0.15%)</td>
           <td class="green">&lt; 1 second</td>
-          <td style="color:#ef4444;">No (final)</td>
+          <td style="color:var(--fx-bad);">No (final)</td>
           <td class="green">Yes</td>
         </tr>
         <tr>
           <td>Bank wire</td>
-          <td style="color:#f59e0b;">$25–$50 flat</td>
+          <td style="color:var(--fx-warn);">$25–$50 flat</td>
           <td>1–5 business days</td>
           <td>Possible</td>
-          <td style="color:#334155;">No</td>
+          <td style="color:var(--fx-muted);">No</td>
         </tr>
         <tr>
           <td>Wise</td>
-          <td style="color:#f59e0b;">$41 (~0.41%)</td>
+          <td style="color:var(--fx-warn);">$41 (~0.41%)</td>
           <td>1–2 business days</td>
           <td>Limited</td>
-          <td style="color:#334155;">No</td>
+          <td style="color:var(--fx-muted);">No</td>
         </tr>
         <tr>
           <td>Revolut Business</td>
-          <td style="color:#f59e0b;">$50+ (0.5%)</td>
+          <td style="color:var(--fx-warn);">$50+ (0.5%)</td>
           <td>Instant (limits apply)</td>
           <td>Limited</td>
           <td>Yes</td>
         </tr>
         <tr>
           <td>PayPal</td>
-          <td style="color:#ef4444;">$350 (3.5%)</td>
+          <td style="color:var(--fx-bad);">$350 (3.5%)</td>
           <td>Instant</td>
           <td>Yes</td>
           <td>Yes</td>
@@ -286,12 +288,12 @@
     </div>
 
     <!-- CTA -->
-    <div id="waitlist" style="margin-top:64px;background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:40px;text-align:center;">
-      <div style="font-size:22px;font-weight:700;color:#f1f5f9;margin-bottom:10px;">Ready to start?</div>
-      <div style="font-size:14px;color:#475569;margin-bottom:28px;">No account needed. Connect your wallet and start in under a minute.</div>
+    <div id="waitlist" style="margin-top:64px;background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:12px;padding:40px;text-align:center;">
+      <div style="font-size:22px;font-weight:700;color:var(--fx-ink);margin-bottom:10px;">Ready to start?</div>
+      <div style="font-size:14px;color:var(--fx-muted);margin-bottom:28px;">No account needed. Connect your wallet and start in under a minute.</div>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-        <a href="/" style="padding:13px 28px;background:#2563eb;color:#fff;border-radius:7px;font-size:14px;font-weight:600;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Launch ArcFX →</a>
-        <a href="mailto:arcfxapp@gmail.com" style="padding:13px 28px;background:transparent;color:#475569;border:1px solid #1e293b;border-radius:7px;font-size:14px;font-weight:600;" onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'">Talk to us →</a>
+        <a href="/" style="padding:13px 28px;background:var(--fx-accent);color:var(--fx-on-accent);border-radius:7px;font-size:14px;font-weight:600;">Launch ArcFX →</a>
+        <a href="mailto:arcfxapp@gmail.com" style="padding:13px 28px;background:transparent;color:var(--fx-muted);border:1px solid var(--fx-line);border-radius:7px;font-size:14px;font-weight:600;">Talk to us →</a>
       </div>
     </div>
 
@@ -299,7 +301,7 @@
 
   <script>
     function calcFee() {
-      // Payer-pays model: the entered amount is what the recipient receives;
+      // Payer-pays model:the entered amount is what the recipient receives;
       // the sender pays that plus the 0.15% fee on top.
       var amt = parseFloat(document.getElementById('calc-amount').value) || 0;
       var fee = (amt * 0.0015).toFixed(2);

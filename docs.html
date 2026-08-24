@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<!-- Instrument register:light, near-monochrome, colour reserved for state.
+     Tokens: src/shared/tokens.css -->
+<html lang="en" data-register="app">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -29,30 +31,30 @@
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     :root {
-      --navy:    #0a0f1e;
-      --card:    #0f172a;
-      --raised:  #111827;
-      --border:  #1e293b;
-      --blue:    #2563eb;
-      --teal:    #10b981;
-      --white:   #f1f5f9;
-      --muted:   #475569;
-      --subtle:  #334155;
-      --red:     #ef4444;
-      --amber:   #f59e0b;
-      --green:   #10b981;
+      --navy:   var(--fx-bg);
+      --card:   var(--fx-surface);
+      --raised: var(--fx-sunken);
+      --border: var(--fx-line);
+      --blue:   var(--fx-accent);
+      --teal:   var(--fx-ok);
+      --white:  var(--fx-ink);
+      --muted:  var(--fx-muted);
+      --subtle: var(--fx-muted);
+      --red:    var(--fx-bad);
+      --amber:  var(--fx-warn);
+      --green:  var(--fx-ok);
     }
     html,body { height:100%; }
     /* FIX: body is no longer a flex container — layout handled by .docs-layout */
-    body { font-family:"Inter",system-ui,sans-serif; background:var(--navy); color:var(--white); line-height:1.6; -webkit-font-smoothing:antialiased; }
+    body { font-family:var(--fx-body); background:var(--navy); color:var(--white); line-height:1.6; -webkit-font-smoothing:antialiased; }
 
     /* ── Stats bar — canonical, matches index.html ── */
-    .stats-bar { background:#08090f; border-bottom:1px solid var(--border); height:36px; display:flex; align-items:center; }
+    .stats-bar { background:var(--fx-bg); border-bottom:1px solid var(--border); height:36px; display:flex; align-items:center; }
     .stats-bar-inner { display:flex; align-items:center; justify-content:center; gap:0; width:100%; padding:0 24px; }
     .stats-bar-item { display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
-    .stats-bar-dot { width:5px; height:5px; border-radius:50%; background:#00d4aa; box-shadow:0 0 5px #00d4aa; animation:pulse 2s ease-in-out infinite; }
-    .stats-bar-label { font-family:"JetBrains Mono",monospace; font-size:11px; color:#475569; }
-    .stats-bar-val { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500; color:#e2e8f0; }
+    .stats-bar-dot { width:5px; height:5px; border-radius:50%; background:var(--fx-ok-bg); box-shadow:0 0 5px var(--fx-ok-bg); animation:pulse 2s ease-in-out infinite; }
+    .stats-bar-label { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--fx-muted); }
+    .stats-bar-val { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500; color:var(--fx-ink); }
     .stats-bar-sep { width:1px; height:14px; background:var(--border); margin:0 20px; flex-shrink:0; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
@@ -60,7 +62,7 @@
     .docs-layout { display:flex; min-height:calc(100vh - 36px); }
 
     /* ── Sidebar ── */
-    /* FIX: top:64px keeps sidebar below the sticky nav; height accounts for nav height */
+    /* FIX:top:64px keeps sidebar below the sticky nav; height accounts for nav height */
     .sidebar {
       width:240px; flex-shrink:0;
       height:calc(100vh - 64px); position:sticky; top:64px;
@@ -71,16 +73,16 @@
     .sidebar-logo { display:flex; align-items:center; gap:9px; padding:0 20px 24px; border-bottom:1px solid var(--border); margin-bottom:20px; }
     .sidebar-logo img { width:28px; height:28px; border-radius:50%; border:1px solid var(--border); }
     .sidebar-logo span { font-size:14px; font-weight:600; color:var(--white); }
-    .sidebar-logo .version { font-family:"JetBrains Mono",monospace; font-size:9px; color:var(--blue); background:rgba(37,99,235,0.1); border:1px solid rgba(37,99,235,0.2); padding:1px 6px; border-radius:3px; margin-left:4px; }
+    .sidebar-logo .version { font-family:"JetBrains Mono",monospace; font-size:9px; color:var(--blue); background:var(--fx-sunken); border:1px solid var(--fx-sunken); padding:1px 6px; border-radius:3px; margin-left:4px; }
     .nav-section { padding:0 20px; margin-bottom:20px; }
     .nav-section-title { font-family:"JetBrains Mono",monospace; font-size:9.5px; font-weight:600; color:var(--subtle); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:8px; }
     .nav-link { display:block; padding:6px 10px; border-radius:5px; font-size:13px; color:var(--muted); text-decoration:none; transition:all .15s; margin-bottom:1px; }
     .nav-link:hover { color:var(--white); background:var(--border); }
-    .nav-link.active { color:var(--white); background:rgba(37,99,235,0.15); border-left:2px solid var(--blue); padding-left:8px; }
+    .nav-link.active { color:var(--white); background:var(--fx-sunken); border-left:2px solid var(--blue); padding-left:8px; }
     .method-badge { font-family:"JetBrains Mono",monospace; font-size:8.5px; font-weight:600; padding:1px 5px; border-radius:3px; margin-right:6px; vertical-align:middle; }
-    .method-get  { background:rgba(16,185,129,0.15); color:#10b981; }
-    .method-post { background:rgba(37,99,235,0.15); color:#3b82f6; }
-    .method-del  { background:rgba(239,68,68,0.15); color:#ef4444; }
+    .method-get  { background:var(--fx-ok-bg); color:var(--fx-ok); }
+    .method-post { background:var(--fx-sunken); color:#CF222E; }
+    .method-del  { background:var(--fx-bad-bg); color:var(--fx-bad); }
 
     /* ── Main ── */
     .main { flex:1; min-width:0; }
@@ -89,13 +91,13 @@
     .topnav {
       height:64px; display:flex; align-items:center; justify-content:space-between;
       padding:0 40px; border-bottom:1px solid var(--border);
-      background:rgba(10,15,30,0.97); position:sticky; top:0; z-index:40;
+      background:var(--fx-bg); position:sticky; top:0; z-index:40;
       backdrop-filter:blur(12px);
     }
     .topnav-left { display:flex; align-items:center; gap:24px; }
     .topnav-link { font-size:13.5px; color:var(--muted); text-decoration:none; transition:color .15s; }
     .topnav-link:hover { color:var(--white); }
-    .pricing-badge { display:flex; align-items:center; gap:6px; padding:6px 14px; border-radius:6px; background:var(--blue); color:#fff; font-size:13px; font-weight:600; text-decoration:none; }
+    .pricing-badge { display:flex; align-items:center; gap:6px; padding:6px 14px; border-radius:6px; background:var(--blue); color:var(--fx-on-accent); font-size:13px; font-weight:600; text-decoration:none; }
 
     /* ── Content ── */
     .content { max-width:860px; padding:48px 40px 80px; }
@@ -117,32 +119,32 @@
     /* Code block */
     .code-label { font-family:"JetBrains Mono",monospace; font-size:9.5px; font-weight:600; color:var(--subtle); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px; }
     pre {
-      background:#060b18; border:1px solid var(--border); border-radius:8px;
+      background:var(--fx-sunken); border:1px solid var(--border); border-radius:8px;
       padding:16px; overflow-x:auto; font-family:"JetBrains Mono",monospace;
-      font-size:12.5px; line-height:1.7; color:#94a3b8; margin-bottom:16px;
+      font-size:12.5px; line-height:1.7; color:var(--fx-muted); margin-bottom:16px;
     }
-    .k { color:#3b82f6; } /* keyword */
-    .s { color:#10b981; } /* string */
-    .n { color:#f59e0b; } /* number */
-    .c { color:#334155; } /* comment */
-    .p { color:#e2e8f0; } /* punctuation */
-    .key { color:#93c5fd; } /* json key */
+    .k { color:#CF222E; } /* keyword */
+    .s { color:var(--fx-ok); } /* string */
+    .n { color:var(--fx-warn); } /* number */
+    .c { color:var(--fx-muted); } /* comment */
+    .p { color:var(--fx-ink); } /* punctuation */
+    .key { color:#0550AE; } /* json key */
 
     /* Params table */
     .params-table { width:100%; border-collapse:collapse; font-size:13px; }
-    .params-table th { text-align:left; padding:8px 12px; font-size:9.5px; font-family:"JetBrains Mono",monospace; font-weight:600; color:var(--subtle); text-transform:uppercase; letter-spacing:0.1em; background:#060b18; border-bottom:1px solid var(--border); }
-    .params-table td { padding:10px 12px; border-bottom:1px solid #0f172a; vertical-align:top; }
+    .params-table th { text-align:left; padding:8px 12px; font-size:9.5px; font-family:"JetBrains Mono",monospace; font-weight:600; color:var(--subtle); text-transform:uppercase; letter-spacing:0.1em; background:var(--fx-sunken); border-bottom:1px solid var(--border); }
+    .params-table td { padding:10px 12px; border-bottom:1px solid var(--fx-surface); vertical-align:top; }
     .params-table tr:last-child td { border-bottom:none; }
-    .param-name { font-family:"JetBrains Mono",monospace; font-size:12.5px; color:#93c5fd; }
+    .param-name { font-family:"JetBrains Mono",monospace; font-size:12.5px; color:#0550AE; }
     .param-type { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--subtle); }
-    .param-req  { font-size:10px; color:#ef4444; font-weight:600; }
+    .param-req  { font-size:10px; color:var(--fx-bad); font-weight:600; }
     .param-desc { color:var(--muted); font-size:13px; }
 
     /* Info boxes */
     .info-box { border-radius:8px; padding:14px 16px; margin-bottom:20px; font-size:13px; line-height:1.7; }
-    .info-blue  { background:rgba(37,99,235,0.08); border:1px solid rgba(37,99,235,0.2); color:#93c5fd; }
-    .info-green { background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); color:#6ee7b7; }
-    .info-amber { background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); color:#fcd34d; }
+    .info-blue  { background:var(--fx-sunken); border:1px solid var(--fx-sunken); color:#0550AE; }
+    .info-green { background:var(--fx-ok-bg); border:1px solid var(--fx-ok-bg); color:var(--fx-ok); }
+    .info-amber { background:var(--fx-warn-bg); border:1px solid var(--fx-warn-bg); color:#953800; }
 
     /* Divider */
     .divider { border:none; border-top:1px solid var(--border); margin:48px 0; }
@@ -150,7 +152,7 @@
     /* Pricing cards */
     .pricing-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:24px; }
     .pricing-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; }
-    .pricing-card.featured { border-color:var(--blue); background:rgba(37,99,235,0.05); }
+    .pricing-card.featured { border-color:var(--blue); background:var(--fx-sunken); }
     .pricing-price { font-size:36px; font-weight:700; color:var(--white); letter-spacing:-1px; margin:8px 0; font-family:"JetBrains Mono",monospace; }
     .pricing-price span { font-size:14px; color:var(--muted); font-weight:400; }
     .pricing-feature { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin-top:10px; }
@@ -167,7 +169,7 @@
   <script type="module">
     import { arcfxMountHeader } from '/src/shared/header.ts';
     arcfxMountHeader({
-      pageKey: 'docs',
+      pageKey:'docs',
       activeLink: 'docs',
       mode: 'product'
     });
@@ -215,7 +217,7 @@
           <h1 class="section-title">What is ArcFX</h1>
           <p class="section-sub">ArcFX is a non-custodial stablecoin toolkit for teams, built on <strong>Arc</strong> &mdash; Circle&rsquo;s Layer-1 blockchain for stablecoin finance. Swap and bridge stablecoins, pay up to 500 wallets at once, and send payment links and invoices that settle on-chain &mdash; all from your own wallet.</p>
           <div class="info-box info-amber" style="margin-top:24px;">&#9888; ArcFX is currently live on <strong>Arc Testnet</strong>. Testnet USDC and EURC have no real-world value. Mainnet support will follow Arc&rsquo;s mainnet launch.</div>
-          <div class="info-box info-green">Non-custodial by design: ArcFX never holds your funds. Every action is a transaction you sign in your own wallet.</div>
+          <div class="info-box info-green">Non-custodial by design:ArcFX never holds your funds. Every action is a transaction you sign in your own wallet.</div>
         </div>
 
         <hr class="divider" />
@@ -251,25 +253,25 @@
           <div class="code-label">Tokens</div>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span style="font-size:14px;font-weight:600;color:var(--white);">USDC <span style="font-weight:400;color:var(--muted);font-size:12px;">&middot; 6 decimals</span></span><a href="https://testnet.arcscan.app/address/0x3600000000000000000000000000000000000000" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;">ArcScan &#8599;</a></div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#94a3b8;margin-top:8px;word-break:break-all;">0x3600000000000000000000000000000000000000</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--fx-muted);margin-top:8px;word-break:break-all;">0x3600000000000000000000000000000000000000</div>
           </div>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:24px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span style="font-size:14px;font-weight:600;color:var(--white);">EURC <span style="font-weight:400;color:var(--muted);font-size:12px;">&middot; 6 decimals</span></span><a href="https://testnet.arcscan.app/address/0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;">ArcScan &#8599;</a></div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#94a3b8;margin-top:8px;word-break:break-all;">0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--fx-muted);margin-top:8px;word-break:break-all;">0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a</div>
           </div>
 
           <div class="code-label">ArcFX contracts</div>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span style="font-size:14px;font-weight:600;color:var(--white);">ArcFXPayments</span><a href="https://testnet.arcscan.app/address/0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;">ArcScan &#8599;</a></div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#94a3b8;margin-top:8px;word-break:break-all;">0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--fx-muted);margin-top:8px;word-break:break-all;">0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3</div>
             <div style="font-size:12.5px;color:var(--muted);margin-top:8px;">Powers Pay Links and Invoice payments. Emits an on-chain event for every payment.</div>
           </div>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:24px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span style="font-size:14px;font-weight:600;color:var(--white);">ArcFXMultisender</span><a href="https://testnet.arcscan.app/address/0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;">ArcScan &#8599;</a></div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#94a3b8;margin-top:8px;word-break:break-all;">0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--fx-muted);margin-top:8px;word-break:break-all;">0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398</div>
             <div style="font-size:12.5px;color:var(--muted);margin-top:8px;">Batches USDC/EURC transfers to up to 500 wallets in a single transaction.</div>
           </div>
-          <div class="info-box info-blue">Source code is open: <a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" style="color:#93c5fd;">github.com/Qazza1/arcswap</a></div>
+          <div class="info-box info-blue">Source code is open:<a href="https://github.com/Qazza1/arcswap" target="_blank" rel="noopener" style="color:#0550AE;">github.com/Qazza1/arcswap</a></div>
         </div>
 
         <hr class="divider" />
@@ -279,7 +281,7 @@
           <div class="section-eyebrow">Tools</div>
           <h2 class="section-title">Swap &amp; Bridge</h2>
           <p class="section-sub">Swap between USDC and EURC on Arc, or bridge stablecoins in from another chain. Settlement is sub-second and gas is paid in USDC. Routing is powered by Circle&rsquo;s stablecoin infrastructure.</p>
-          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/trade" style="color:#93c5fd;">arcfx.app/trade</a> &mdash; connect your wallet, choose your tokens and amount, and confirm.</div>
+          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/trade" style="color:#0550AE;">arcfx.app/trade</a> &mdash; connect your wallet, choose your tokens and amount, and confirm.</div>
           <div class="info-box info-amber">On testnet, not every swap direction is routable yet &mdash; Circle provisions routes over time, so a given pair may be temporarily unavailable. If a direction returns &ldquo;no route,&rdquo; try the reverse or use Bridge.</div>
         </div>
 
@@ -290,11 +292,11 @@
           <h2 class="section-title">Multisend</h2>
           <p class="section-sub">Send USDC or EURC to many recipients in a single transaction &mdash; payroll, vendor runs, airdrops, or DAO payouts. Up to 500 recipients per batch via the ArcFXMultisender contract.</p>
           <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;">
-            <div class="pricing-feature" style="color:var(--muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Free tier: up to 5 recipients per batch</div>
-            <div class="pricing-feature" style="color:var(--muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Pro tier: up to 500 recipients, 0.10% fee on the batch</div>
+            <div class="pricing-feature" style="color:var(--muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Free tier:up to 5 recipients per batch</div>
+            <div class="pricing-feature" style="color:var(--muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Pro tier:up to 500 recipients, 0.10% fee on the batch</div>
             <div class="pricing-feature" style="color:var(--muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> One transaction, one signature</div>
           </div>
-          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/multisend" style="color:#93c5fd;">arcfx.app/multisend</a>.</div>
+          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/multisend" style="color:#0550AE;">arcfx.app/multisend</a>.</div>
         </div>
 
         <hr class="divider" />
@@ -303,7 +305,7 @@
         <div class="section" id="pay">
           <h2 class="section-title">Pay Links</h2>
           <p class="section-sub">Create a shareable link that requests a stablecoin payment. The payer opens the link, connects their wallet, and pays in one click &mdash; no invoice or account required. Payments settle through the ArcFXPayments contract.</p>
-          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/pay" style="color:#93c5fd;">arcfx.app/pay</a>. A 0.15% protocol fee applies to completed payments.</div>
+          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/pay" style="color:#0550AE;">arcfx.app/pay</a>. A 0.15% protocol fee applies to completed payments.</div>
         </div>
 
         <hr class="divider" />
@@ -312,8 +314,8 @@
         <div class="section" id="invoices">
           <h2 class="section-title">Invoices</h2>
           <p class="section-sub">Generate a professional invoice your client can pay on-chain in one click. Add your logo and save your business details so they carry across every invoice, then export to PDF. Built on the same ArcFXPayments contract, with the payment recorded on-chain for reconciliation.</p>
-          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/invoice" style="color:#93c5fd;">arcfx.app/invoice</a>. A 0.15% protocol fee applies to completed payments.</div>
-          <div class="info-box info-green">Check an invoice's <strong>on-chain payment status</strong> from the invoice page — ArcFX matches the payment to your invoice number and recipient wallet. And from <a href="/history" style="color:#6ee7b7;">your transaction history</a>, any transaction can be exported as a PDF receipt.</div>
+          <div class="info-box info-blue" style="margin-top:20px;">Open it at <a href="/invoice" style="color:#0550AE;">arcfx.app/invoice</a>. A 0.15% protocol fee applies to completed payments.</div>
+          <div class="info-box info-green">Check an invoice's <strong>on-chain payment status</strong> from the invoice page — ArcFX matches the payment to your invoice number and recipient wallet. And from <a href="/history" style="color:var(--fx-ok);">your transaction history</a>, any transaction can be exported as a PDF receipt.</div>
         </div>
 
         <hr class="divider" />
@@ -332,13 +334,13 @@
 
         <hr class="divider" />
 
-        <!-- ── Developer API (honest: not yet available) ── -->
+        <!-- ── Developer API (honest:not yet available) ── -->
         <div class="section" id="api">
           <h2 class="section-title">Developer API</h2>
           <p class="section-sub">A REST API for programmatic payments, invoicing, multisend, and webhooks is in development &mdash; so teams can automate ArcFX from their own backend.</p>
           <div class="info-box info-amber" style="margin-top:20px;">&#9888; The API is not yet available. There are no live endpoints or API keys today. This section will be filled in with full reference docs when the API ships.</div>
           <div style="margin-top:8px;">
-            <a href="mailto:arcfxapp@gmail.com?subject=ArcFX%20API%20early%20access" style="display:inline-block;padding:10px 18px;background:var(--blue);color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;">Request early access &rarr;</a>
+            <a href="mailto:arcfxapp@gmail.com?subject=ArcFX%20API%20early%20access" style="display:inline-block;padding:10px 18px;background:var(--blue);color:var(--fx-on-accent);border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;">Request early access &rarr;</a>
           </div>
         </div>
 

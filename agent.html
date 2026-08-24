@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- Instrument register. src/shared/tokens.css -->
-<html lang="en" class="dark" data-register="app">
+<html lang="en" data-register="app">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -241,6 +241,7 @@
 
   <script type="module">
     import { BrowserProvider, getAddress, hexlify, randomBytes, parseUnits } from "https://esm.sh/ethers@6";
+    import { arcfxWallet } from "/src/shared/wallet.ts";
 
     const API = "https://arcfx-backend-production.up.railway.app";
     const ARC_CHAIN_ID = "0x4CEF52"; // 5042002
@@ -362,11 +363,12 @@
         }
 
         setStep("s3", "active", "Waiting for your wallet…");
+        // Reuse the shared session rather than prompting again — the nav may
+        // already hold an authorization, and a second concurrent
+        // eth_requestAccounts is rejected by the wallet as "already processing".
+        if (!arcfxWallet.connected) await arcfxWallet.connect();
+        if (!arcfxWallet.onArc) await arcfxWallet.ensureArc();
         const provider = new BrowserProvider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        try {
-          await provider.send("wallet_switchEthereumChain", [{ chainId: ARC_CHAIN_ID }]);
-        } catch { /* already on Arc, or the user declined the switch */ }
         const signer = await provider.getSigner();
         const from = await signer.getAddress();
 
@@ -454,16 +456,16 @@
 
     // Prefill the recipient with the connected wallet, so the demo is one click
     // away from being runnable.
-    (async () => {
+    arcfxWallet.onChange(state => {
       if (!window.ethereum) { show("wallet-warn"); return; }
+      if (!state.connected || !state.address) return;
       try {
-        const accounts = await window.ethereum.request({ method: "eth_accounts" });
-        if (accounts?.length && !el("inv-recipient").value) {
-          el("inv-recipient").value = getAddress(accounts[0]);
+        if (!el("inv-recipient").value) {
+          el("inv-recipient").value = getAddress(state.address);
           renderCurl();
         }
-      } catch { /* wallet not connected yet — the user can paste an address */ }
-    })();
+      } catch { /* an unparseable address is not worth failing the demo over */ }
+    });
   </script>
 </body>
 </html>

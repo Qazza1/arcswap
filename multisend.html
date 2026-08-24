@@ -784,48 +784,34 @@
         : MULTISENDER_ADDRESS.slice(0,10)+"..."+MULTISENDER_ADDRESS.slice(-8);
 
     // ─── Wallet ───────────────────────────────────────────────────────────────
-    async function connectWallet() {
-      if (!window.ethereum) { showStatus("MetaMask not found.", "error"); return; }
-      try {
-        el("connect-btn").textContent = "Connecting…";
-        provider = new BrowserProvider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-
-        // Switch to Arc Testnet
-        try {
-          await provider.send("wallet_switchEthereumChain", [{ chainId: ARC_TESTNET.chainId }]);
-        } catch (e) {
-          const code = e.code ?? e.error?.code ?? e.info?.error?.code;
-          const msg = e.message ?? "";
-          if (code === 4902 || msg.includes("4902")) {
-            await provider.send("wallet_addEthereumChain", [ARC_TESTNET]);
-          } else if (!msg.includes("already") && !msg.includes("same RPC")) throw e;
+    // The session is owned by src/shared/wallet.ts. This page reacts to it and
+    // never asks for accounts itself — running a second eth_requestAccounts
+    // alongside the nav's is what made Connect appear broken.
+    async function adoptSession(state) {
+      if (!state.connected || !state.address || !state.onArc) {
+        provider = signer = userAddress = null;
+        show("connect-section"); hide("app-section");
+        if (state.connected && !state.onArc) {
+          showStatus("Switch to Arc Testnet to send a batch.", "error");
         }
-
-        signer      = await provider.getSigner();
-        userAddress = await signer.getAddress();
-        const short = userAddress.slice(0,6)+"…"+userAddress.slice(-4);
-        el("connect-btn").textContent = short;
-        el("connect-btn").classList.add("connected");
-
-        hide("connect-section");
-        show("app-section");
-
-        // Read the real fee rate from the contract once, for the live summary
-        // display (the approval itself uses quoteTotal(), so this is display-only).
-        try {
-          const msRead = new Contract(MULTISENDER_ADDRESS, MULTISENDER_ABI, signer);
-          feeBps = Number(await msRead.FEE_BPS());
-          updateSummary();
-        } catch { /* keep the 0.10% default */ }
-
-        await loadBalance();
-        updateSummary();
-
-      } catch (err) {
-        el("connect-btn").textContent = "Connect wallet";
-        showStatus("Connection failed: "+err.message, "error");
+        return;
       }
+      provider    = new BrowserProvider(window.ethereum);
+      signer      = await provider.getSigner();
+      userAddress = state.address;
+
+      hide("connect-section");
+      show("app-section");
+
+      // Read the real fee rate from the contract once, for the live summary
+      // display (the approval itself uses quoteTotal(), so this is display-only).
+      try {
+        const msRead = new Contract(MULTISENDER_ADDRESS, MULTISENDER_ABI, signer);
+        feeBps = Number(await msRead.FEE_BPS());
+      } catch { /* keep the 0.10% default */ }
+
+      await loadBalance();
+      updateSummary();
     }
 
     async function loadBalance() {
@@ -1185,60 +1171,25 @@
     }
 
     // ─── Wire events ─────────────────────────────────────────────────────────
-    el("connect-btn")?.addEventListener("click", connectWallet);
-    el("big-connect-btn")?.addEventListener("click", connectWallet);
-
-    window.ethereum?.on("accountsChanged", async (accounts) => {
-      if (accounts.length === 0) {
-        userAddress = null;
-        show("connect-section"); hide("app-section");
-        el("connect-btn").textContent = "Connect wallet";
-      } else {
-        userAddress = accounts[0];
-        signer = await provider.getSigner();
-        loadBalance();
-      }
+    // Connect is the shared header's button; this page only supplies the
+    // handler so the big in-page CTA and the nav button drive the same session.
+    arcfxWallet.onChange(state => {
+      adoptSession(state).catch(err => {
+        console.error("[multisend] could not adopt wallet session:", err);
+        showStatus("Wallet session could not be restored. Click connect to retry.", "error");
+      });
     });
 
-    window.ethereum?.on("chainChanged", () => window.location.reload());
-
-    // Auto-reconnect silently on page load — use eth_accounts (no popup) and do
-    // NOT call connectWallet(), which would fire wallet_switchEthereumChain and
-    // pop MetaMask unprompted (M12). Only show the app if already on Arc Testnet.
-    async function silentReconnect() {
-      if (!window.ethereum) return;
+    window.connectWallet = async function () {
       try {
-        const accounts = await window.ethereum.request({ method: "eth_accounts" });
-        if (!accounts || !accounts.length) return;
+        const state = await arcfxWallet.connect();
+        await adoptSession(state);
+      } catch (err) {
+        showStatus("Connection failed: " + (err?.message || err), "error");
+      }
+    };
+    el("big-connect-btn")?.addEventListener("click", () => window.connectWallet());
 
-        let chainId = "";
-        try { chainId = await window.ethereum.request({ method: "eth_chainId" }); } catch { chainId = ""; }
-        if (chainId && chainId.toLowerCase() !== ARC_TESTNET.chainId.toLowerCase()) {
-          // Authorized but wrong network — leave the connect screen; a manual
-          // Connect click will switch the chain. No popup on load.
-          return;
-        }
-
-        provider    = new BrowserProvider(window.ethereum);
-        signer      = await provider.getSigner();
-        userAddress = await signer.getAddress();
-        const short = userAddress.slice(0,6)+"…"+userAddress.slice(-4);
-        el("connect-btn").textContent = short;
-        el("connect-btn").classList.add("connected");
-
-        hide("connect-section");
-        show("app-section");
-
-        try {
-          const msRead = new Contract(MULTISENDER_ADDRESS, MULTISENDER_ABI, signer);
-          feeBps = Number(await msRead.FEE_BPS());
-        } catch { /* keep default */ }
-
-        await loadBalance();
-        updateSummary();
-      } catch { /* silent — user can connect manually */ }
-    }
-    silentReconnect();
 
     // ── Scheduled payouts (reminder-based, non-custodial) ──────────────────
     const SCHEDULE_KEY = "arcfx_multisend_schedules";

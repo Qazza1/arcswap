@@ -1,0 +1,16 @@
+[profile.default]
+src   = "contracts"   # ArcFX source contracts live here
+test  = "test"        # Foundry test files
+out   = "out"         # Foundry compilation output (separate from Hardhat's artifacts/)
+libs  = ["lib"]       # forge-std and other Foundry libs
+solc  = "0.8.35"      # Pinned — matches pragma in both contracts
+
+# Fuzz configuration
+[profile.default.fuzz]
+runs = 1000           # Number of fuzz iterations per fuzz test function
+
+# Invariant testing configuration
+[profile.default.invariant]
+runs = 256
+
+# See full options: https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
