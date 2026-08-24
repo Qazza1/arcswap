@@ -1,0 +1,146 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ArcFX design tokens — one system, two registers.
+
+   APP (default)      "Instrument"  · near-monochrome, light, Archivo.
+                      Used by every screen the account holder operates.
+
+   DOCUMENT           "Document"    · paper and ink, Newsreader.
+                      Used by anything a client sees: invoices, pay links,
+                      receipts, PDFs. These leave the building, so they read
+                      as documents rather than as software output.
+
+   Opt a subtree into the document register with data-register="document".
+
+   The governing rule, borrowed from Stripe and worth keeping whatever else
+   changes: COLOUR ONLY EVER MEANS STATE. Paid, due, overdue, failed. Brand
+   colour never competes with status colour, because on a dense financial
+   screen that is what makes the status readable at a glance.
+
+   Names are prefixed --fx- so pages can be converted one at a time without
+   colliding with the per-page :root variables that already exist.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Type ── */
+  --fx-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --fx-body:    "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --fx-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* ── Surface ── */
+  --fx-bg:      #FFFFFF;
+  --fx-surface: #FAFAFA;
+  --fx-sunken:  #F4F4F5;
+  --fx-line:    #E5E5E5;
+  --fx-line-soft: #F0F0F0;
+
+  /* ── Ink ── */
+  --fx-ink:     #0A0A0A;   /* 19.8:1 on --fx-bg */
+  --fx-muted:   #737373;   /* 4.7:1 — the lightest value safe for body text */
+  /* --fx-faint is ~2.5:1. Borders, disabled states, decorative marks only:
+     never text a reader needs. Reach for --fx-muted instead. */
+  --fx-faint:   #A3A3A3;
+
+  /* ── Action. Deliberately ink, not a hue: the primary button is the most
+        emphatic thing on screen and must not read as a status. ── */
+  --fx-accent:     #0A0A0A;
+  --fx-on-accent:  #FFFFFF;
+  --fx-focus:      #2563EB;
+
+  /* ── State. The only place colour is allowed to carry meaning. ── */
+  --fx-ok:      #15803D;  --fx-ok-bg:   #DCFCE7;
+  --fx-warn:    #A16207;  --fx-warn-bg: #FEF3C7;
+  --fx-bad:     #B91C1C;  --fx-bad-bg:  #FEE2E2;
+  --fx-info:    #1D4ED8;  --fx-info-bg: #DBEAFE;
+
+  /* ── Shape & rhythm ── */
+  --fx-r:    10px;
+  --fx-r-sm: 6px;
+  --fx-r-lg: 14px;
+  --fx-gap:  16px;
+}
+
+/* ── Document register: client-facing surfaces ──────────────────────────────
+   Warmer ground, ink that is not pure black, and a serif for anything that
+   behaves like a heading on a printed page. Status colours are shifted to
+   match the warmer paper rather than sitting on it as stickers. */
+[data-register="document"] {
+  --fx-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --fx-body:    "Karla", ui-sans-serif, system-ui, sans-serif;
+  --fx-mono:    "JetBrains Mono", ui-monospace, monospace;
+
+  --fx-bg:      #FBFAF8;
+  --fx-surface: #FFFFFF;
+  --fx-sunken:  #F3F1EC;
+  --fx-line:    #E4E0D8;
+  --fx-line-soft: #EFEDE7;
+
+  --fx-ink:     #1C1A17;
+  --fx-muted:   #6E6862;
+  --fx-faint:   #9A938B;
+
+  --fx-accent:    #1F5D4C;
+  --fx-on-accent: #FFFFFF;
+
+  --fx-ok:   #1F5D4C;  --fx-ok-bg:   rgba(31,93,76,.11);
+  --fx-warn: #8A5A12;  --fx-warn-bg: rgba(138,90,18,.12);
+  --fx-bad:  #96331F;  --fx-bad-bg:  rgba(150,51,31,.11);
+  --fx-info: #1F4E79;  --fx-info-bg: rgba(31,78,121,.10);
+}
+
+/* ── Primitives ─────────────────────────────────────────────────────────────
+   Deliberately few. Anything reached for on most screens lives here so pages
+   stop re-declaring it; anything page-specific stays on the page. */
+
+.fx { background: var(--fx-bg); color: var(--fx-ink); font-family: var(--fx-body); }
+
+.fx-h1, .fx-h2, .fx-h3 { font-family: var(--fx-display); margin: 0; text-wrap: balance; letter-spacing: -0.02em; }
+.fx-h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; line-height: 1.08; }
+.fx-h2 { font-size: 20px; font-weight: 600; line-height: 1.25; }
+.fx-h3 { font-size: 15px; font-weight: 600; line-height: 1.35; }
+
+.fx-eyebrow { font-family: var(--fx-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .14em; color: var(--fx-muted); }
+.fx-muted { color: var(--fx-muted); }
+
+/* Figures line up in columns or the eye cannot compare them. */
+.fx-num { font-family: var(--fx-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* The one trusted number a screen opens with. */
+.fx-lede-num { font-family: var(--fx-mono); font-size: clamp(28px, 4.5vw, 38px); font-weight: 500; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--fx-ink); }
+
+.fx-card { background: var(--fx-surface); border: 1px solid var(--fx-line); border-radius: var(--fx-r); }
+
+.fx-btn {
+  font-family: var(--fx-body); font-size: 13.5px; font-weight: 600;
+  padding: 9px 16px; border-radius: var(--fx-r-sm); border: 1px solid transparent;
+  background: var(--fx-accent); color: var(--fx-on-accent);
+  cursor: pointer; transition: opacity .15s;
+}
+.fx-btn:hover:not(:disabled) { opacity: .88; }
+.fx-btn:disabled { opacity: .45; cursor: default; }
+.fx-btn-ghost { background: transparent; border-color: var(--fx-line); color: var(--fx-muted); }
+.fx-btn-ghost:hover:not(:disabled) { border-color: var(--fx-ink); color: var(--fx-ink); opacity: 1; }
+
+/* Status is the only coloured thing on a screen. */
+.fx-pill { font-family: var(--fx-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; padding: 2px 8px; border-radius: 100px; white-space: nowrap; }
+.fx-pill-ok   { background: var(--fx-ok-bg);   color: var(--fx-ok); }
+.fx-pill-warn { background: var(--fx-warn-bg); color: var(--fx-warn); }
+.fx-pill-bad  { background: var(--fx-bad-bg);  color: var(--fx-bad); }
+.fx-pill-info { background: var(--fx-info-bg); color: var(--fx-info); }
+
+/* Wide content scrolls inside its own box; the page never scrolls sideways. */
+.fx-scroll { overflow-x: auto; }
+
+.fx-table { width: 100%; border-collapse: collapse; }
+.fx-table th { text-align: left; font-family: var(--fx-body); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--fx-muted); padding: 0 12px 8px; border-bottom: 1px solid var(--fx-line); white-space: nowrap; }
+.fx-table td { padding: 10px 12px; border-bottom: 1px solid var(--fx-line-soft); font-size: 13.5px; color: var(--fx-ink); }
+.fx-table tbody tr:last-child td { border-bottom: none; }
+.fx-table .ta-r { text-align: right; }
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--fx-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-btn { transition: none; }
+}

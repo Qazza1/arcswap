@@ -32,6 +32,11 @@
 // re-implementing it and drifting out of sync.
 import { arcfxWallet } from './wallet';
 
+// Design tokens for both registers (app + client-facing document). Imported
+// here because every page mounts this header, so the token layer arrives
+// everywhere from one place. Vite bundles it into the page's CSS.
+import './tokens.css';
+
 export type PageKey =
   | 'index' | 'app' | 'trade' | 'multisend' | 'pay' | 'invoice' | 'history'
   | 'analytics' | 'docs' | 'docs-api' | 'developers' | 'pricing' | 'ecosystem' | 'security'
@@ -173,11 +178,88 @@ const CANONICAL_CSS = `
   @media (max-width: 400px) {
     #connect-btn { max-width: 112px; }
   }
+
+  /* ═══ App register ═══════════════════════════════════════════════════════
+     A page opts in with <html data-register="app">. The nav and stats bar are
+     built from inline styles, so they are overridden here rather than
+     rewritten — which means pages that have not been converted yet keep the
+     dark chrome and nothing changes for them until they opt in.
+     Remove this block once every page has been converted. */
+  [data-register="app"] .arcfx-nav {
+    background: var(--fx-bg) !important;
+    border-bottom: 1px solid var(--fx-line) !important;
+    backdrop-filter: none !important;
+  }
+  [data-register="app"] .arcfx-nav a,
+  [data-register="app"] .arcfx-nav button { color: var(--fx-muted) !important; }
+  [data-register="app"] .arcfx-nav a span { color: var(--fx-ink) !important; }
+  [data-register="app"] .arcfx-nav a:hover,
+  [data-register="app"] .arcfx-nav button:hover { color: var(--fx-ink) !important; }
+  [data-register="app"] .arcfx-nav img { border-color: var(--fx-line) !important; }
+
+  [data-register="app"] .arcfx-testnet-pill {
+    background: var(--fx-surface) !important;
+    border-color: var(--fx-line) !important;
+  }
+  [data-register="app"] #connect-btn {
+    background: var(--fx-surface) !important;
+    border-color: var(--fx-line) !important;
+    color: var(--fx-ink) !important;
+  }
+
+  [data-register="app"] .stats-bar {
+    background: var(--fx-surface) !important;
+    border-bottom: 1px solid var(--fx-line) !important;
+  }
+  /* --fx-muted, not --fx-faint: these labels are 11px, and faint on the raised
+     surface measures 2.4:1, well under the 4.5:1 that small text needs. */
+  [data-register="app"] .stats-bar-label { color: var(--fx-muted) !important; }
+  [data-register="app"] .stats-bar-val   { color: var(--fx-muted) !important; }
+  [data-register="app"] .stats-bar-sep   { background: var(--fx-line) !important; }
+
+  /* Dropdowns and the contacts modal are dark panels in the legacy chrome. */
+  [data-register="app"] .arcfx-nav div[id^="arcfx-tools-dd"],
+  [data-register="app"] .arcfx-nav div[id^="arcfx-more-dd"],
+  [data-register="app"] div[id^="arcfx-mobile-menu"],
+  [data-register="app"] #arcfx-contacts-inner {
+    background: var(--fx-surface) !important;
+    border-color: var(--fx-line) !important;
+    box-shadow: 0 16px 40px rgba(0,0,0,.10) !important;
+  }
+  [data-register="app"] div[id^="arcfx-tools-dd"] a,
+  [data-register="app"] div[id^="arcfx-more-dd"] a,
+  [data-register="app"] div[id^="arcfx-mobile-menu"] a { color: var(--fx-ink) !important; }
+  [data-register="app"] div[id^="arcfx-tools-dd"] a div,
+  [data-register="app"] div[id^="arcfx-more-dd"] a div { color: var(--fx-muted) !important; }
+  [data-register="app"] #arcfx-contacts-inner,
+  [data-register="app"] #arcfx-contacts-inner * { color: var(--fx-ink); }
+  [data-register="app"] #arcfx-contact-name,
+  [data-register="app"] #arcfx-contact-addr {
+    background: var(--fx-bg) !important;
+    border-color: var(--fx-line) !important;
+    color: var(--fx-ink) !important;
+  }
   /* Hamburger is desktop-hidden; the media query above reveals it ≤768px. */
   .arcfx-hamburger { display: none; }
 `;
 
+// The typefaces the token layer names. Loaded once, from here, so a page never
+// has to remember which families its register needs.
+const TOKEN_FONTS =
+  'https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700' +
+  '&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600' +
+  '&family=Karla:wght@400;500;600' +
+  '&family=JetBrains+Mono:wght@400;500' +
+  '&display=swap';
+
 function ensureCss(): void {
+  if (!document.getElementById('arcfx-token-fonts')) {
+    const link = document.createElement('link');
+    link.id = 'arcfx-token-fonts';
+    link.rel = 'stylesheet';
+    link.href = TOKEN_FONTS;
+    document.head.appendChild(link);
+  }
   if (document.getElementById('arcfx-shared-css')) return;
   const style = document.createElement('style');
   style.id = 'arcfx-shared-css';

@@ -1,33 +1,48 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- data-register="app" opts this page into the Instrument register: light,
+     near-monochrome, colour reserved for state. See src/shared/tokens.css. -->
+<html lang="en" data-register="app">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ArcFX History — Your transaction history on Arc</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    /* Books runs in the APP register ("Instrument"): light, near-monochrome,
+       colour reserved for state. The page's own variable names are kept and
+       remapped onto the shared tokens, so every existing rule below keeps
+       working and the theme lives in exactly one place.
+       Tokens: src/shared/tokens.css */
     :root {
-      --bg:     #060810; --card:   #0b0f1a; --raised: #101420;
-      --border: #1a2035; --bmed:   #252d45; --text:   #e8edf8;
-      --muted:  #4a5578; --subtle: #2a3350;
-      --blue:   #3d7eff; --bdim:   rgba(61,126,255,0.1);
-      --teal:   #00d4aa; --tdim:   rgba(0,212,170,0.08);
-      --orange: #ff6b35; --red:    #ff4d6a;
-      --r: 10px; --rsm: 6px; --rlg: 14px;
+      --bg:     var(--fx-bg);
+      --card:   var(--fx-surface);
+      --raised: var(--fx-sunken);
+      --border: var(--fx-line);
+      --bmed:   var(--fx-line);
+      --text:   var(--fx-ink);
+      --muted:  var(--fx-muted);
+      --subtle: var(--fx-faint);
+      /* "blue" is now ink: the primary action must not read as a status. */
+      --blue:   var(--fx-accent);
+      --bdim:   var(--fx-sunken);
+      --teal:   var(--fx-ok);
+      --tdim:   var(--fx-ok-bg);
+      --orange: var(--fx-warn);
+      --red:    var(--fx-bad);
+      --r: var(--fx-r); --rsm: var(--fx-r-sm); --rlg: var(--fx-r-lg);
     }
     html { scroll-behavior: smooth; }
-    body { font-family: "Space Grotesk", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: var(--fx-body); background: var(--bg); color: var(--text); min-height: 100vh; }
     a { color: var(--blue); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
     /* Nav */
-    nav { height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; background: rgba(6,8,16,.96); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    nav { height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; background: var(--fx-bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
     .nav-logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; color: var(--text); }
     .nav-logo img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--bmed); }
-    .btn-ghost { background: transparent; border: 1px solid var(--bmed); color: var(--text); font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--rsm); cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: border-color .15s, background .15s; }
+    .btn-ghost { background: transparent; border: 1px solid var(--bmed); color: var(--text); font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--rsm); cursor: pointer; font-family: var(--fx-body); transition: border-color .15s, background .15s; }
     .btn-ghost:hover { border-color: var(--blue); background: var(--bdim); }
     .btn-ghost.connected { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
 
@@ -38,7 +53,9 @@
     .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 36px; flex-wrap: wrap; gap: 16px; }
     .eyebrow { display: inline-flex; align-items: center; gap: 7px; background: var(--card); border: 1px solid var(--bmed); color: var(--muted); font-size: 11.5px; font-weight: 500; padding: 4px 12px; border-radius: 100px; margin-bottom: 14px; }
     h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 700; letter-spacing: -1px; }
-    .gradient { background: linear-gradient(135deg, #3d7eff, #00d4aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    /* The gradient headline is the single most recognisable marker of the
+       generic fintech template. Ink instead — the words carry it. */
+    .gradient { color: var(--fx-muted); font-weight: 400; }
     .sub { font-size: 13.5px; color: var(--muted); margin-top: 6px; }
 
     /* Stats row */
@@ -62,20 +79,20 @@
     /* Toolbar */
     .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
     .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-    .filter-tab { font-size: 12.5px; font-weight: 600; padding: 6px 14px; border: 1px solid var(--border); border-radius: 100px; cursor: pointer; color: var(--muted); background: transparent; transition: all .15s; font-family: "Space Grotesk", sans-serif; }
+    .filter-tab { font-size: 12.5px; font-weight: 600; padding: 6px 14px; border: 1px solid var(--border); border-radius: 100px; cursor: pointer; color: var(--muted); background: transparent; transition: all .15s; font-family: var(--fx-body); }
     .filter-tab:hover { border-color: var(--bmed); color: var(--text); }
-    .filter-tab.active { background: var(--bdim); border-color: rgba(61,126,255,.4); color: var(--blue); }
+    .filter-tab.active { background: var(--bdim); border-color: var(--fx-ink); color: var(--blue); }
     .toolbar-right { display: flex; gap: 8px; align-items: center; }
-    .btn-export { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; transition: all .15s; font-family: "Space Grotesk", sans-serif; }
+    .btn-export { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; transition: all .15s; font-family: var(--fx-body); }
     .btn-export:hover { border-color: var(--teal); color: var(--teal); }
     /* The export control is a <select>, so undo the flex layout it inherits. */
     select.btn-export { display: inline-block; appearance: none; -webkit-appearance: none; }
     select.btn-export option { background: var(--card); color: var(--muted); }
-    .tx-category { background: transparent; border: 1px solid var(--border); border-radius: var(--rsm); color: var(--muted); font-size: 11.5px; font-family: "Space Grotesk", sans-serif; padding: 4px 6px; max-width: 165px; cursor: pointer; transition: all .15s; }
+    .tx-category { background: transparent; border: 1px solid var(--border); border-radius: var(--rsm); color: var(--muted); font-size: 11.5px; font-family: var(--fx-body); padding: 4px 6px; max-width: 165px; cursor: pointer; transition: all .15s; }
     .tx-category:hover, .tx-category:focus { border-color: var(--teal); color: var(--teal); outline: none; }
     .tx-category option { background: var(--card); color: var(--muted); }
-    .btn-sync { background: var(--tdim); border: 1px solid rgba(0,212,170,.35); color: var(--teal); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; }
-    .btn-sync:hover:not(:disabled) { background: rgba(0,212,170,.16); }
+    .btn-sync { background: var(--tdim); border: 1px solid var(--fx-ok); color: var(--teal); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; font-family: var(--fx-body); transition: all .15s; }
+    .btn-sync:hover:not(:disabled) { background: var(--fx-ok-bg); }
     .btn-sync:disabled { opacity: .6; cursor: default; }
 
     /* ── Accounting period + period summary ── */
@@ -87,7 +104,7 @@
     .period-input { background: transparent; border: 1px solid var(--border); border-radius: var(--rsm); color: var(--text); font-size: 12px; font-family: "JetBrains Mono", monospace; padding: 5px 8px; cursor: pointer; }
     .period-input:hover, .period-input:focus { border-color: var(--teal); outline: none; }
     .period-sep { color: var(--muted); font-size: 12px; }
-    .period-preset { background: transparent; border: 1px solid var(--border); border-radius: var(--rsm); color: var(--muted); font-size: 11.5px; font-weight: 600; padding: 5px 10px; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; }
+    .period-preset { background: transparent; border: 1px solid var(--border); border-radius: var(--rsm); color: var(--muted); font-size: 11.5px; font-weight: 600; padding: 5px 10px; cursor: pointer; font-family: var(--fx-body); transition: all .15s; }
     .period-preset:hover { border-color: var(--blue); color: var(--blue); }
     .period-count { margin-left: auto; font-size: 11.5px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
 
@@ -112,16 +129,16 @@
     .ledger-table td.fee { color: var(--orange); }
     .ledger-table td.zero { color: var(--subtle); }
     .pnl-fees { margin-top: 14px; }
-    .pnl-fee { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 12px; background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.2); border-radius: var(--rsm); font-size: 12.5px; }
+    .pnl-fee { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 12px; background: var(--fx-warn-bg); border: 1px solid var(--fx-warn); border-radius: var(--rsm); font-size: 12.5px; }
     .pnl-fee + .pnl-fee { margin-top: 6px; }
-    .pnl-fee-name { color: #f59e0b; font-weight: 600; }
+    .pnl-fee-name { color: var(--fx-warn); font-weight: 600; }
     .pnl-fee-val { font-family: "JetBrains Mono", monospace; color: var(--text); }
     .pnl-fee-rate { color: var(--muted); font-size: 11.5px; }
     .pnl-cats { display: flex; flex-direction: column; gap: 5px; }
     .pnl-cat { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
     .pnl-cat-name { color: var(--muted); }
     .pnl-cat-val { font-family: "JetBrains Mono", monospace; color: var(--text); }
-    .btn-refresh { display: flex; align-items: center; gap: 5px; background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; transition: all .15s; font-family: "Space Grotesk", sans-serif; }
+    .btn-refresh { display: flex; align-items: center; gap: 5px; background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: var(--rsm); cursor: pointer; transition: all .15s; font-family: var(--fx-body); }
     .btn-refresh:hover { border-color: var(--blue); color: var(--blue); }
 
     /* Table */
@@ -139,11 +156,11 @@
     /* Type cell */
     .tx-type-cell { display: flex; align-items: center; gap: 10px; }
     .tx-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
-    .icon-swap    { background: rgba(61,126,255,.1); }
-    .icon-bridge  { background: rgba(0,212,170,.1); }
-    .icon-in      { background: rgba(0,212,170,.1); }
-    .icon-out     { background: rgba(255,77,106,.08); }
-    .icon-multi   { background: rgba(255,107,53,.1); }
+    .icon-swap    { background: var(--fx-sunken); }
+    .icon-bridge  { background: var(--fx-sunken); }
+    .icon-in      { background: var(--fx-ok-bg); }
+    .icon-out     { background: var(--fx-bad-bg); }
+    .icon-multi   { background: var(--fx-warn-bg); }
     .tx-type-name { font-weight: 600; color: var(--text); font-size: 13.5px; }
     .tx-type-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: "JetBrains Mono", monospace; }
 
@@ -156,7 +173,7 @@
 
     /* Block / hash */
     .tx-block { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
-    .tx-hash-link { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--blue); border: 1px solid rgba(61,126,255,.2); border-radius: var(--rsm); padding: 3px 8px; white-space: nowrap; transition: background .15s; display: inline-block; }
+    .tx-hash-link { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--blue); border: 1px solid var(--fx-line); border-radius: var(--rsm); padding: 3px 8px; white-space: nowrap; transition: background .15s; display: inline-block; }
     .tx-hash-link:hover { background: var(--bdim); text-decoration: none; }
     .tx-receipt-btn { background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: 13px; line-height: 1; border-radius: var(--rsm); padding: 4px 8px; cursor: pointer; margin-right: 6px; vertical-align: middle; transition: all .15s; }
     .tx-receipt-btn:hover { border-color: var(--teal); color: var(--teal); }
@@ -166,7 +183,7 @@
     .state-icon { font-size: 40px; margin-bottom: 16px; }
     .state-title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
     .state-sub { font-size: 13.5px; line-height: 1.7; margin-bottom: 24px; }
-    .btn-connect-center { display: inline-block; background: linear-gradient(135deg, #3d7eff, #00d4aa); color: #fff; border: none; border-radius: var(--r); padding: 13px 28px; font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: opacity .15s; }
+    .btn-connect-center { display: inline-block; background: var(--fx-accent); color: var(--fx-on-accent); border: none; border-radius: var(--rsm); padding: 13px 28px; font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: var(--fx-body); transition: opacity .15s; }
     .btn-connect-center:hover { opacity: .88; }
     .loading-spin { display: inline-block; width: 20px; height: 20px; border: 2.5px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-right: 8px; }
     .hidden { display: none !important; }
