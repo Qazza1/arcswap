@@ -3,3 +3,9 @@
 # over these exact bytes, so a CRLF conversion on checkout would change the hash and
 # break re-verification against the deployed bytecode.
 verified/*.sol -text
+
+# Working contract sources are formatted by `forge fmt`, which emits LF. CI runs
+# `forge fmt --check` on Linux, so these must stay LF on every platform — without
+# this, autocrlf re-CRLFs them on a Windows checkout and the fmt gate fails.
+contracts/*.sol text eol=lf
+test/*.sol      text eol=lf
