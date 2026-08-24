@@ -504,9 +504,9 @@
           <div id="manual-mode">
             <div class="add-row">
               <input id="input-address" class="add-address" type="text"
-                placeholder="0x... wallet address" autocomplete="off" />
+                placeholder="0x... wallet address" autocomplete="off" aria-label="wallet address" />
               <input id="input-amount" class="add-amount" type="number"
-                min="0" step="any" placeholder="Amount" autocomplete="off" />
+                min="0" step="any" placeholder="Amount" autocomplete="off" aria-label="Amount" />
               <button class="btn-add" onclick="addRecipient()" title="Add">+</button>
             </div>
           </div>
@@ -514,7 +514,7 @@
           <!-- CSV paste mode -->
           <div id="csv-mode" style="display:none;">
             <textarea id="csv-input" class="csv-area"
-              placeholder="0x1234...abcd, 100&#10;0x5678...efgh, 50&#10;0x9abc...ijkl, 75"></textarea>
+              placeholder="0x1234...abcd, 100&#10;0x5678...efgh, 50&#10;0x9abc...ijkl, 75" aria-label="1234...abcd, 100&#10;0x5678...efgh, 50&#10;0x9abc...ijkl, 75"></textarea>
             <div class="csv-hint">One per line: <code style="color:var(--blue)">address, amount</code> — comma or tab separated.</div>
             <button onclick="parseCSV()" style="margin-top:10px;background:var(--blue-dim);border:1px solid var(--fx-line);color:var(--blue);border-radius:var(--rsm);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--fx-body);">
               Parse CSV →
@@ -530,12 +530,12 @@
               <input id="ms-ab-name" type="text" placeholder="Contact name"
                      style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:6px;
                             color:var(--fx-ink);font-size:13px;font-family:inherit;padding:8px 11px;outline:none;"
-                     onfocus="this.style.borderColor='var(--fx-accent)'" onblur="this.style.borderColor='var(--fx-line)'" />
+                     onfocus="this.style.borderColor='var(--fx-accent)'" onblur="this.style.borderColor='var(--fx-line)'" aria-label="Contact name" />
               <input id="ms-ab-addr" type="text" placeholder="0x... wallet address"
                      style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:6px;
                             color:var(--fx-ink);font-size:12px;font-family:'JetBrains Mono',monospace;
                             padding:8px 11px;outline:none;"
-                     onfocus="this.style.borderColor='var(--fx-accent)'" onblur="this.style.borderColor='var(--fx-line)'" />
+                     onfocus="this.style.borderColor='var(--fx-accent)'" onblur="this.style.borderColor='var(--fx-line)'" aria-label="wallet address" />
               <button onclick="saveContactFromMultisend()"
                       style="padding:8px 14px;background:var(--fx-surface);color:var(--fx-muted);border:1px solid var(--fx-line);
                              border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;
@@ -560,7 +560,7 @@
             <div id="drop-zone" class="drop-zone"
               ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
               <input type="file" id="file-input" accept=".csv,.xlsx,.xls,.tsv,.txt"
-                onchange="handleFileSelect(event)" />
+                onchange="handleFileSelect(event)" aria-label="Choose a file" />
               <div class="drop-zone-icon">📂</div>
               <div class="drop-zone-title">Drop your file here</div>
               <div class="drop-zone-sub">
@@ -581,11 +581,11 @@
                 <div class="col-map-title">Map columns — tell us which column is which</div>
                 <div class="col-map-row">
                   <span class="col-map-label">Address</span>
-                  <select id="col-address" class="col-map-select" onchange="reApplyMapping()"></select>
+                  <select id="col-address" class="col-map-select" onchange="reApplyMapping()" aria-label="Col Address"></select>
                 </div>
                 <div class="col-map-row">
                   <span class="col-map-label">Amount</span>
-                  <select id="col-amount" class="col-map-select" onchange="reApplyMapping()"></select>
+                  <select id="col-amount" class="col-map-select" onchange="reApplyMapping()" aria-label="Col Amount"></select>
                 </div>
               </div>
 
@@ -690,11 +690,11 @@
       </p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;">
         <div style="flex:1;min-width:160px;">
-          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:5px;">Schedule name</label>
+          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:5px;" for="sched-name">Schedule name</label>
           <input id="sched-name" type="text" placeholder="Monthly payroll" style="width:100%;box-sizing:border-box;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:13px;padding:9px 11px;font-family:inherit;outline:none;" />
         </div>
         <div style="width:120px;">
-          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:5px;">Day of month</label>
+          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:5px;" for="sched-day">Day of month</label>
           <input id="sched-day" type="number" min="1" max="28" value="1" style="width:100%;box-sizing:border-box;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:13px;padding:9px 11px;font-family:inherit;outline:none;" />
         </div>
         <button id="sched-save-btn" style="background:var(--blue-dim);border:1px solid var(--fx-line);color:var(--blue);border-radius:var(--r-sm);padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--fx-body);">Save current list</button>
@@ -1378,7 +1378,7 @@
         html += "<div style=\"font-size:13px;font-weight:600;color:var(--fx-ink);\">" + name + "</div>";
         html += "<div style=\"font-size:11px;color:var(--fx-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\">" + addr + "</div>";
         html += "</div>";
-        html += "<input id=\"cab-" + i + "\" type=\"number\" min=\"0\" step=\"any\" placeholder=\"Amount\" style=\"width:86px;background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:6px;color:var(--fx-ink);font-size:12px;font-family:inherit;padding:6px 9px;outline:none;text-align:right;\" />";
+        html += "<input id=\"cab-" + i + "\" type=\"number\" min=\"0\" step=\"any\" placeholder=\"Amount\" aria-label=\"Amount for recipient " + (i + 1) + "\" style=\"width:86px;background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:6px;color:var(--fx-ink);font-size:12px;font-family:inherit;padding:6px 9px;outline:none;text-align:right;\" />";
         html += "<button onclick=\"addContactAsRecipient(" + i + ")\" style=\"padding:7px 12px;background:var(--fx-accent);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;\">+ Add</button>";
         html += "</div>";
       });

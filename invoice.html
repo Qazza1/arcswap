@@ -228,23 +228,23 @@
         <div class="card-body">
           <div class="field-row">
             <div class="field">
-              <label>Your name / company</label>
+              <label for="from-name">Your name / company</label>
               <input id="from-name" type="text" placeholder="Your name / Company name" autocomplete="off" oninput="updatePreview()" />
             </div>
             <div class="field">
-              <label>Your email (optional)</label>
+              <label for="from-email">Your email (optional)</label>
               <input id="from-email" type="email" placeholder="you@email.com" oninput="updatePreview()" />
             </div>
           </div>
           <div class="field">
-            <label>Your wallet address (payments go here)</label>
+            <label for="from-wallet">Your wallet address (payments go here)</label>
             <input id="from-wallet" class="mono" type="text" placeholder="0x4F81E393..." autocomplete="off" oninput="updatePreview()" />
           </div>
           <div class="field">
             <label>Your logo (optional)</label>
             <div style="display:flex;align-items:center;gap:12px;">
               <div id="logo-thumb" style="width:44px;height:44px;border-radius:8px;border:1px solid var(--border);background:var(--raised);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:var(--muted);font-size:11px;">&mdash;</div>
-              <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleLogoUpload(event)" />
+              <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleLogoUpload(event)" aria-label="Choose a file" />
               <button type="button" onclick="document.getElementById('logo-input').click()" style="padding:8px 14px;border-radius:var(--rsm);background:var(--raised);border:1px solid var(--bmed);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">Upload logo</button>
               <button type="button" id="logo-remove" onclick="removeLogo()" style="display:none;padding:8px 12px;border-radius:var(--rsm);background:transparent;border:1px solid var(--border);color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;">Remove</button>
             </div>
@@ -266,11 +266,11 @@
         <div class="card-body">
           <div class="field-row">
             <div class="field">
-              <label>Client name / company</label>
+              <label for="to-name">Client name / company</label>
               <input id="to-name" type="text" placeholder="Client Name Ltd" oninput="updatePreview()" />
             </div>
             <div class="field">
-              <label>Client email (optional)</label>
+              <label for="to-email">Client email (optional)</label>
               <input id="to-email" type="email" placeholder="client@company.com" oninput="updatePreview()" />
             </div>
           </div>
@@ -286,7 +286,7 @@
         <div class="card-body">
           <div class="field-row">
             <div class="field">
-              <label>Invoice number</label>
+              <label for="inv-number">Invoice number</label>
               <input id="inv-number" type="text" value="INV-001" oninput="updatePreview()" />
             </div>
             <div class="field">
@@ -303,11 +303,11 @@
           </div>
           <div class="field-row">
             <div class="field">
-              <label>Issue date</label>
+              <label for="inv-date">Issue date</label>
               <input id="inv-date" type="date" oninput="updatePreview()" />
             </div>
             <div class="field">
-              <label>Due date</label>
+              <label for="inv-due">Due date</label>
               <input id="inv-due" type="date" oninput="updatePreview()" />
             </div>
           </div>
@@ -362,7 +362,7 @@
         </div>
         <div class="card-body">
           <div class="field">
-            <label>Payment terms / notes (optional)</label>
+            <label for="inv-note">Payment terms / notes (optional)</label>
             <textarea id="inv-note" placeholder="Payment due within 14 days. Please pay via the ArcFX Pay link below." oninput="updatePreview()"></textarea>
           </div>
         </div>
@@ -644,9 +644,9 @@ function renderItems() {
   }
   body.innerHTML = items.map((item, i) => `
     <tr class="item-row">
-      <td><input type="text" value="${item.desc}" placeholder="Description" oninput="updateItem(${i},'desc',this.value)" /></td>
-      <td><input type="text" inputmode="decimal" class="right" value="${item.qty}" placeholder="1" oninput="updateItem(${i},'qty',this.value)" style="text-align:right;" /></td>
-      <td><input type="text" inputmode="decimal" class="right" value="${item.price || ''}" placeholder="0.00" oninput="updateItem(${i},'price',this.value)" style="text-align:right;" /></td>
+      <td><input type="text" value="${item.desc}" placeholder="Description" oninput="updateItem(${i},'desc',this.value)" aria-label="Description" /></td>
+      <td><input type="text" inputmode="decimal" class="right" value="${item.qty}" placeholder="1" oninput="updateItem(${i},'qty',this.value)" style="text-align:right;" aria-label="Quantity" /></td>
+      <td><input type="text" inputmode="decimal" class="right" value="${item.price || ''}" placeholder="0.00" oninput="updateItem(${i},'price',this.value)" style="text-align:right;" aria-label="Unit price" /></td>
       <td class="item-row-total">${((item.qty||0) * (item.price||0)).toFixed(2)}</td>
       <td><button class="btn-remove-item" onclick="removeItem(${i})" title="Remove">×</button></td>
     </tr>
