@@ -151,6 +151,27 @@ const CANONICAL_CSS = `
     .arcfx-nav { padding: 0 16px !important; }
     .arcfx-nav-center { display: none !important; }
     .arcfx-hamburger { display: flex !important; }
+
+    /* Logo + hamburger + Connect together overflowed a 375px viewport by ~55px,
+       which made every page scroll sideways on a phone. The buttons have fixed
+       padding and will not shrink on their own, so tighten them and let the
+       address truncate rather than push the nav past the screen edge. */
+    #connect-btn {
+      padding: 6px 10px !important;
+      font-size: 12px !important;
+      max-width: 132px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* The network pill is decorative next to the address; the stats bar already
+       says "Arc Testnet · Live". Dropping it reclaims the width the nav needs. */
+    .arcfx-testnet-pill { display: none !important; }
+  }
+
+  /* Very narrow phones. */
+  @media (max-width: 400px) {
+    #connect-btn { max-width: 112px; }
   }
   /* Hamburger is desktop-hidden; the media query above reveals it ≤768px. */
   .arcfx-hamburger { display: none; }
