@@ -565,16 +565,38 @@ function renderContacts(): void {
     list.innerHTML = "<div style='text-align:center;padding:24px;color:#475569;font-size:13px;'>No contacts yet.</div>";
     return;
   }
-  list.innerHTML = entries.map((c, i) => `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;">
-      <div style="width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;">${(c.name || '?').charAt(0).toUpperCase()}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;color:#f1f5f9;">${c.name || ''}</div>
-        <div style="font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.address || ''}</div>
-      </div>
-      <button data-idx="${i}" class="arcfx-copy-btn" style="background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;">Copy</button>
-    </div>
-  `).join('');
+  // Contact names are user-supplied. Interpolating them into innerHTML let a
+  // crafted name inject markup — self-scoped while contacts live only in this
+  // browser's localStorage, but a real hole the moment contacts are imported,
+  // shared or synced. Built from DOM nodes with textContent instead, so the
+  // name can never be parsed as markup.
+  list.replaceChildren(...entries.map((c, i) => {
+    const row = document.createElement('div');
+    row.setAttribute('style', 'display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;');
+
+    const avatar = document.createElement('div');
+    avatar.setAttribute('style', 'width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;');
+    avatar.textContent = (c.name || '?').charAt(0).toUpperCase();
+
+    const middle = document.createElement('div');
+    middle.setAttribute('style', 'flex:1;min-width:0;');
+    const name = document.createElement('div');
+    name.setAttribute('style', 'font-size:13px;font-weight:600;color:#f1f5f9;');
+    name.textContent = c.name || '';
+    const addr = document.createElement('div');
+    addr.setAttribute('style', 'font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;');
+    addr.textContent = c.address || '';
+    middle.append(name, addr);
+
+    const copy = document.createElement('button');
+    copy.className = 'arcfx-copy-btn';
+    copy.dataset.idx = String(i);
+    copy.setAttribute('style', 'background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;');
+    copy.textContent = 'Copy';
+
+    row.append(avatar, middle, copy);
+    return row;
+  }));
   list.querySelectorAll<HTMLButtonElement>('.arcfx-copy-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx || '0', 10);
