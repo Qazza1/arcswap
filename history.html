@@ -79,8 +79,11 @@
     .btn-sync:disabled { opacity: .6; cursor: default; }
 
     /* ── Accounting period + period summary ── */
-    .period-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; padding: 10px 14px; background: var(--card); border: 1px solid var(--border); border-radius: var(--rsm); }
+    .period-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; padding: 12px 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); }
     .period-lbl { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+    .period-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+    .period-actions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+    @media (max-width: 760px) { .period-actions { margin-left: 0; width: 100%; } .period-count { margin-left: 0 !important; } }
     .period-input { background: transparent; border: 1px solid var(--border); border-radius: var(--rsm); color: var(--text); font-size: 12px; font-family: "JetBrains Mono", monospace; padding: 5px 8px; cursor: pointer; }
     .period-input:hover, .period-input:focus { border-color: var(--teal); outline: none; }
     .period-sep { color: var(--muted); font-size: 12px; }
@@ -88,15 +91,27 @@
     .period-preset:hover { border-color: var(--blue); color: var(--blue); }
     .period-count { margin-left: auto; font-size: 11.5px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
 
-    .pnl { margin-bottom: 18px; padding: 16px 18px; background: var(--card); border: 1px solid var(--border); border-radius: var(--rsm); }
-    .pnl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-    .pnl-title { font-size: 13px; font-weight: 600; color: var(--text); }
-    .pnl-note { font-size: 11.5px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
-    .pnl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 14px; }
-    .pnl-cell { padding: 10px 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--rsm); }
-    .pnl-cell-val { font-size: 16px; font-weight: 600; font-family: "JetBrains Mono", monospace; margin-bottom: 3px; }
-    .pnl-cell-lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-    .pnl-fees { margin-bottom: 14px; }
+    /* ── Ledger blocks: balances and categories as tables ── */
+    .ledger-block { margin-bottom: 18px; padding: 18px 20px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); }
+    .block-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+    .block-title { font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: -0.2px; margin: 0; }
+    .block-note { font-size: 11.5px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
+    .table-scroll { overflow-x: auto; }
+    .ledger-table { width: 100%; border-collapse: collapse; min-width: 420px; }
+    .ledger-table th { text-align: left; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: 0 12px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .ledger-table td { padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13.5px; }
+    .ledger-table tbody tr:last-child td { border-bottom: none; }
+    .ledger-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+    .ta-r { text-align: right; }
+    .ledger-table td.num { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ledger-table td.cur { font-family: "JetBrains Mono", monospace; font-weight: 500; color: var(--text); }
+    .ledger-table td.cat { color: var(--muted); }
+    .ledger-table td.strong { font-weight: 600; }
+    .ledger-table td.pos { color: var(--teal); }
+    .ledger-table td.neg { color: var(--red); }
+    .ledger-table td.fee { color: var(--orange); }
+    .ledger-table td.zero { color: var(--subtle); }
+    .pnl-fees { margin-top: 14px; }
     .pnl-fee { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 12px; background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.2); border-radius: var(--rsm); font-size: 12.5px; }
     .pnl-fee + .pnl-fee { margin-top: 6px; }
     .pnl-fee-name { color: #f59e0b; font-weight: 600; }
@@ -191,69 +206,81 @@
     <div id="wallet-display" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);display:none;background:var(--card);border:1px solid var(--border);padding:8px 14px;border-radius:var(--rsm);"></div>
   </div>
 
-  <!-- Stats -->
-  <div class="stats-row" id="stats-row">
-    <div class="stat-card">
-      <div class="stat-val blue" id="stat-txs">—</div>
-      <div class="stat-lbl">Transactions</div>
+  <!-- ── The period drives the whole page ───────────────────────────────────
+       Books are kept per period, so this is the primary control and sits above
+       everything it governs. The balances, the categories and all three exports
+       read from this one window. -->
+  <div class="period-bar" id="period-bar">
+    <span class="period-lbl">Period</span>
+    <input type="date" class="period-input" id="period-from" onchange="applyPeriod()" aria-label="Period start" />
+    <span class="period-sep">→</span>
+    <input type="date" class="period-input" id="period-to" onchange="applyPeriod()" aria-label="Period end" />
+    <span class="period-presets">
+      <button class="period-preset" onclick="setPeriodPreset('m')">Month</button>
+      <button class="period-preset" onclick="setPeriodPreset('q')">Quarter</button>
+      <button class="period-preset" onclick="setPeriodPreset('ytd')">Year</button>
+      <button class="period-preset" onclick="setPeriodPreset('all')">All time</button>
+    </span>
+    <span class="period-count" id="period-count"></span>
+    <span class="period-actions">
+      <button class="btn-refresh" onclick="refresh()">↻ Refresh</button>
+      <button class="btn-sync" id="sync-btn" onclick="syncCategories()" style="display:none;" title="Save your categories to your ArcFX account (one wallet signature)">☁ Sync</button>
+      <select class="btn-export" id="export-select" onchange="exportLedger(this.value); this.selectedIndex=0;" title="Export for bookkeeping" aria-label="Export ledger">
+        <option value="">⬇ Export</option>
+        <option value="detailed">Detailed ledger (all fields)</option>
+        <option value="quickbooks">QuickBooks (3-column)</option>
+        <option value="xero">Xero (bank statement)</option>
+      </select>
+    </span>
+  </div>
+
+  <!-- ── Balances: one row per currency, columns to compare down ───────────
+       This replaces a grid of up to ten tiles. A table lets you read a single
+       currency across, or compare currencies down a column — neither of which
+       a wrapping tile grid supports. -->
+  <div class="ledger-block" id="pnl" style="display:none;">
+    <div class="block-head">
+      <h2 class="block-title">Balances</h2>
+      <span class="block-note" id="pnl-note"></span>
     </div>
-    <div class="stat-card">
-      <div class="stat-val green" id="stat-received">—</div>
-      <div class="stat-lbl">Total received</div>
+    <div class="table-scroll">
+      <table class="ledger-table" id="balances-table">
+        <thead>
+          <tr>
+            <th>Currency</th>
+            <th class="ta-r">Received</th>
+            <th class="ta-r">Sent</th>
+            <th class="ta-r">Net</th>
+            <th class="ta-r">Fees</th>
+          </tr>
+        </thead>
+        <tbody id="balances-body"></tbody>
+      </table>
     </div>
-    <div class="stat-card">
-      <div class="stat-val red" id="stat-sent">—</div>
-      <div class="stat-lbl">Total sent</div>
+
+    <div class="pnl-fees" id="pnl-fees" style="display:none;"></div>
+
+    <div class="block-head" style="margin-top:26px;">
+      <h2 class="block-title">By category</h2>
+      <span class="block-note">Click any transaction below to recategorise it</span>
     </div>
-    <div class="stat-card">
-      <div class="stat-val" id="stat-swaps">—</div>
-      <div class="stat-lbl">Swap transactions</div>
+    <div class="table-scroll">
+      <table class="ledger-table" id="category-table">
+        <thead><tr id="category-head"></tr></thead>
+        <tbody id="pnl-cats"></tbody>
+      </table>
     </div>
   </div>
 
-  <!-- Toolbar -->
-  <div class="toolbar">
+  <!-- ── Transactions: the drill-down, not the headline ── -->
+  <div class="block-head" style="margin-top:34px;">
+    <h2 class="block-title">Transactions</h2>
     <div class="filter-tabs" id="filter-tabs">
       <button class="filter-tab active" onclick="setFilter('all', this)">All</button>
       <button class="filter-tab" onclick="setFilter('swap', this)">Swaps</button>
       <button class="filter-tab" onclick="setFilter('in', this)">Received</button>
       <button class="filter-tab" onclick="setFilter('out', this)">Sent</button>
     </div>
-    <div class="toolbar-right">
-      <button class="btn-refresh" onclick="refresh()">↻ Refresh</button>
-      <button class="btn-sync" id="sync-btn" onclick="syncCategories()" style="display:none;" title="Save your categories to your ArcFX account (one wallet signature)">☁ Sync</button>
-      <select class="btn-export" id="export-select" onchange="exportLedger(this.value); this.selectedIndex=0;" title="Export for bookkeeping">
-        <option value="">⬇ Export</option>
-        <option value="detailed">Detailed ledger (all fields)</option>
-        <option value="quickbooks">QuickBooks (3-column)</option>
-        <option value="xero">Xero (bank statement)</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- Accounting period: bookkeeping is done per period, never "everything since
-       inception", so exports and the summary below both honour this range. -->
-  <div class="period-bar" id="period-bar">
-    <span class="period-lbl">Accounting period</span>
-    <input type="date" class="period-input" id="period-from" onchange="applyPeriod()" />
-    <span class="period-sep">→</span>
-    <input type="date" class="period-input" id="period-to" onchange="applyPeriod()" />
-    <button class="period-preset" onclick="setPeriodPreset('ytd')">Year to date</button>
-    <button class="period-preset" onclick="setPeriodPreset('q')">This quarter</button>
-    <button class="period-preset" onclick="setPeriodPreset('m')">This month</button>
-    <button class="period-preset" onclick="setPeriodPreset('all')">All time</button>
-    <span class="period-count" id="period-count"></span>
-  </div>
-
-  <!-- Period summary: what an accountant actually needs to see -->
-  <div class="pnl" id="pnl" style="display:none;">
-    <div class="pnl-head">
-      <span class="pnl-title">Period summary</span>
-      <span class="pnl-note" id="pnl-note"></span>
-    </div>
-    <div class="pnl-grid" id="pnl-grid"></div>
-    <div class="pnl-fees" id="pnl-fees" style="display:none;"></div>
-    <div class="pnl-cats" id="pnl-cats"></div>
   </div>
 
   <!-- Table -->
@@ -525,40 +552,18 @@ async function loadHistory() {
 }
 
 // ── Stats ──────────────────────────────────────────────────────────────────
-// Totals are kept per currency and never cross-added. USDC and EURC are
-// different units of account: adding 60 EURC to 121 USDC produces "181", a
-// quantity that exists in neither currency. These cards read from the same
-// period-windowed set as the table and the summary, so all three agree.
-function sumByToken(txs, dir) {
-  const by = new Map();
-  for (const t of txs) {
-    if (t.isSwap || t.dir !== dir) continue;
-    by.set(t.sym, (by.get(t.sym) || 0) + t.rawAmt);
-  }
-  // Filter on what will actually be displayed. A dust balance of 0.0004 is
-  // "> 0" but renders as "0.00", which reads as an empty row rather than a
-  // small one — the same noise we strip out of the period summary.
-  return [...by.entries()].filter(([, v]) => v >= 0.005).sort((a, b) => b[1] - a[1]);
-}
-
-function renderMoneyStat(id, rows, sign) {
-  const node = el(id);
-  if (!node) return;
-  if (!rows.length) { node.innerHTML = `<span class="stat-money">0.00</span>`; return; }
-  node.innerHTML = rows
-    .map(([sym, v]) =>
-      `<div class="stat-money-row"><span class="stat-money">${sign}${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span><span class="stat-money-sym">${sym}</span></div>`
-    )
-    .join("");
-}
-
+// The four headline cards were removed in favour of the balances table: they
+// showed the same money twice, and cross-added currencies to do it. The counts
+// were the only thing they carried that the table doesn't, so they live in the
+// period line now.
 function updateStats() {
   const txs = periodTxs();
-  txt("stat-txs", txs.length > 0 ? txs.length : "0");
-  renderMoneyStat("stat-received", sumByToken(txs, "in"), "+");
-  renderMoneyStat("stat-sent", sumByToken(txs, "out"), "−");
   const swaps = txs.filter(t => t.isSwap).length;
-  txt("stat-swaps", swaps > 0 ? swaps : "0");
+  const node = el("period-count");
+  if (!node) return;
+  if (!allTxs.length) { node.textContent = ""; return; }
+  const scope = txs.length === allTxs.length ? `${txs.length} transactions` : `${txs.length} of ${allTxs.length} transactions`;
+  node.textContent = swaps ? `${scope} · ${swaps} swaps` : scope;
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────
@@ -951,8 +956,7 @@ function renderPnl() {
   const box = el("pnl");
   if (!box) return;
   const txs = periodTxs();
-  const cnt = el("period-count");
-  if (cnt) cnt.textContent = allTxs.length ? `${txs.length} of ${allTxs.length} transactions in period` : "";
+  updateStats();
   if (!txs.length) { box.style.display = "none"; return; }
   box.style.display = "block";
 
@@ -962,27 +966,20 @@ function renderPnl() {
     ? `${periodFrom || "start"} → ${periodTo || "today"}`
     : "all time";
 
-  const cells = [];
-  for (const [sym, b] of byTok) {
-    // A token with no meaningful movement contributes tiles of zero and crowds
-    // out the numbers that matter. Threshold on the displayed value, so dust
-    // that rounds to 0.00 is treated as no movement.
-    if (b.in < 0.005 && b.out < 0.005) continue;
+  // One row per currency. Tokens with no meaningful movement are left out —
+  // thresholding on the displayed value, so dust rounding to 0.00 counts as
+  // nothing rather than rendering an empty row.
+  const active = [...byTok.entries()].filter(([, b]) => b.in >= 0.005 || b.out >= 0.005);
+  el("balances-body").innerHTML = active.map(([sym, b]) => {
     const net = b.in - b.out;
-    cells.push(`<div class="pnl-cell">
-      <div class="pnl-cell-val" style="color:${net >= 0 ? "#10b981" : "#ef4444"};">${money(net)}</div>
-      <div class="pnl-cell-lbl">${sym} net</div></div>`);
-    cells.push(`<div class="pnl-cell">
-      <div class="pnl-cell-val" style="color:#10b981;">${money(b.in)}</div>
-      <div class="pnl-cell-lbl">${sym} in</div></div>`);
-    cells.push(`<div class="pnl-cell">
-      <div class="pnl-cell-val" style="color:#ef4444;">${money(b.out)}</div>
-      <div class="pnl-cell-lbl">${sym} out</div></div>`);
-    if (b.fees > 0) cells.push(`<div class="pnl-cell">
-      <div class="pnl-cell-val" style="color:#f59e0b;">${money(b.fees)}</div>
-      <div class="pnl-cell-lbl">${sym} fees</div></div>`);
-  }
-  el("pnl-grid").innerHTML = cells.join("");
+    return `<tr>
+      <td class="cur">${sym}</td>
+      <td class="ta-r num pos">${money(b.in)}</td>
+      <td class="ta-r num neg">${b.out > 0 ? "−" + money(b.out) : "—"}</td>
+      <td class="ta-r num ${net >= 0 ? "pos" : "neg"} strong">${money(net)}</td>
+      <td class="ta-r num fee">${b.fees > 0 ? money(b.fees) : "—"}</td>
+    </tr>`;
+  }).join("");
 
   // Protocol fees get their own line rather than sitting anonymously among the
   // category totals: it is the one cost ArcFX itself charges, and the effective
@@ -1008,12 +1005,25 @@ function renderPnl() {
     feeBox.style.display = feeRows.length ? "" : "none";
   }
 
-  const rows = [...byCat.entries()]
-    .map(([cat, m]) => [cat, [...m.entries()].map(([s, v]) => `${money(v)} ${s}`).join("  ·  ")])
-    .sort((a, b) => a[0].localeCompare(b[0]));
-  el("pnl-cats").innerHTML = rows
-    .map(([cat, val]) => `<div class="pnl-cat"><span class="pnl-cat-name">${cat}</span><span class="pnl-cat-val">${val}</span></div>`)
-    .join("");
+  // Categories as a matrix: one column per currency in play, so amounts line up
+  // down the column instead of being concatenated into one string per row.
+  const cols = active.map(([sym]) => sym);
+  el("category-head").innerHTML =
+    `<th>Category</th>` + cols.map(s => `<th class="ta-r">${s}</th>`).join("");
+
+  const catRows = [...byCat.entries()]
+    .map(([cat, m]) => ({
+      cat,
+      vals: cols.map(s => m.get(s) || 0),
+      weight: cols.reduce((acc, s) => acc + Math.abs(m.get(s) || 0), 0),
+    }))
+    .filter(r => r.weight >= 0.005)
+    .sort((a, b) => b.weight - a.weight); // biggest movers first, not alphabetical
+
+  el("pnl-cats").innerHTML = catRows.map(r => `<tr>
+      <td class="cat">${r.cat}</td>
+      ${r.vals.map(v => `<td class="ta-r num ${v === 0 ? "zero" : v > 0 ? "pos" : "neg"}">${v === 0 ? "—" : money(v)}</td>`).join("")}
+    </tr>`).join("");
 }
 
 window.exportLedger = function(format) {
