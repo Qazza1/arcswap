@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.35; // L-01: pinned version — no floating ^ (original was ^0.8.20)
 
 /**
  * ArcFXMultisender — Send USDC/EURC to multiple wallets in one transaction.
  *
  * Free tier:   up to 5 recipients, no fee
- * Pro tier:    up to 500 recipients, 0.15% protocol fee
+ * Pro tier:    up to 500 recipients, 0.10% protocol fee
  *
  * Deployed on Arc Testnet by ArcFX (arcfx.app)
  */
@@ -26,9 +26,9 @@ contract ArcFXMultisender {
 
     uint256 public constant FREE_LIMIT   = 5;       // max recipients on free tier
     uint256 public constant MAX_LIMIT    = 500;     // max recipients on pro tier
-    uint256 public constant FEE_BPS      = 15;      // 0.15% = 15 basis points
+    uint256 public constant FEE_BPS      = 10;      // 0.10% = 10 basis points
     uint256 public constant BPS_DENOM    = 10_000;  // basis point denominator
-    // Math: fee = (total * 15) / 10_000 — multiply before divide prevents precision loss
+    // Math: fee = (total * 10) / 10_000 — multiply before divide prevents precision loss
 
     // ── Events ────────────────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ contract ArcFXMultisender {
 
     /**
      * Pro tier: send to up to 500 recipients.
-     * A 0.15% protocol fee is added on top of the total amount.
+     * A 0.10% protocol fee is added on top of the total amount.
      */
     function multisend(
         address         token,
@@ -128,10 +128,17 @@ contract ArcFXMultisender {
             "Insufficient balance"
         );
 
+        // H-02: CEI pattern — emit event before external interactions.
+        // If any subsequent transfer reverts, the entire transaction (including
+        // this event) is rolled back, so no phantom events are ever recorded.
+        emit Multisent(msg.sender, token, total, recipients.length, fee, isPro);
+
         bool ok = erc20.transferFrom(msg.sender, address(this), pull);
         require(ok, "TransferFrom failed");
 
-        // Distribute
+        // Distribute — M-01: each transfer is wrapped in require() so the
+        // whole batch reverts cleanly on any single failure (intended behaviour
+        // for a B2B payroll tool where partial settlement is unacceptable).
         for (uint256 i = 0; i < recipients.length; i++) {
             bool sent = erc20.transfer(recipients[i], amounts[i]);
             require(sent, "Transfer to recipient failed");
@@ -142,22 +149,20 @@ contract ArcFXMultisender {
             bool feeSent = erc20.transfer(treasury, fee);
             require(feeSent, "Fee transfer failed");
         }
-
-        emit Multisent(msg.sender, token, total, recipients.length, fee, isPro);
     }
 
     // ── Admin ─────────────────────────────────────────────────────────────────
 
-    function setTreasury(address _new) external onlyOwner {
-        require(_new != address(0), "Invalid treasury address");
-        emit TreasuryUpdated(treasury, _new);
-        treasury = _new;
+    function setTreasury(address newTreasury) external onlyOwner { // L-02: mixedCase param
+        require(newTreasury != address(0), "Invalid treasury address");
+        emit TreasuryUpdated(treasury, newTreasury);
+        treasury = newTreasury;
     }
 
-    function transferOwnership(address _new) external onlyOwner {
-        require(_new != address(0), "Invalid address");
-        emit OwnershipTransferred(owner, _new);
-        owner = _new;
+    function transferOwnership(address newOwner) external onlyOwner { // L-02: mixedCase param
+        require(newOwner != address(0), "Invalid address");
+        emit OwnershipTransferred(owner, newOwner);
+        owner = newOwner;
     }
 
     /**
@@ -167,7 +172,7 @@ contract ArcFXMultisender {
         IERC20 erc20 = IERC20(token);
         uint256 bal  = erc20.balanceOf(address(this));
         require(bal > 0, "Nothing to withdraw");
-        erc20.transfer(owner, bal);
+        require(erc20.transfer(owner, bal), "Withdraw failed"); // H-01: checked return value
     }
 
     // ── View helpers ──────────────────────────────────────────────────────────

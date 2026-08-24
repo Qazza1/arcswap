@@ -82,7 +82,7 @@ fx-swap-widget/
 | USDC  | `0x3600000000000000000000000000000000000000` | 6 |
 | EURC  | `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a` | 6 |
 
-Chain ID: `5177170` (0x4CEF52)  
+Chain ID: `5042002` (0x4CEF52)  
 RPC: `https://rpc.testnet.arc.network`  
 Explorer: https://testnet.arcscan.app
 

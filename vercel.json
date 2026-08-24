@@ -1,33 +1,147 @@
 {
   "rewrites": [
-    { "source": "/circle-proxy/:path*", "destination": "https://api.circle.com/:path*" },
-    { "source": "/app",        "destination": "/app.html" },
-    { "source": "/app/",       "destination": "/app.html" },
-    { "source": "/trade",      "destination": "/trade.html" },
-    { "source": "/trade/",     "destination": "/trade.html" },
-    { "source": "/multisend",  "destination": "/multisend.html" },
-    { "source": "/multisend/", "destination": "/multisend.html" },
-    { "source": "/pay",        "destination": "/pay.html" },
-    { "source": "/pay/",       "destination": "/pay.html" },
-    { "source": "/invoice",    "destination": "/invoice.html" },
-    { "source": "/invoice/",   "destination": "/invoice.html" },
-    { "source": "/history",    "destination": "/history.html" },
-    { "source": "/history/",   "destination": "/history.html" },
-    { "source": "/agent",      "destination": "/agent.html" },
-    { "source": "/agent/",     "destination": "/agent.html" },
-    { "source": "/analytics",  "destination": "/analytics.html" },
-    { "source": "/analytics/", "destination": "/analytics.html" },
-    { "source": "/docs",        "destination": "/docs.html" },
-    { "source": "/docs/",       "destination": "/docs.html" },
-    { "source": "/developers",  "destination": "/developers.html" },
-    { "source": "/developers/", "destination": "/developers.html" },
-    { "source": "/pricing",     "destination": "/pricing.html" },
-    { "source": "/pricing/",   "destination": "/pricing.html" },
-    { "source": "/security",   "destination": "/security.html" },
-    { "source": "/security/",  "destination": "/security.html" },
-    { "source": "/ecosystem",  "destination": "/ecosystem.html" },
-    { "source": "/ecosystem/", "destination": "/ecosystem.html" },
-    { "source": "/docs-api",   "destination": "/docs-api.html" },
-    { "source": "/docs-api/",  "destination": "/docs-api.html" }
+    {
+      "source": "/circle-proxy/:path*",
+      "destination": "https://api.circle.com/:path*"
+    },
+    {
+      "source": "/app",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/app/",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/trade",
+      "destination": "/trade.html"
+    },
+    {
+      "source": "/trade/",
+      "destination": "/trade.html"
+    },
+    {
+      "source": "/multisend",
+      "destination": "/multisend.html"
+    },
+    {
+      "source": "/multisend/",
+      "destination": "/multisend.html"
+    },
+    {
+      "source": "/pay",
+      "destination": "/pay.html"
+    },
+    {
+      "source": "/pay/",
+      "destination": "/pay.html"
+    },
+    {
+      "source": "/invoice",
+      "destination": "/invoice.html"
+    },
+    {
+      "source": "/invoice/",
+      "destination": "/invoice.html"
+    },
+    {
+      "source": "/history",
+      "destination": "/history.html"
+    },
+    {
+      "source": "/history/",
+      "destination": "/history.html"
+    },
+    {
+      "source": "/agent",
+      "destination": "/agent.html"
+    },
+    {
+      "source": "/agent/",
+      "destination": "/agent.html"
+    },
+    {
+      "source": "/analytics",
+      "destination": "/analytics.html"
+    },
+    {
+      "source": "/analytics/",
+      "destination": "/analytics.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/docs.html"
+    },
+    {
+      "source": "/docs/",
+      "destination": "/docs.html"
+    },
+    {
+      "source": "/developers",
+      "destination": "/developers.html"
+    },
+    {
+      "source": "/developers/",
+      "destination": "/developers.html"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/pricing.html"
+    },
+    {
+      "source": "/pricing/",
+      "destination": "/pricing.html"
+    },
+    {
+      "source": "/security",
+      "destination": "/security.html"
+    },
+    {
+      "source": "/security/",
+      "destination": "/security.html"
+    },
+    {
+      "source": "/ecosystem",
+      "destination": "/ecosystem.html"
+    },
+    {
+      "source": "/ecosystem/",
+      "destination": "/ecosystem.html"
+    },
+    {
+      "source": "/docs-api",
+      "destination": "/docs-api.html"
+    },
+    {
+      "source": "/docs-api/",
+      "destination": "/docs-api.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    }
   ]
 }
