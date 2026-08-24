@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- Instrument register: the marketing site uses the same system as the app,
+     so what someone evaluates looks like what they get. src/shared/tokens.css -->
+<html lang="en" data-register="app">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -28,31 +30,30 @@
   <link rel="icon" href="/logo.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:         #060810;
-      --bg-card:    #0b0f1a;
-      --bg-raised:  #101420;
-      --bg-deep:    #050709;
-      --border:     #1a2035;
-      --border-med: #252d45;
-      --text:       #e8edf8;
-      --muted:      #94a3b8;
-      --subtle:     #475569;
-      --dim:        #334155;
-      --blue:       #2563eb;
-      --blue-bright:#3d7eff;
-      --blue-dim:   rgba(61,126,255,0.1);
-      --teal:       #00d4aa;
-      --teal-dim:   rgba(0,212,170,0.08);
-      --r:          8px;
-      --r-sm:       6px;
-      --r-lg:       12px;
-      --r-xl:       16px;
+      --bg:         var(--fx-bg);
+      --bg-card:    var(--fx-surface);
+      --bg-raised:  var(--fx-sunken);
+      --bg-deep:    var(--fx-sunken);
+      --border:     var(--fx-line);
+      --border-med: var(--fx-line);
+      --text:       var(--fx-ink);
+      --muted:      var(--fx-muted);
+      --subtle:     var(--fx-muted);
+      --dim:        var(--fx-muted);
+      --blue:       var(--fx-accent);
+      --blue-bright:var(--fx-accent);
+      --blue-dim:   var(--fx-sunken);
+      --teal:       var(--fx-ok);
+      --teal-dim:   var(--fx-ok-bg);
+      --r:          var(--fx-r);
+      --r-sm:       var(--fx-r-sm);
+      --r-lg:       var(--fx-r);
+      --r-xl:       var(--fx-r-lg);
     }
-    html, body { background: var(--bg); color: var(--text); font-family: "Inter", system-ui, sans-serif; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    html, body { background: var(--bg); color: var(--text); font-family: var(--fx-body); line-height: 1.6; -webkit-font-smoothing: antialiased; }
     a { color: inherit; text-decoration: none; }
     img { display: block; max-width: 100%; }
     .container { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
@@ -71,7 +72,7 @@
       pointer-events: none; z-index: 0;
     }
     .hero-inner { position: relative; z-index: 1; text-align: center; max-width: 880px; margin: 0 auto; }
-    .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 100px; border: 1px solid var(--border-med); background: rgba(11,15,26,0.6); font-size: 12px; color: var(--muted); margin-bottom: 36px; font-family: "JetBrains Mono", monospace; font-weight: 500; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 100px; border: 1px solid var(--border-med); background: var(--fx-sunken); font-size: 12px; color: var(--muted); margin-bottom: 36px; font-family: "JetBrains Mono", monospace; font-weight: 500; }
     .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px rgba(0,212,170,0.6); animation: arcfx-pulse 2s ease-in-out infinite; }
     .hero-badge-sep { color: var(--subtle); }
     .hero-h1 { font-size: clamp(40px, 7vw, 76px); font-weight: 700; letter-spacing: -2.5px; line-height: 1.04; color: var(--text); margin-bottom: 24px; }
@@ -87,7 +88,7 @@
       font-family: inherit; text-decoration: none;
     }
     .btn-primary { background: var(--blue); color: #fff; box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset; }
-    .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+    .btn-primary:hover { background: var(--fx-ink); transform: translateY(-1px); box-shadow: 0 4px 12px var(--fx-line); }
     .btn-ghost { background: transparent; color: var(--text); border-color: var(--border-med); }
     .btn-ghost:hover { border-color: var(--text); }
     .btn-large { padding: 15px 32px; font-size: 15.5px; }
@@ -184,7 +185,7 @@
     /* ────────── PRICING TEASER ────────── */
     .pricing-teaser { padding: 80px 0; }
     .pricing-teaser-inner { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 48px; text-align: center; max-width: 920px; margin: 0 auto; position: relative; overflow: hidden; }
-    .pricing-teaser-inner::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--blue-bright), transparent); }
+    .pricing-teaser-inner::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--fx-accent); }
     .pricing-teaser-h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; color: var(--text); margin-bottom: 14px; }
     .pricing-teaser-tiers { display: flex; justify-content: center; gap: 24px; margin: 24px 0 28px; flex-wrap: wrap; }
     .pricing-tier { padding: 12px 18px; }

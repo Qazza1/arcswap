@@ -650,18 +650,22 @@ function showPayStatus(msg, type) {
 }
 
 // ── Wallet connect (nav button) ────────────────────────────────────────────
-// The shared session handles prompting, the chain switch and painting the nav
-// button; this only has to do the bit that is specific to this page.
-document.getElementById("connect-btn")?.addEventListener("click", async () => {
-  if (isPayMode) { connectAndPay(); return; }
+// Define window.connectWallet rather than binding a second listener to
+// #connect-btn: the shared header already binds one and delegates to this, so
+// adding our own meant a single click fired BOTH — two concurrent
+// eth_requestAccounts calls, which MetaMask rejects with "already processing".
+window.connectWallet = async function () {
+  if (isPayMode) { return connectAndPay(); }
   try {
     const state = await arcfxWallet.connect();
     if (!state.onArc) return; // don't present a connected state on the wrong network
     await adoptSession(state);
     const inp = document.getElementById("gen-address");
     if (inp && state.address) inp.value = state.address; // pre-fill the link generator
-  } catch { /* user dismissed the wallet dialog */ }
-});
+  } catch (err) {
+    console.error("[pay] connect failed:", err);
+  }
+};
 
 // Keep the link generator's address in step with the wallet, including when the
 // session is restored on load rather than clicked.

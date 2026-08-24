@@ -180,6 +180,26 @@ const CANONICAL_CSS = `
     #connect-btn { max-width: 112px; }
   }
 
+  /* ── Nav hover, in CSS rather than inline JS ──────────────────────────────
+     These states used to be set by onmouseover handlers writing a literal
+     '#1e293b'. A stylesheet cannot reliably override a value JS writes into the
+     style attribute, which is why every tab still went dark blue on a light
+     page. As real rules they follow the tokens, and six inline handlers go
+     away with them. */
+  .arcfx-navlink { color: #94a3b8; }
+  .arcfx-navlink:hover { color: #f1f5f9; background: #1e293b; }
+  .arcfx-dditem:hover { background: #1e293b; }
+  .arcfx-mobilelink:hover { background: #1e293b; color: #f1f5f9; }
+  #arcfx-contacts-btn:hover, [id^="arcfx-contacts-btn"]:hover { border-color: #2563eb !important; color: #94a3b8 !important; }
+  #connect-btn:hover { border-color: #2563eb; }
+
+  [data-register] .arcfx-navlink { color: var(--fx-muted); }
+  [data-register] .arcfx-navlink:hover { color: var(--fx-ink); background: var(--fx-sunken); }
+  [data-register] .arcfx-dditem:hover { background: var(--fx-sunken); }
+  [data-register] .arcfx-mobilelink:hover { background: var(--fx-sunken); color: var(--fx-ink); }
+  [data-register] [id^="arcfx-contacts-btn"]:hover { border-color: var(--fx-ink) !important; color: var(--fx-ink) !important; }
+  [data-register] #connect-btn:hover { border-color: var(--fx-ink) !important; }
+
   /* ═══ App register ═══════════════════════════════════════════════════════
      A page opts in with data-register on <html> — either register. The nav and
      stats bar are app chrome and stay light in both. The nav and stats bar are
@@ -192,11 +212,15 @@ const CANONICAL_CSS = `
     border-bottom: 1px solid var(--fx-line) !important;
     backdrop-filter: none !important;
   }
-  [data-register] .arcfx-nav a,
-  [data-register] .arcfx-nav button { color: var(--fx-muted) !important; }
-  [data-register] .arcfx-nav a span { color: var(--fx-ink) !important; }
-  [data-register] .arcfx-nav a:hover,
-  [data-register] .arcfx-nav button:hover { color: var(--fx-ink) !important; }
+  /* Anything that paints its own background is excluded: the marketing CTA is
+     a filled button with white text, and repainting it muted left grey on blue
+     at 1:1. A blanket rule over every anchor is too blunt for a nav that mixes
+     plain links with a solid button. */
+  [data-register] .arcfx-nav a:not([style*="background:#"]),
+  [data-register] .arcfx-nav button:not([style*="background:#"]) { color: var(--fx-muted) !important; }
+  [data-register] .arcfx-nav a:not([style*="background:#"]) span { color: var(--fx-ink) !important; }
+  [data-register] .arcfx-nav a:not([style*="background:#"]):hover,
+  [data-register] .arcfx-nav button:not([style*="background:#"]):hover { color: var(--fx-ink) !important; }
   /* The mark is stroke-based and inherits colour, so it needs ink rather than
      a border to sit correctly on a light ground. */
   [data-register] .arcfx-nav > a { color: var(--fx-ink) !important; }
@@ -305,13 +329,13 @@ function buildLink(href: string, label: string, isActive: boolean): string {
   if (isActive) {
     return `<a href="${href}" style="padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;text-decoration:none;transition:all .15s;color:#f1f5f9;background:#1e293b;">${label}</a>`;
   }
-  return `<a href="${href}" style="padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;text-decoration:none;transition:all .15s;color:#94a3b8;" onmouseover="this.style.color='#f1f5f9';this.style.background='#1e293b'" onmouseout="this.style.color='#94a3b8';this.style.background='transparent'">${label}</a>`;
+  return `<a href="${href}" class="arcfx-navlink" style="padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;text-decoration:none;transition:all .15s;">${label}</a>`;
 }
 
 function buildDropdownItem(href: string, name: string, sub: string, svg: string, isActive: boolean): string {
   const bg = isActive ? '#1e293b' : 'transparent';
   const hoverOut = isActive ? '#1e293b' : 'transparent';
-  return `<a href="${href}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;background:${bg};transition:background .15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='${hoverOut}'">${svg}<div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">${name}</div><div style="font-size:11px;color:#64748b;margin-top:1px;">${sub}</div></div></a>`;
+  return `<a href="${href}" class="arcfx-dditem" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;background:${bg};transition:background .15s;">${svg}<div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">${name}</div><div style="font-size:11px;color:#64748b;margin-top:1px;">${sub}</div></div></a>`;
 }
 
 // ── Nav HTML builder (dispatches by mode) ──────────────────────────────────
@@ -380,7 +404,7 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
     const active = l.key === activeLink;
     const bg  = active ? '#1e293b' : 'transparent';
     const col = active ? '#f1f5f9' : '#94a3b8';
-    return `<a href="${l.href}" style="display:block;padding:9px 12px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;color:${col};background:${bg};transition:all .15s;" onmouseover="this.style.background='#1e293b';this.style.color='#f1f5f9'" onmouseout="this.style.background='${bg}';this.style.color='${col}'">${l.label}</a>`;
+    return `<a href="${l.href}" class="arcfx-mobilelink" style="display:block;padding:9px 12px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;color:${col};background:${bg};transition:all .15s;">${l.label}</a>`;
   }).join('');
 
   // ── Mobile menu (≤768px): a flat list of every destination, since the
@@ -431,8 +455,8 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
       <span style="width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.7);animation:arcfx-pulse 2s ease-in-out infinite;display:inline-block;"></span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#64748b;">Testnet</span>
     </div>
-    <button id="arcfx-contacts-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;" onmouseover="this.style.borderColor='#2563eb';this.style.color='#94a3b8'" onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Contacts</button>
-    <button id="connect-btn" style="padding:7px 16px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#94a3b8;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#1e293b'">Connect wallet</button>
+    <button id="arcfx-contacts-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Contacts</button>
+    <button id="connect-btn" style="padding:7px 16px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#94a3b8;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;">Connect wallet</button>
     <button class="arcfx-hamburger" id="arcfx-hamburger-${pageKey}" aria-label="Menu" style="align-items:center;justify-content:center;width:38px;height:38px;border-radius:8px;border:1px solid #1e293b;background:#0f172a;color:#cbd5e1;cursor:pointer;flex-shrink:0;padding:0;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
@@ -634,9 +658,22 @@ export function arcfxMountHeader(config: MountConfig): void {
 
   ensureCss();
 
-  // Stats bar
+  // Stats bar — marketing only.
+  //
+  // Inside the app it was a permanent ticker of six facts that never change,
+  // occupying 36px of the most valuable space on every screen. "Arc raised
+  // $222M" is an argument for choosing ArcFX, which belongs where people are
+  // deciding, not where they are working. Live status still shows: the network
+  // pill and the wallet chip are both in the nav.
   const statsBarMount = document.getElementById('arcfx-stats-bar');
-  if (statsBarMount) statsBarMount.innerHTML = buildStatsBar(mode);
+  if (statsBarMount) {
+    if (mode === 'marketing') {
+      statsBarMount.innerHTML = buildStatsBar(mode);
+    } else {
+      statsBarMount.innerHTML = '';
+      statsBarMount.style.display = 'none';
+    }
+  }
 
   // Nav
   const navMount = document.getElementById('arcfx-nav');
