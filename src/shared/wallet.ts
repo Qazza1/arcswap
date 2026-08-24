@@ -184,16 +184,29 @@ async function ensureArc(): Promise<boolean> {
   return state.onArc;
 }
 
-/** Explicit connect. Prompts, then switches the wallet to Arc. */
+/**
+ * Explicit connect. Prompts, then switches the wallet to Arc.
+ *
+ * Re-entrant callers share one in-flight request. A wallet rejects a second
+ * concurrent eth_requestAccounts with "already processing", which surfaces to
+ * the user as connect being broken — so two handlers racing must not be able
+ * to cause it.
+ */
+let connecting: Promise<WalletState> | null = null;
+
 async function connect(): Promise<WalletState> {
+  if (connecting) return connecting;
   const e = eth();
   if (!e) throw new Error("No wallet detected. Install MetaMask to continue.");
-  wireEvents();
-  const accounts: string[] = await e.request({ method: "eth_requestAccounts" });
-  await ensureArc();
-  await hydrate(accounts && accounts.length ? accounts[0] : null);
-  emit();
-  return snapshot();
+  connecting = (async () => {
+    wireEvents();
+    const accounts: string[] = await e.request({ method: "eth_requestAccounts" });
+    await ensureArc();
+    await hydrate(accounts && accounts.length ? accounts[0] : null);
+    emit();
+    return snapshot();
+  })();
+  try { return await connecting; } finally { connecting = null; }
 }
 
 /**
