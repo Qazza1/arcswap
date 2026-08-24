@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- Instrument register: light, near-monochrome. See src/shared/tokens.css -->
+<html lang="en" data-register="app">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,18 +10,20 @@
   <link rel="icon" href="/logo.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg:#060810; --bg-card:#0b0f1a; --bg-raised:#101420; --bg-deep:#050709;
-      --border:#1a2035; --border-med:#252d45; --text:#e8edf8; --muted:#94a3b8;
-      --subtle:#64748b; --dim:#334155;
-      --blue:#2563eb; --blue-bright:#3d7eff; --blue-dim:rgba(61,126,255,0.1);
-      --teal:#00d4aa; --teal-dim:rgba(0,212,170,0.08);
-      --r-sm:6px; --r-lg:12px; --r-xl:16px;
+      --bg:var(--fx-bg); --bg-card:var(--fx-surface); --bg-raised:var(--fx-sunken); --bg-deep:var(--fx-sunken);
+      --border:var(--fx-line); --border-med:var(--fx-line); --text:var(--fx-ink); --muted:var(--fx-muted);
+      /* --subtle and --dim carry text in places, so both resolve to muted:
+         faint measures ~2.5:1 and would fail on small labels. */
+      --subtle:var(--fx-muted); --dim:var(--fx-muted);
+      /* The primary action is ink, never a hue — colour is reserved for state. */
+      --blue:var(--fx-accent); --blue-bright:var(--fx-accent); --blue-dim:var(--fx-sunken);
+      --teal:var(--fx-ok); --teal-dim:var(--fx-ok-bg);
+      --r-sm:var(--fx-r-sm); --r-lg:var(--fx-r); --r-xl:var(--fx-r-lg);
     }
     * { box-sizing:border-box; margin:0; padding:0; }
-    html,body { background:var(--bg); color:var(--text); font-family:"Inter",system-ui,sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased; }
+    html,body { background:var(--bg); color:var(--text); font-family:var(--fx-body); line-height:1.6; -webkit-font-smoothing:antialiased; }
     a { text-decoration:none; color:inherit; }
     .mono { font-family:"JetBrains Mono",monospace; }
 
@@ -106,7 +109,7 @@
 
     /* Side stack (dev tile + secondary) */
     .side { display:flex; flex-direction:column; gap:24px; }
-    .dev-tile { border:1px solid var(--border); background:linear-gradient(160deg, var(--bg-card), var(--bg-deep)); border-radius:var(--r-lg); padding:22px; }
+    .dev-tile { border:1px solid var(--border); background:var(--fx-surface); border-radius:var(--r-lg); padding:22px; }
     .dev-tile .tag { font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:600; color:var(--blue-bright); text-transform:uppercase; letter-spacing:0.14em; margin-bottom:10px; }
     .dev-tile h3 { font-size:15px; font-weight:600; color:var(--text); margin-bottom:8px; }
     .dev-tile p { font-size:12.5px; color:var(--muted); line-height:1.6; margin-bottom:16px; }
@@ -145,11 +148,11 @@
 
     <!-- ── Wrong-network banner (hidden unless wallet is off Arc Testnet) ── -->
     <div id="netBanner" style="display:none;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:rgba(234,179,8,.07);border:1px solid rgba(234,179,8,.28);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:24px;">
-      <div style="display:flex;align-items:center;gap:10px;color:#fde68a;font-size:13.5px;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div style="display:flex;align-items:center;gap:10px;color:var(--fx-warn);font-size:13.5px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <span>You're not connected to <strong>Arc Testnet</strong>. Switch networks to use ArcFX.</span>
       </div>
-      <button id="switchNetBtn" style="padding:8px 16px;border-radius:6px;background:#eab308;color:#0a0a0a;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">Switch to Arc Testnet</button>
+      <button id="switchNetBtn" style="padding:8px 16px;border-radius:6px;background:var(--fx-warn);color:var(--fx-on-accent);border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">Switch to Arc Testnet</button>
     </div>
 
     <!-- ── Status / welcome header ── -->
@@ -466,8 +469,8 @@
           }
           var leg = g[0];
           if (leg.dir === 'out'){
-            return { hash:h, label:'Sent ' + leg.sym, icon:ICON_OUT, color:'#f87171',
-                     amt: '-' + fmt(amtFromData(leg.log.data)) + ' ' + leg.sym, amtColor:'#f87171', when:when };
+            return { hash:h, label:'Sent ' + leg.sym, icon:ICON_OUT, color:'var(--fx-bad)',
+                     amt: '-' + fmt(amtFromData(leg.log.data)) + ' ' + leg.sym, amtColor:'var(--fx-bad)', when:when };
           }
           return { hash:h, label:'Received ' + leg.sym, icon:ICON_IN, color:'var(--teal)',
                    amt: '+' + fmt(amtFromData(leg.log.data)) + ' ' + leg.sym, amtColor:'var(--teal)', when:when };

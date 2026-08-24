@@ -201,11 +201,17 @@ const CANONICAL_CSS = `
     background: var(--fx-surface) !important;
     border-color: var(--fx-line) !important;
   }
-  [data-register="app"] #connect-btn {
+  /* Every chip in the nav, not just Connect: the Contacts and hamburger buttons
+     keep their own dark background otherwise, leaving grey text on a dark chip
+     at 3.8:1. */
+  [data-register="app"] #connect-btn,
+  [data-register="app"] .arcfx-nav button[id^="arcfx-contacts-btn"],
+  [data-register="app"] .arcfx-hamburger {
     background: var(--fx-surface) !important;
     border-color: var(--fx-line) !important;
     color: var(--fx-ink) !important;
   }
+  [data-register="app"] .arcfx-hamburger svg { stroke: var(--fx-ink) !important; }
 
   [data-register="app"] .stats-bar {
     background: var(--fx-surface) !important;
@@ -229,6 +235,13 @@ const CANONICAL_CSS = `
   [data-register="app"] div[id^="arcfx-tools-dd"] a,
   [data-register="app"] div[id^="arcfx-more-dd"] a,
   [data-register="app"] div[id^="arcfx-mobile-menu"] a { color: var(--fx-ink) !important; }
+  /* The active link in the nav and mobile menu paints a dark chip inline,
+     which survives on a light ground as near-black on near-black. */
+  [data-register="app"] .arcfx-nav-center a[style*="background"],
+  [data-register="app"] div[id^="arcfx-mobile-menu"] a[style*="background"] {
+    background: var(--fx-sunken) !important;
+    color: var(--fx-ink) !important;
+  }
   [data-register="app"] div[id^="arcfx-tools-dd"] a div,
   [data-register="app"] div[id^="arcfx-more-dd"] a div { color: var(--fx-muted) !important; }
   [data-register="app"] #arcfx-contacts-inner,
