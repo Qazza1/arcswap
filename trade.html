@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- Instrument register. src/shared/tokens.css -->
+<html lang="en" data-register="app">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,30 +9,32 @@
   <link rel="icon" href="/logo.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg:       #060810;
-      --bg-card:  #0b0f1a;
-      --bg-raised:#101420;
-      --bg-deep:  #060b18;
-      --border:   #1a2035;
-      --border-med:#252d45;
-      --text:     #e8edf8;
-      --muted:    #64748b;
-      --subtle:   #475569;
-      --dim:      #334155;
-      --blue:     #3d7eff;
-      --blue-dim: rgba(61,126,255,0.1);
-      --teal:     #00d4aa;
-      --teal-dim: rgba(0,212,170,0.08);
-      --red:      #ff4d6a;
-      --r:        10px;
-      --r-sm:     6px;
-      --r-lg:     14px;
+      /* Instrument register: light, near-monochrome, colour reserved for
+         state. Page variable names are kept and remapped onto the shared
+         tokens, so existing rules keep working. src/shared/tokens.css */
+      --bg:       var(--fx-bg);
+      --bg-card:  var(--fx-surface);
+      --bg-raised:var(--fx-sunken);
+      --bg-deep:  var(--fx-sunken);
+      --border:   var(--fx-line);
+      --border-med:var(--fx-line);
+      --text:     var(--fx-ink);
+      --muted:    var(--fx-muted);
+      --subtle:   var(--fx-muted);
+      --dim:      var(--fx-muted);
+      --blue:     var(--fx-accent);
+      --blue-dim: var(--fx-sunken);
+      --teal:     var(--fx-ok);
+      --teal-dim: var(--fx-ok-bg);
+      --red:      var(--fx-bad);
+      --r:        var(--fx-r);
+      --r-sm:     var(--fx-r-sm);
+      --r-lg:     var(--fx-r-lg);
     }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    html, body { background:var(--bg); color:var(--text); font-family:"Inter",system-ui,sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased; }
+    html, body { background:var(--bg); color:var(--text); font-family:var(--fx-body); line-height:1.6; -webkit-font-smoothing:antialiased; }
     a { color:var(--blue); text-decoration:none; }
     input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
     input[type=number] { -moz-appearance:textfield; }
@@ -47,7 +50,7 @@
 
     /* Page header: title + network pill */
     .tool-head { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:18px; gap:16px; flex-wrap:wrap; }
-    .tool-title { font-family:"Space Grotesk",sans-serif; font-size:25px; font-weight:700; letter-spacing:-0.5px; color:var(--text); }
+    .tool-title { font-family:var(--fx-body); font-size:25px; font-weight:700; letter-spacing:-0.5px; color:var(--text); }
     .tool-title .accent { color:var(--blue); }
     .tool-sub { font-size:13px; color:var(--muted); margin-top:2px; }
     .net-pill { display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--teal); background:var(--teal-dim); border:1px solid rgba(0,212,170,.2); padding:6px 11px; border-radius:100px; white-space:nowrap; }
@@ -62,16 +65,16 @@
 
     /* Tabs sit on top of the card */
     .app-tabs { display:flex; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-lg) var(--r-lg) 0 0; border-bottom:none; overflow:hidden; }
-    .app-tab { flex:1; padding:14px 12px; font-size:14px; font-weight:600; font-family:"Space Grotesk",sans-serif; border:none; cursor:pointer; transition:all .15s; background:var(--bg-card); color:var(--muted); border-bottom:2px solid transparent; }
+    .app-tab { flex:1; padding:14px 12px; font-size:14px; font-weight:600; font-family:var(--fx-body); border:none; cursor:pointer; transition:all .15s; background:var(--bg-card); color:var(--muted); border-bottom:2px solid transparent; }
     .app-tab:hover { color:var(--text); }
-    .app-tab.active { background:#0f172a; color:var(--text); border-bottom:2px solid var(--blue); }
+    .app-tab.active { background:var(--fx-surface); color:var(--text); border-bottom:2px solid var(--blue); }
     .app-tab.active.bridge-tab { border-bottom-color:var(--teal); }
     .app-panel { background:transparent; border:none; padding:0; }
 
     /* Status messages (verbatim contract from main.ts) */
     #estimate-row { display:flex; justify-content:space-between; margin-top:7px; font-size:11px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
     .status { border-radius:var(--r-sm); padding:11px 13px; font-size:13px; line-height:1.6; }
-    .status.info    { background:var(--blue-dim); border:1px solid rgba(61,126,255,.25); color:#7eb3ff; }
+    .status.info    { background:var(--blue-dim); border:1px solid var(--fx-line); color:var(--fx-accent); }
     .status.success { background:var(--teal-dim); border:1px solid rgba(0,212,170,.25); color:var(--teal); }
     .status.error   { background:rgba(255,77,106,.07); border:1px solid rgba(255,77,106,.25); color:var(--red); }
     .status-title   { font-weight:700; margin-bottom:5px; }
@@ -84,26 +87,26 @@
     /* Chain dots + bridge steps (verbatim contract) */
     .chain-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
     #bridge-steps.visible { display:flex !important; }
-    .bridge-step.done   { color:#10b981; }
-    .bridge-step.active { color:#f1f5f9; }
-    .bridge-step.done   .bridge-step-dot { background:#10b981 !important; }
-    .bridge-step.active .bridge-step-dot { background:#2563eb !important; animation:blink 1s infinite; }
+    .bridge-step.done   { color:var(--fx-ok); }
+    .bridge-step.active { color:var(--fx-ink); }
+    .bridge-step.done   .bridge-step-dot { background:var(--fx-ok) !important; }
+    .bridge-step.active .bridge-step-dot { background:var(--fx-accent) !important; animation:blink 1s infinite; }
 
     .connected { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--muted); }
 
     /* Custom token picker — clickable pill + dropdown menu */
-    .token-pill { display:flex; align-items:center; gap:7px; background:#0f172a; border:1px solid #283449; border-radius:8px; padding:7px 10px 7px 12px; cursor:pointer; transition:border-color .15s, background .15s; font-family:inherit; }
-    .token-pill:hover { border-color:#3a4a63; background:#131a2b; }
+    .token-pill { display:flex; align-items:center; gap:7px; background:var(--fx-surface); border:1px solid var(--fx-line); border-radius:8px; padding:7px 10px 7px 12px; cursor:pointer; transition:border-color .15s, background .15s; font-family:inherit; }
+    .token-pill:hover { border-color:var(--fx-line); background:var(--fx-sunken); }
     .token-pill-logo { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; flex-shrink:0; }
-    .token-pill-name { font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:500; color:#e8edf8; }
-    .token-pill-chev { color:#64748b; margin-left:1px; transition:transform .18s; }
+    .token-pill-name { font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:500; color:var(--fx-ink); }
+    .token-pill-chev { color:var(--fx-muted); margin-left:1px; transition:transform .18s; }
     .token-pill.open .token-pill-chev { transform:rotate(180deg); }
-    .token-menu { position:absolute; top:calc(100% + 6px); left:0; min-width:150px; background:#0d1322; border:1px solid #283449; border-radius:9px; padding:5px; z-index:50; box-shadow:0 12px 28px rgba(0,0,0,.5); animation:fadeUp .14s ease both; }
+    .token-menu { position:absolute; top:calc(100% + 6px); left:0; min-width:150px; background:var(--fx-sunken); border:1px solid var(--fx-line); border-radius:9px; padding:5px; z-index:50; box-shadow:0 12px 28px rgba(0,0,0,.5); animation:fadeUp .14s ease both; }
     .token-menu-item { display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:6px; cursor:pointer; transition:background .12s; }
-    .token-menu-item:hover { background:#172033; }
-    .token-menu-item.selected { background:#15203a; }
+    .token-menu-item:hover { background:var(--fx-sunken); }
+    .token-menu-item.selected { background:var(--fx-sunken); }
     .token-menu-item .tm-logo { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; flex-shrink:0; }
-    .token-menu-item .tm-sym { font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:500; color:#e8edf8; flex:1; }
+    .token-menu-item .tm-sym { font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:500; color:var(--fx-ink); flex:1; }
     .token-menu-item .tm-check { color:var(--blue); opacity:0; }
     .token-menu-item.selected .tm-check { opacity:1; }
 
@@ -175,74 +178,74 @@
 
         <div id="panel-swap" class="app-panel">
           <div id="global-status" style="display:none;margin-bottom:12px;"></div>
-          <div id="connect-card" style="background:#0f172a;border:1px solid #1e293b;border-radius:0 0 10px 10px;padding:20px;">
+          <div id="connect-card" style="background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:0 0 10px 10px;padding:20px;">
             <!-- Header row matching swap card -->
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
               <div>
-                <div style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.2px;">Swap</div>
-                <div style="font-size:11px;color:#475569;margin-top:2px;font-family:'JetBrains Mono',monospace;">Arc Testnet · Circle App Kit</div>
-                <div style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:2px 8px;border-radius:4px;background:#0a0f1e;border:1px solid #1e293b;">
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#475569;letter-spacing:0.04em;">Safe Compatible</span>
+                <div style="font-size:15px;font-weight:600;color:var(--fx-ink);letter-spacing:-0.2px;">Swap</div>
+                <div style="font-size:11px;color:var(--fx-muted);margin-top:2px;font-family:'JetBrains Mono',monospace;">Arc Testnet · Circle App Kit</div>
+                <div style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:2px 8px;border-radius:4px;background:var(--fx-surface);border:1px solid var(--fx-line);">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--fx-muted)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--fx-muted);letter-spacing:0.04em;">Safe Compatible</span>
                 </div>
               </div>
-              <div style="display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:9999px;background:#0a0f1e;border:1px solid #1e293b;">
+              <div style="display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:9999px;background:var(--fx-surface);border:1px solid var(--fx-line);">
                 <span style="width:16px;height:16px;border-radius:50%;background:#2775ca;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;">$</span>
-                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#94a3b8;">USDC</span>
-                <span style="color:#334155;margin:0 1px;">→</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--fx-muted);">USDC</span>
+                <span style="color:var(--fx-muted);margin:0 1px;">→</span>
                 <span style="width:16px;height:16px;border-radius:50%;background:#1a3ca8;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;">€</span>
-                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#94a3b8;">EURC</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--fx-muted);">EURC</span>
               </div>
             </div>
             <!-- Connect prompt -->
             <div style="text-align:center;padding:24px 0 28px;">
-              <div style="width:44px;height:44px;border-radius:50%;border:1px solid #1e293b;background:#0a0f1e;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <div style="width:44px;height:44px;border-radius:50%;border:1px solid var(--fx-line);background:var(--fx-surface);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--fx-muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
                 </svg>
               </div>
-              <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:6px;">Connect your wallet</div>
-              <div style="font-size:12.5px;color:#475569;margin-bottom:20px;line-height:1.6;">Connect MetaMask to swap USDC ↔ EURC<br>with sub-second settlement on Arc.</div>
+              <div style="font-size:14px;font-weight:600;color:var(--fx-ink);margin-bottom:6px;">Connect your wallet</div>
+              <div style="font-size:12.5px;color:var(--fx-muted);margin-bottom:20px;line-height:1.6;">Connect MetaMask to swap USDC ↔ EURC<br>with sub-second settlement on Arc.</div>
               <button id="big-connect-btn"
-                      style="display:block;width:100%;padding:13px;background:#2563eb;color:#fff;
+                      style="display:block;width:100%;padding:13px;background:var(--fx-accent);color:#fff;
                              border:none;border-radius:8px;font-size:14px;font-weight:600;
                              cursor:pointer;font-family:inherit;transition:background .15s;"
-                      onmouseover="this.style.background='#1d4ed8'"
-                      onmouseout="this.style.background='#2563eb'">
+                      onmouseover="this.style.background='var(--fx-accent)'"
+                      onmouseout="this.style.background='var(--fx-accent)'">
                 Connect MetaMask
               </button>
             </div>
           </div>
           <!-- ── Swap Card — Enterprise redesign ── -->
-          <div class="hidden" id="swap-card" style="background:#0f172a;border:1px solid #1e293b;border-radius:0 0 10px 10px;padding:20px;">
+          <div class="hidden" id="swap-card" style="background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:0 0 10px 10px;padding:20px;">
 
             <!-- Card header -->
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
               <div>
-                <div style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.2px;">Swap</div>
-                <div style="font-size:11px;color:#475569;margin-top:2px;font-family:'JetBrains Mono',monospace;">Arc Testnet · Circle App Kit</div>
-                <div style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:2px 8px;border-radius:4px;background:#0a0f1e;border:1px solid #1e293b;">
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#475569;letter-spacing:0.04em;">Safe Compatible</span>
+                <div style="font-size:15px;font-weight:600;color:var(--fx-ink);letter-spacing:-0.2px;">Swap</div>
+                <div style="font-size:11px;color:var(--fx-muted);margin-top:2px;font-family:'JetBrains Mono',monospace;">Arc Testnet · Circle App Kit</div>
+                <div style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:2px 8px;border-radius:4px;background:var(--fx-surface);border:1px solid var(--fx-line);">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--fx-muted)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--fx-muted);letter-spacing:0.04em;">Safe Compatible</span>
                 </div>
               </div>
-              <div style="display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:9999px;background:#0a0f1e;border:1px solid #1e293b;">
+              <div style="display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:9999px;background:var(--fx-surface);border:1px solid var(--fx-line);">
                 <span id="token-in-flag" style="width:16px;height:16px;border-radius:50%;background:#2775ca;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;">$</span>
-                <span id="token-in-symbol" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#94a3b8;">USDC</span>
-                <span style="color:#334155;margin:0 1px;">→</span>
+                <span id="token-in-symbol" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--fx-muted);">USDC</span>
+                <span style="color:var(--fx-muted);margin:0 1px;">→</span>
                 <span id="token-out-flag" style="width:16px;height:16px;border-radius:50%;background:#1a3ca8;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;">€</span>
-                <span id="token-out-symbol" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#94a3b8;">EURC</span>
+                <span id="token-out-symbol" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--fx-muted);">EURC</span>
               </div>
             </div>
 
             <!-- You Pay input -->
-            <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:14px 16px;margin-bottom:4px;transition:border-color .15s;"
-                 onfocusin="this.style.borderColor='#2563eb'" onfocusout="this.style.borderColor='#1e293b'">
+            <div style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:14px 16px;margin-bottom:4px;transition:border-color .15s;"
+                 onfocusin="this.style.borderColor='var(--fx-accent)'" onfocusout="this.style.borderColor='var(--fx-line)'">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <span style="font-size:10px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.1em;">You Pay</span>
+                <span style="font-size:10px;font-weight:600;color:var(--fx-muted);text-transform:uppercase;letter-spacing:0.1em;">You Pay</span>
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <span id="balance-in-label" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569;">Balance: — USDC</span>
-                  <button id="max-btn" style="font-size:10px;font-weight:700;color:#2563eb;background:transparent;border:none;cursor:pointer;padding:0;font-family:inherit;letter-spacing:0.05em;">MAX</button>
+                  <span id="balance-in-label" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fx-muted);">Balance: — USDC</span>
+                  <button id="max-btn" style="font-size:10px;font-weight:700;color:var(--fx-accent);background:transparent;border:none;cursor:pointer;padding:0;font-family:inherit;letter-spacing:0.05em;">MAX</button>
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:12px;">
@@ -262,7 +265,7 @@
                   autocomplete="off"
                   style="flex:1;background:transparent;border:none;outline:none;
                          font-family:'JetBrains Mono',monospace;font-size:28px;
-                         font-weight:500;color:#f1f5f9;text-align:right;
+                         font-weight:500;color:var(--fx-ink);text-align:right;
                          letter-spacing:-0.5px;min-width:0;"
                 />
               </div>
@@ -272,21 +275,21 @@
             <div style="display:flex;justify-content:center;margin:2px 0;">
               <button id="flip-btn" title="Flip tokens"
                       style="width:30px;height:30px;border-radius:6px;
-                             background:#0f172a;border:1px solid #1e293b;
-                             color:#475569;font-size:15px;cursor:pointer;
+                             background:var(--fx-surface);border:1px solid var(--fx-line);
+                             color:var(--fx-muted);font-size:15px;cursor:pointer;
                              display:flex;align-items:center;justify-content:center;
                              transition:border-color .15s,color .15s;"
-                      onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'"
-                      onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'">
+                      onmouseover="this.style.borderColor='var(--fx-accent)';this.style.color='var(--fx-accent)'"
+                      onmouseout="this.style.borderColor='var(--fx-line)';this.style.color='var(--fx-muted)'">
                 ⇅
               </button>
             </div>
 
             <!-- You Receive output -->
-            <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+            <div style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:14px 16px;margin-bottom:16px;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <span style="font-size:10px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.1em;">You Receive</span>
-                <div id="estimate-row" class="hidden" style="display:flex;gap:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569;">
+                <span style="font-size:10px;font-weight:600;color:var(--fx-muted);text-transform:uppercase;letter-spacing:0.1em;">You Receive</span>
+                <div id="estimate-row" class="hidden" style="display:flex;gap:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fx-muted);">
                   <span id="estimate-fee"></span>
                   <span>Arc Testnet</span>
                 </div>
@@ -303,7 +306,7 @@
                 </div>
                 <div id="estimate-output"
                      style="flex:1;text-align:right;font-family:'JetBrains Mono',monospace;
-                            font-size:28px;font-weight:500;color:#475569;letter-spacing:-0.5px;">
+                            font-size:28px;font-weight:500;color:var(--fx-muted);letter-spacing:-0.5px;">
                   —
                 </div>
               </div>
@@ -318,58 +321,58 @@
             <button
               id="execute-swap-btn"
               style="display:block;width:100%;padding:14px;
-                     background:#2563eb;color:#fff;border:none;
+                     background:var(--fx-accent);color:#fff;border:none;
                      border-radius:8px;font-size:15px;font-weight:600;
                      cursor:pointer;font-family:inherit;letter-spacing:-0.1px;
                      transition:background .15s;"
-              onmouseover="this.style.background='#1d4ed8'"
-              onmouseout="this.style.background='#2563eb'">
+              onmouseover="this.style.background='var(--fx-accent)'"
+              onmouseout="this.style.background='var(--fx-accent)'">
               Swap USDC → EURC
             </button>
 
             <!-- Footer -->
             <div style="display:flex;justify-content:space-between;margin-top:14px;
-                        padding-top:13px;border-top:1px solid #1e293b;
-                        font-size:11px;color:#334155;">
+                        padding-top:13px;border-top:1px solid var(--fx-line);
+                        font-size:11px;color:var(--fx-muted);">
               <a href="https://faucet.circle.com" target="_blank" rel="noopener"
-                 style="color:#334155;text-decoration:none;transition:color .15s;"
-                 onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#334155'">
+                 style="color:var(--fx-muted);text-decoration:none;transition:color .15s;"
+                 onmouseover="this.style.color='var(--fx-accent)'" onmouseout="this.style.color='var(--fx-muted)'">
                 Get testnet tokens →
               </a>
               <a href="https://testnet.arcscan.app" target="_blank" rel="noopener"
-                 style="color:#334155;text-decoration:none;transition:color .15s;"
-                 onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#334155'">
+                 style="color:var(--fx-muted);text-decoration:none;transition:color .15s;"
+                 onmouseover="this.style.color='var(--fx-accent)'" onmouseout="this.style.color='var(--fx-muted)'">
                 ArcScan ↗
               </a>
             </div>
           </div>
         </div>
 
-        <div id="panel-bridge" style="display:none;background:#0f172a;border:1px solid #1e293b;border-radius:0 0 10px 10px;padding:20px;">
+        <div id="panel-bridge" style="display:none;background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:0 0 10px 10px;padding:20px;">
 
           <!-- Header -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
             <div>
-              <div style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.2px;">Bridge</div>
-              <div style="font-size:11px;color:#475569;margin-top:2px;font-family:'JetBrains Mono',monospace;">Circle CCTP v2 · Native USDC</div>
+              <div style="font-size:15px;font-weight:600;color:var(--fx-ink);letter-spacing:-0.2px;">Bridge</div>
+              <div style="font-size:11px;color:var(--fx-muted);margin-top:2px;font-family:'JetBrains Mono',monospace;">Circle CCTP v2 · Native USDC</div>
             </div>
             <div style="display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:4px;
-                        background:#0a0f1e;border:1px solid #1e293b;">
-              <span style="width:6px;height:6px;border-radius:50%;background:#10b981;
+                        background:var(--fx-surface);border:1px solid var(--fx-line);">
+              <span style="width:6px;height:6px;border-radius:50%;background:var(--fx-ok);
                            box-shadow:0 0 5px rgba(16,185,129,0.6);display:inline-block;"></span>
               <span style="font-family:'JetBrains Mono',monospace;font-size:10px;
-                           font-weight:600;color:#334155;text-transform:uppercase;
+                           font-weight:600;color:var(--fx-muted);text-transform:uppercase;
                            letter-spacing:0.08em;">CCTP Live</span>
             </div>
           </div>
 
           <!-- External chain selector (the non-Arc side) -->
           <div style="margin-bottom:12px;">
-            <div style="font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+            <div style="font-size:10px;font-weight:600;color:var(--fx-muted);text-transform:uppercase;
                         letter-spacing:0.1em;margin-bottom:6px;">External chain</div>
             <select id="bridge-external-select"
-                    style="width:100%;background:#0f172a;border:1px solid #1e293b;
-                           border-radius:6px;color:#e2e8f0;font-size:13px;padding:9px 10px;
+                    style="width:100%;background:var(--fx-surface);border:1px solid var(--fx-line);
+                           border-radius:6px;color:var(--fx-ink);font-size:13px;padding:9px 10px;
                            font-family:'JetBrains Mono',monospace;cursor:pointer;"></select>
           </div>
 
@@ -377,17 +380,17 @@
           <div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:8px;align-items:center;margin-bottom:16px;">
 
             <!-- From network -->
-            <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:12px 14px;">
-              <div style="font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+            <div style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:12px 14px;">
+              <div style="font-size:10px;font-weight:600;color:var(--fx-muted);text-transform:uppercase;
                           letter-spacing:0.1em;margin-bottom:8px;">From network</div>
               <div id="bridge-from-name" style="display:flex;align-items:center;gap:8px;">
                 <div class="chain-dot" style="width:8px;height:8px;border-radius:50%;background:#627eea;flex-shrink:0;"></div>
                 <span id="bridge-from-label"
-                      style="font-size:13px;font-weight:600;color:#f1f5f9;">
+                      style="font-size:13px;font-weight:600;color:var(--fx-ink);">
                   Ethereum Sepolia
                 </span>
               </div>
-              <div id="bridge-from-chainid" style="font-size:10px;color:#334155;margin-top:4px;font-family:'JetBrains Mono',monospace;">
+              <div id="bridge-from-chainid" style="font-size:10px;color:var(--fx-muted);margin-top:4px;font-family:'JetBrains Mono',monospace;">
                 Chain 11155111
               </div>
             </div>
@@ -396,55 +399,55 @@
             <div style="display:flex;justify-content:center;">
               <button id="bridge-flip-btn"
                       onclick="flipBridgeDirection()"
-                      style="width:34px;height:34px;border-radius:6px;background:#0f172a;
-                             border:1px solid #1e293b;color:#475569;font-size:14px;
+                      style="width:34px;height:34px;border-radius:6px;background:var(--fx-surface);
+                             border:1px solid var(--fx-line);color:var(--fx-muted);font-size:14px;
                              cursor:pointer;display:flex;align-items:center;justify-content:center;
                              transition:border-color .15s,color .15s;"
-                      onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'"
-                      onmouseout="this.style.borderColor='#1e293b';this.style.color='#475569'">
+                      onmouseover="this.style.borderColor='var(--fx-accent)';this.style.color='var(--fx-accent)'"
+                      onmouseout="this.style.borderColor='var(--fx-line)';this.style.color='var(--fx-muted)'">
                 ⇄
               </button>
             </div>
 
             <!-- To network -->
-            <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;padding:12px 14px;">
-              <div style="font-size:10px;font-weight:600;color:#334155;text-transform:uppercase;
+            <div style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:12px 14px;">
+              <div style="font-size:10px;font-weight:600;color:var(--fx-muted);text-transform:uppercase;
                           letter-spacing:0.1em;margin-bottom:8px;">To network</div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <div id="bridge-to-dot"
-                     style="width:8px;height:8px;border-radius:50%;background:#2563eb;flex-shrink:0;"></div>
+                     style="width:8px;height:8px;border-radius:50%;background:var(--fx-accent);flex-shrink:0;"></div>
                 <span id="bridge-to-label"
-                      style="font-size:13px;font-weight:600;color:#f1f5f9;">
+                      style="font-size:13px;font-weight:600;color:var(--fx-ink);">
                   Arc Testnet
                 </span>
               </div>
-              <div id="bridge-to-chainid" style="font-size:10px;color:#334155;margin-top:4px;font-family:'JetBrains Mono',monospace;">
+              <div id="bridge-to-chainid" style="font-size:10px;color:var(--fx-muted);margin-top:4px;font-family:'JetBrains Mono',monospace;">
                 Chain 5042002
               </div>
             </div>
           </div>
 
           <!-- Amount input -->
-          <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;
+          <div style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;
                       padding:14px 16px;margin-bottom:12px;transition:border-color .15s;"
-               onfocusin="this.style.borderColor='#2563eb'"
-               onfocusout="this.style.borderColor='#1e293b'">
+               onfocusin="this.style.borderColor='var(--fx-accent)'"
+               onfocusout="this.style.borderColor='var(--fx-line)'">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-              <span style="font-size:10px;font-weight:600;color:#334155;
+              <span style="font-size:10px;font-weight:600;color:var(--fx-muted);
                            text-transform:uppercase;letter-spacing:0.1em;">Amount to bridge</span>
               <span id="bridge-receive-label"
-                    style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#334155;">
+                    style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fx-muted);">
                 You receive on Arc
               </span>
             </div>
             <div style="display:flex;align-items:center;gap:12px;">
-              <div style="display:flex;align-items:center;gap:7px;background:#0f172a;
-                          border:1px solid #1e293b;border-radius:6px;padding:7px 12px;flex-shrink:0;">
+              <div style="display:flex;align-items:center;gap:7px;background:var(--fx-surface);
+                          border:1px solid var(--fx-line);border-radius:6px;padding:7px 12px;flex-shrink:0;">
                 <div style="width:22px;height:22px;border-radius:50%;background:#2775ca;
                             display:flex;align-items:center;justify-content:center;
                             font-size:11px;font-weight:700;color:#fff;">$</div>
                 <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
-                             font-weight:500;color:#e2e8f0;">USDC</span>
+                             font-weight:500;color:var(--fx-ink);">USDC</span>
               </div>
               <input
                 id="bridge-amount-input"
@@ -453,43 +456,43 @@
                 autocomplete="off"
                 style="flex:1;background:transparent;border:none;outline:none;
                        font-family:'JetBrains Mono',monospace;font-size:28px;
-                       font-weight:500;color:#f1f5f9;text-align:right;
+                       font-weight:500;color:var(--fx-ink);text-align:right;
                        min-width:0;letter-spacing:-0.5px;"
               />
             </div>
             <div style="display:flex;justify-content:flex-end;margin-top:8px;">
               <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
-                           font-weight:500;color:#10b981;" id="bridge-receive-amt">—</span>
+                           font-weight:500;color:var(--fx-ok);" id="bridge-receive-amt">—</span>
             </div>
           </div>
 
           <!-- Info grid -->
-          <div style="background:#060b18;border:1px solid #1e293b;border-radius:8px;
+          <div style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;
                       padding:12px 14px;margin-bottom:16px;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div>
-                <div style="font-size:10px;font-weight:600;color:#334155;
+                <div style="font-size:10px;font-weight:600;color:var(--fx-muted);
                             text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Protocol</div>
                 <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
-                            font-weight:500;color:#94a3b8;">Circle CCTP v2</div>
+                            font-weight:500;color:var(--fx-muted);">Circle CCTP v2</div>
               </div>
               <div>
-                <div style="font-size:10px;font-weight:600;color:#334155;
+                <div style="font-size:10px;font-weight:600;color:var(--fx-muted);
                             text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Bridge fee</div>
                 <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
-                            font-weight:500;color:#10b981;">~$0.00 testnet</div>
+                            font-weight:500;color:var(--fx-ok);">~$0.00 testnet</div>
               </div>
               <div>
-                <div style="font-size:10px;font-weight:600;color:#334155;
+                <div style="font-size:10px;font-weight:600;color:var(--fx-muted);
                             text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Token</div>
                 <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
-                            font-weight:500;color:#94a3b8;">Native USDC</div>
+                            font-weight:500;color:var(--fx-muted);">Native USDC</div>
               </div>
               <div>
-                <div style="font-size:10px;font-weight:600;color:#334155;
+                <div style="font-size:10px;font-weight:600;color:var(--fx-muted);
                             text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Est. time</div>
                 <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;
-                            font-weight:500;color:#94a3b8;">~30 seconds</div>
+                            font-weight:500;color:var(--fx-muted);">~30 seconds</div>
               </div>
             </div>
           </div>
@@ -497,21 +500,21 @@
           <!-- Progress steps (hidden until bridging) -->
           <div id="bridge-steps" style="display:none;flex-direction:column;gap:8px;
                                         margin-bottom:14px;padding:12px 14px;
-                                        background:#060b18;border:1px solid #1e293b;border-radius:8px;">
-            <div id="bstep-approve" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
-              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+                                        background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;">
+            <div id="bstep-approve" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--fx-muted);">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:var(--fx-line);flex-shrink:0;transition:background .3s;"></div>
               <span id="bstep-approve-label">Approve USDC spending</span>
             </div>
-            <div id="bstep-burn" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
-              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+            <div id="bstep-burn" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--fx-muted);">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:var(--fx-line);flex-shrink:0;transition:background .3s;"></div>
               <span id="bstep-burn-label">Burn USDC on Sepolia</span>
             </div>
-            <div id="bstep-attest" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
-              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+            <div id="bstep-attest" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--fx-muted);">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:var(--fx-line);flex-shrink:0;transition:background .3s;"></div>
               <span>Circle attestation</span>
             </div>
-            <div id="bstep-mint" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#475569;">
-              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:#1e293b;flex-shrink:0;transition:background .3s;"></div>
+            <div id="bstep-mint" style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--fx-muted);">
+              <div class="bridge-step-dot" style="width:7px;height:7px;border-radius:50%;background:var(--fx-line);flex-shrink:0;transition:background .3s;"></div>
               <span id="bstep-mint-label">Mint USDC on Arc</span>
             </div>
           </div>
@@ -521,26 +524,26 @@
 
           <!-- Action button -->
           <button id="bridge-btn"
-                  style="display:block;width:100%;padding:14px;background:#2563eb;
+                  style="display:block;width:100%;padding:14px;background:var(--fx-accent);
                          color:#fff;border:none;border-radius:8px;font-size:15px;
                          font-weight:600;cursor:pointer;font-family:inherit;
                          letter-spacing:-0.1px;transition:background .15s;"
-                  onmouseover="this.style.background='#1d4ed8'"
-                  onmouseout="this.style.background='#2563eb'">
+                  onmouseover="this.style.background='var(--fx-accent)'"
+                  onmouseout="this.style.background='var(--fx-accent)'">
             Bridge to Arc →
           </button>
 
           <!-- Footer -->
           <div style="display:flex;justify-content:space-between;margin-top:14px;
-                      padding-top:13px;border-top:1px solid #1e293b;font-size:11px;">
+                      padding-top:13px;border-top:1px solid var(--fx-line);font-size:11px;">
             <a href="https://faucet.circle.com" target="_blank" rel="noopener"
-               style="color:#334155;text-decoration:none;transition:color .15s;"
-               onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#334155'">
+               style="color:var(--fx-muted);text-decoration:none;transition:color .15s;"
+               onmouseover="this.style.color='var(--fx-accent)'" onmouseout="this.style.color='var(--fx-muted)'">
               Get testnet USDC →
             </a>
             <a href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noopener"
-               style="color:#334155;text-decoration:none;transition:color .15s;"
-               onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#334155'">
+               style="color:var(--fx-muted);text-decoration:none;transition:color .15s;"
+               onmouseover="this.style.color='var(--fx-accent)'" onmouseout="this.style.color='var(--fx-muted)'">
               Get Sepolia ETH →
             </a>
           </div>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<!-- Instrument register. src/shared/tokens.css -->
+<html lang="en" class="dark" data-register="app">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -24,61 +25,60 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:"Inter",system-ui,sans-serif;background:#0a0f1e;color:#e2e8f0;line-height:1.6;-webkit-font-smoothing:antialiased;}
+    body{font-family:var(--fx-body);background:var(--fx-bg);color:var(--fx-ink);line-height:1.6;-webkit-font-smoothing:antialiased;}
     a{text-decoration:none;}
     .page{max-width:900px;margin:0 auto;padding:64px 28px 100px;}
-    .eyebrow{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;color:#a855f7;text-transform:uppercase;letter-spacing:0.14em;margin-bottom:14px;}
-    h1{font-size:clamp(32px,4vw,48px);font-weight:700;color:#f1f5f9;letter-spacing:-1px;line-height:1.15;margin-bottom:14px;}
-    .sub{font-size:16px;color:#475569;line-height:1.7;max-width:640px;margin-bottom:40px;}
+    .eyebrow{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;color:var(--fx-ink);text-transform:uppercase;letter-spacing:0.14em;margin-bottom:14px;}
+    h1{font-size:clamp(32px,4vw,48px);font-weight:700;color:var(--fx-ink);letter-spacing:-1px;line-height:1.15;margin-bottom:14px;}
+    .sub{font-size:16px;color:var(--fx-muted);line-height:1.7;max-width:640px;margin-bottom:40px;}
 
-    .section-title{font-size:18px;font-weight:700;color:#f1f5f9;letter-spacing:-0.3px;margin:44px 0 16px;padding-bottom:12px;border-bottom:1px solid #1e293b;}
+    .section-title{font-size:18px;font-weight:700;color:var(--fx-ink);letter-spacing:-0.3px;margin:44px 0 16px;padding-bottom:12px;border-bottom:1px solid var(--fx-line);}
 
-    .card{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:22px;margin-bottom:16px;}
-    .card-title{font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:4px;}
-    .card-desc{font-size:13px;color:#475569;line-height:1.7;margin-bottom:16px;}
+    .card{background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:10px;padding:22px;margin-bottom:16px;}
+    .card-title{font-size:14px;font-weight:600;color:var(--fx-ink);margin-bottom:4px;}
+    .card-desc{font-size:13px;color:var(--fx-muted);line-height:1.7;margin-bottom:16px;}
 
     .field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px;}
-    label{display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;}
-    input{width:100%;background:#0a0f1e;border:1px solid #1e293b;border-radius:6px;color:#f1f5f9;font-family:"JetBrains Mono",monospace;font-size:13px;padding:10px 12px;}
-    input:focus{outline:none;border-color:#a855f7;}
+    label{display:block;font-size:11px;font-weight:600;color:var(--fx-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;}
+    input{width:100%;background:var(--fx-bg);border:1px solid var(--fx-line);border-radius:6px;color:var(--fx-ink);font-family:"JetBrains Mono",monospace;font-size:13px;padding:10px 12px;}
+    input:focus{outline:none;border-color:var(--fx-ink);}
 
-    .btn{display:inline-flex;align-items:center;gap:8px;background:#a855f7;border:none;color:#fff;font-size:13.5px;font-weight:600;padding:10px 18px;border-radius:6px;cursor:pointer;font-family:"Inter",sans-serif;transition:background .15s;}
-    .btn:hover:not(:disabled){background:#9333ea;}
+    .btn{display:inline-flex;align-items:center;gap:8px;background:var(--fx-ink);border:none;color:var(--fx-on-accent);font-size:13.5px;font-weight:600;padding:10px 18px;border-radius:6px;cursor:pointer;font-family:var(--fx-body);transition:background .15s;}
+    .btn:hover:not(:disabled){background:var(--fx-ink);}
     .btn:disabled{opacity:.45;cursor:default;}
-    .btn-ghost{background:transparent;border:1px solid #1e293b;color:#94a3b8;}
-    .btn-ghost:hover:not(:disabled){border-color:#a855f7;color:#a855f7;background:transparent;}
+    .btn-ghost{background:transparent;border:1px solid var(--fx-line);color:var(--fx-muted);}
+    .btn-ghost:hover:not(:disabled){border-color:var(--fx-ink);color:var(--fx-ink);background:transparent;}
     .btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
 
     /* Protocol steps */
     .steps{display:flex;flex-direction:column;gap:0;margin-bottom:8px;}
-    .step{display:grid;grid-template-columns:34px 1fr;gap:14px;padding:16px 0;border-bottom:1px solid #131c33;}
+    .step{display:grid;grid-template-columns:34px 1fr;gap:14px;padding:16px 0;border-bottom:1px solid var(--fx-line-soft);}
     .step:last-child{border-bottom:none;}
-    .step-num{width:28px;height:28px;border-radius:50%;background:#0a0f1e;border:1px solid #1e293b;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:12px;color:#475569;}
-    .step.active .step-num{border-color:#a855f7;color:#a855f7;}
-    .step.done .step-num{border-color:#10b981;color:#10b981;}
-    .step.failed .step-num{border-color:#ef4444;color:#ef4444;}
-    .step-name{font-size:13.5px;font-weight:600;color:#f1f5f9;margin-bottom:2px;}
-    .step-note{font-size:12.5px;color:#475569;line-height:1.6;}
-    .step.done .step-note{color:#10b981;}
-    .step.failed .step-note{color:#ef4444;}
+    .step-num{width:28px;height:28px;border-radius:50%;background:var(--fx-bg);border:1px solid var(--fx-line);display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--fx-muted);}
+    .step.active .step-num{border-color:var(--fx-ink);color:var(--fx-ink);}
+    .step.done .step-num{border-color:var(--fx-ok);color:var(--fx-ok);}
+    .step.failed .step-num{border-color:var(--fx-bad);color:var(--fx-bad);}
+    .step-name{font-size:13.5px;font-weight:600;color:var(--fx-ink);margin-bottom:2px;}
+    .step-note{font-size:12.5px;color:var(--fx-muted);line-height:1.6;}
+    .step.done .step-note{color:var(--fx-ok);}
+    .step.failed .step-note{color:var(--fx-bad);}
 
-    pre{background:#060a15;border:1px solid #1e293b;border-radius:8px;padding:14px;overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.65;color:#94a3b8;margin-top:10px;}
+    pre{background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:14px;overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.65;color:var(--fx-muted);margin-top:10px;}
     .wire{margin-top:14px;}
-    .wire-label{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:#475569;text-transform:uppercase;letter-spacing:0.1em;}
+    .wire-label{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--fx-muted);text-transform:uppercase;letter-spacing:0.1em;}
 
-    .badge{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10.5px;padding:3px 8px;border-radius:100px;border:1px solid #1e293b;color:#64748b;}
-    .badge.ok{border-color:rgba(16,185,129,.4);color:#10b981;}
-    .badge.warn{border-color:rgba(245,158,11,.4);color:#f59e0b;}
+    .badge{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10.5px;padding:3px 8px;border-radius:100px;border:1px solid var(--fx-line);color:var(--fx-muted);}
+    .badge.ok{border-color:rgba(16,185,129,.4);color:var(--fx-ok);}
+    .badge.warn{border-color:rgba(245,158,11,.4);color:var(--fx-warn);}
 
-    .info{background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.25);border-radius:8px;padding:13px 16px;font-size:13px;color:#c4b5fd;line-height:1.7;margin-bottom:16px;}
-    .warn-box{background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:13px 16px;font-size:13px;color:#fcd34d;line-height:1.7;margin-bottom:16px;}
+    .info{background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:13px 16px;font-size:13px;color:var(--fx-muted);line-height:1.7;margin-bottom:16px;}
+    .warn-box{background:var(--fx-warn-bg);border:1px solid var(--fx-warn);border-radius:8px;padding:13px 16px;font-size:13px;color:var(--fx-warn);line-height:1.7;margin-bottom:16px;}
 
-    .page-footer{margin-top:60px;padding-top:24px;border-top:1px solid #1e293b;display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;font-size:12.5px;color:#334155;}
-    .page-footer a{color:#475569;}
-    .page-footer a:hover{color:#a855f7;}
+    .page-footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--fx-line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--fx-muted);}
+    .page-footer a{color:var(--fx-muted);}
+    .page-footer a:hover{color:var(--fx-ink);}
   </style>
 </head>
 <body>
@@ -96,8 +96,8 @@
     <div class="eyebrow">Agentic payments</div>
     <h1>An agent can pay<br>your invoice over HTTP.</h1>
     <p class="sub">
-      ArcFX speaks <strong style="color:#cbd5e1;">x402</strong> — the HTTP 402 payment standard Circle
-      co-founded. A client asks for an invoice, gets <code style="font-family:'JetBrains Mono',monospace;color:#a855f7;">402 Payment Required</code>,
+      ArcFX speaks <strong style="color:var(--fx-ink);">x402</strong> — the HTTP 402 payment standard Circle
+      co-founded. A client asks for an invoice, gets <code style="font-family:'JetBrains Mono',monospace;color:var(--fx-ink);">402 Payment Required</code>,
       signs a gasless authorization, and asks again. No account, no API key, no card.
       Every step of the exchange is shown below exactly as it happens on the wire.
     </p>
@@ -152,7 +152,7 @@
 
       <div class="warn-box" id="wallet-warn" style="display:none;">
         Connect a wallet holding Arc Testnet USDC to sign the authorization.
-        Get test funds from <a href="https://faucet.circle.com" target="_blank" rel="noopener" style="color:#fcd34d;text-decoration:underline;">faucet.circle.com</a>.
+        Get test funds from <a href="https://faucet.circle.com" target="_blank" rel="noopener" style="color:var(--fx-warn);text-decoration:underline;">faucet.circle.com</a>.
       </div>
 
       <div class="btn-row">

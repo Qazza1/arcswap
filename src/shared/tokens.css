@@ -35,7 +35,10 @@
 
   /* ── Ink ── */
   --fx-ink:     #0A0A0A;   /* 19.8:1 on --fx-bg */
-  --fx-muted:   #737373;   /* 4.7:1 — the lightest value safe for body text */
+  /* Chosen against the SUNKEN surface, not the page ground: #737373 cleared 4.5
+     on white but fell to 4.31 inside a card, so muted text failed exactly where
+     it is used most. 4.6:1 on sunken, 5.1:1 on the page. */
+  --fx-muted:   #6E6E6E;
   /* --fx-faint is ~2.5:1. Borders, disabled states, decorative marks only:
      never text a reader needs. Reach for --fx-muted instead. */
   --fx-faint:   #A3A3A3;
@@ -48,7 +51,7 @@
 
   /* ── State. The only place colour is allowed to carry meaning. ── */
   --fx-ok:      #15803D;  --fx-ok-bg:   #DCFCE7;
-  --fx-warn:    #A16207;  --fx-warn-bg: #FEF3C7;
+  --fx-warn:    #8A5407;  --fx-warn-bg: #FEF3C7;
   --fx-bad:     #B91C1C;  --fx-bad-bg:  #FEE2E2;
   --fx-info:    #1D4ED8;  --fx-info-bg: #DBEAFE;
 
