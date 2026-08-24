@@ -267,7 +267,7 @@ function renderGenMode() {
       <div class="card-body">
 
         <div class="field">
-          <label>Your wallet address</label>
+          <label for="gen-address">Your wallet address</label>
           <input id="gen-address" class="mono-input" type="text" placeholder="0x... (connect wallet or paste manually)" autocomplete="off" />
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
             <span class="field-hint">The address that will receive the payment.</span>
@@ -283,7 +283,7 @@ function renderGenMode() {
 
         <div class="amount-row">
           <div class="field">
-            <label>Amount <span style="color:var(--subtle)">(optional)</span></label>
+            <label for="gen-amount">Amount <span style="color:var(--subtle)">(optional)</span></label>
             <input id="gen-amount" type="number" min="0" step="any" placeholder="Leave blank for any amount" autocomplete="off" />
           </div>
           <div class="field">
@@ -300,7 +300,7 @@ function renderGenMode() {
         </div>
 
         <div class="field">
-          <label>Note <span style="color:var(--subtle)">(optional)</span></label>
+          <label for="gen-note">Note <span style="color:var(--subtle)">(optional)</span></label>
           <textarea id="gen-note" placeholder="Invoice #1, freelance payment, etc."></textarea>
         </div>
 
@@ -441,7 +441,7 @@ function renderPayMode() {
         ${!hasFixed ? `
         <div class="pay-any-amount">
           <div class="field">
-            <label>Amount</label>
+            <label for="pay-custom-amount">Amount</label>
             <input id="pay-custom-amount" type="number" min="0" step="any" placeholder="0.00" autocomplete="off"
               oninput="document.getElementById('pay-amount-display').textContent = this.value || '—'; updateFeeBreakdown();" />
           </div>

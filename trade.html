@@ -50,7 +50,7 @@
 
     /* Page header: title + network pill */
     .tool-head { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:18px; gap:16px; flex-wrap:wrap; }
-    .tool-title { font-family:var(--fx-body); font-size:25px; font-weight:700; letter-spacing:-0.5px; color:var(--text); }
+    .tool-title { margin:0; font-family:var(--fx-body); font-size:25px; font-weight:700; letter-spacing:-0.5px; color:var(--text); }
     .tool-title .accent { color:var(--blue); }
     .tool-sub { font-size:13px; color:var(--muted); margin-top:2px; }
     .net-pill { display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--teal); background:var(--teal-dim); border:1px solid rgba(0,212,170,.2); padding:6px 11px; border-radius:100px; white-space:nowrap; }
@@ -147,7 +147,7 @@
     <!-- Page header -->
     <div class="tool-head">
       <div>
-        <div class="tool-title">Swap <span class="accent">&amp;</span> Bridge</div>
+        <h1 class="tool-title">Swap <span class="accent">&amp;</span> Bridge</h1>
         <div class="tool-sub">USDC &amp; EURC on Arc · gas paid in USDC, no ETH</div>
       </div>
       <span class="net-pill"><span class="dot"></span>Arc Testnet</span>
@@ -256,7 +256,7 @@
                     <svg class="token-pill-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </button>
                   <div id="token-in-menu" class="token-menu" style="display:none;"></div>
-                  <select id="token-in-select" style="display:none;"></select>
+                  <select id="token-in-select" style="display:none;" aria-label="Token In Select"></select>
                 </div>
                 <input
                   id="amount-input"
@@ -267,7 +267,7 @@
                          font-family:'JetBrains Mono',monospace;font-size:28px;
                          font-weight:500;color:var(--fx-ink);text-align:right;
                          letter-spacing:-0.5px;min-width:0;"
-                />
+                aria-label="0.00" />
               </div>
             </div>
 
@@ -302,7 +302,7 @@
                     <svg class="token-pill-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </button>
                   <div id="token-out-menu" class="token-menu" style="display:none;"></div>
-                  <select id="token-out-select" style="display:none;"></select>
+                  <select id="token-out-select" style="display:none;" aria-label="Token Out Select"></select>
                 </div>
                 <div id="estimate-output"
                      style="flex:1;text-align:right;font-family:'JetBrains Mono',monospace;
@@ -373,7 +373,7 @@
             <select id="bridge-external-select"
                     style="width:100%;background:var(--fx-surface);border:1px solid var(--fx-line);
                            border-radius:6px;color:var(--fx-ink);font-size:13px;padding:9px 10px;
-                           font-family:'JetBrains Mono',monospace;cursor:pointer;"></select>
+                           font-family:'JetBrains Mono',monospace;cursor:pointer;" aria-label="Bridge External Select"></select>
           </div>
 
           <!-- Network selectors -->
@@ -458,7 +458,7 @@
                        font-family:'JetBrains Mono',monospace;font-size:28px;
                        font-weight:500;color:var(--fx-ink);text-align:right;
                        min-width:0;letter-spacing:-0.5px;"
-              />
+              aria-label="0.00" />
             </div>
             <div style="display:flex;justify-content:flex-end;margin-top:8px;">
               <span style="font-family:'JetBrains Mono',monospace;font-size:13px;

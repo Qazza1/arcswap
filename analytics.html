@@ -47,7 +47,7 @@
     .page-hdr { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 36px; flex-wrap: wrap; gap: 16px; }
     .page-hdr-left { }
     .page-eyebrow { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; color: var(--fx-accent); text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 10px; }
-    .page-title { font-size: clamp(26px, 3.5vw, 36px); font-weight: 700; color: var(--fx-ink); letter-spacing: -0.8px; }
+    .page-title { margin: 0; font-size: clamp(26px, 3.5vw, 36px); font-weight: 700; color: var(--fx-ink); letter-spacing: -0.8px; }
     .last-updated { display: flex; align-items: center; gap: 8px; font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--fx-muted); }
     #refresh-btn {
       display: flex; align-items: center; gap: 6px;
@@ -172,7 +172,7 @@
     <div class="page-hdr">
       <div class="page-hdr-left">
         <div class="page-eyebrow">Protocol analytics</div>
-        <div class="page-title">Live dashboard</div>
+        <h1 class="page-title">Live dashboard</h1>
       </div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="last-updated">Updated <span id="last-updated">—</span></div>
