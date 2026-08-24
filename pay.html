@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- Document register: paper and ink. Client-facing. src/shared/tokens.css -->
+<html lang="en" data-register="document">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title id="page-title">ArcFX Pay — Stablecoin payments on Arc</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     /* Hide the browser's default number-input spinner arrows (looked unfinished) */
@@ -16,26 +16,28 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:       #060810;
-      --card:     #0b0f1a;
-      --raised:   #101420;
-      --border:   #1a2035;
-      --bmed:     #252d45;
-      --text:     #e8edf8;
-      --muted:    #4a5578;
-      --subtle:   #2a3350;
-      --blue:     #3d7eff;
-      --bdim:     rgba(61,126,255,0.1);
-      --teal:     #00d4aa;
-      --tdim:     rgba(0,212,170,0.08);
-      --orange:   #ff6b35;
-      --red:      #ff4d6a;
-      --r:        10px;
-      --rsm:      6px;
-      --rlg:      14px;
+      /* Client-facing: the DOCUMENT register — paper, ink, a text serif.
+         An invoice is the most public thing ArcFX produces and it gets printed,
+         so it reads as a document rather than as software output.
+         Tokens: src/shared/tokens.css */
+      --bg:     var(--fx-bg);
+      --card:   var(--fx-surface);
+      --raised: var(--fx-sunken);
+      --border: var(--fx-line);
+      --bmed:   var(--fx-line);
+      --text:   var(--fx-ink);
+      --muted:  var(--fx-muted);
+      --subtle: var(--fx-muted);
+      --blue:   var(--fx-accent);
+      --bdim:   var(--fx-sunken);
+      --teal:   var(--fx-ok);
+      --tdim:   var(--fx-ok-bg);
+      --orange: var(--fx-warn);
+      --red:    var(--fx-bad);
+      --r: var(--fx-r); --rsm: var(--fx-r-sm); --rlg: var(--fx-r-lg);
     }
     html { scroll-behavior: smooth; }
-    body { font-family: "Space Grotesk", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: var(--fx-body); background: var(--bg); color: var(--text); min-height: 100vh; }
     a { color: var(--blue); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
@@ -43,7 +45,7 @@
     nav { height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; background: rgba(6,8,16,.96); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
     .nav-logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; color: var(--text); }
     .nav-logo img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--bmed); }
-    .btn-ghost { background: transparent; border: 1px solid var(--bmed); color: var(--text); font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--rsm); cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: border-color .15s, background .15s; }
+    .btn-ghost { background: transparent; border: 1px solid var(--bmed); color: var(--text); font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--rsm); cursor: pointer; font-family: var(--fx-body); transition: border-color .15s, background .15s; }
     .btn-ghost:hover { border-color: var(--blue); background: var(--bdim); }
     .btn-ghost.connected { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
 
@@ -60,7 +62,7 @@
     .eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; }
 
     h1 { font-size: clamp(26px, 5vw, 38px); font-weight: 700; letter-spacing: -1px; line-height: 1.1; margin-bottom: 10px; }
-    .gradient { background: linear-gradient(135deg, #3d7eff, #00d4aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gradient { color: var(--fx-muted); font-weight: 400; }
     .sub { font-size: 14.5px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; }
 
     /* Form fields */
@@ -68,13 +70,13 @@
     .field label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
     .field input, .field select, .field textarea {
       background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm);
-      color: var(--text); font-size: 14px; font-family: "Space Grotesk", sans-serif;
+      color: var(--text); font-size: 14px; font-family: var(--fx-body);
       padding: 11px 13px; outline: none; transition: border-color .15s; width: 100%;
       -webkit-appearance: none;
     }
     .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); }
     .field input::placeholder, .field textarea::placeholder { color: var(--subtle); }
-    .field select option { background: #0b0f1a; color: var(--text); }
+    .field select option { background: var(--fx-surface); color: var(--text); }
     .field textarea { resize: none; min-height: 72px; font-size: 13.5px; line-height: 1.6; }
     .mono-input { font-family: "JetBrains Mono", monospace !important; font-size: 12.5px !important; }
     .field-hint { font-size: 11px; color: var(--muted); }
@@ -86,7 +88,7 @@
 
     /* Token selector */
     .token-btns { display: flex; gap: 6px; }
-    .token-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm); padding: 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all .15s; color: var(--muted); font-family: "Space Grotesk", sans-serif; }
+    .token-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm); padding: 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all .15s; color: var(--muted); font-family: var(--fx-body); }
     .token-btn:hover { border-color: var(--bmed); color: var(--text); }
     .token-btn.active { background: var(--bdim); border-color: rgba(61,126,255,.4); color: var(--blue); }
     .token-logo { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
@@ -94,18 +96,18 @@
     .eurc { background: #1a3ca8; color: #fff; }
 
     /* Buttons */
-    .btn-primary { display: block; width: 100%; background: linear-gradient(135deg, #3d7eff, #00d4aa); color: #fff; border: none; border-radius: var(--r); padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: opacity .15s; }
+    .btn-primary { display: block; width: 100%; background: var(--fx-accent); color: var(--fx-on-accent); border: none; border-radius: var(--r); padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: var(--fx-body); transition: opacity .15s; }
     .btn-primary:hover { opacity: .88; }
     .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
 
-    .btn-outline { display: block; width: 100%; background: transparent; border: 1px solid var(--bmed); color: var(--text); border-radius: var(--r); padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; }
+    .btn-outline { display: block; width: 100%; background: transparent; border: 1px solid var(--bmed); color: var(--text); border-radius: var(--r); padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--fx-body); transition: all .15s; }
     .btn-outline:hover { border-color: var(--blue); background: var(--bdim); }
 
     /* Generated link box */
     .link-box { background: var(--raised); border: 1px solid var(--bmed); border-radius: var(--rsm); padding: 14px; margin-bottom: 14px; }
     .link-label { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
     .link-url { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--blue); word-break: break-all; line-height: 1.7; margin-bottom: 12px; }
-    .copy-btn { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; background: var(--bdim); border: 1px solid rgba(61,126,255,.3); color: var(--blue); border-radius: var(--rsm); padding: 9px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; }
+    .copy-btn { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; background: var(--bdim); border: 1px solid rgba(61,126,255,.3); color: var(--blue); border-radius: var(--rsm); padding: 9px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--fx-body); transition: all .15s; }
     .copy-btn:hover { background: rgba(61,126,255,.18); }
     .copy-btn.copied { background: var(--tdim); border-color: rgba(0,212,170,.3); color: var(--teal); }
 
@@ -115,7 +117,7 @@
 
     /* Status */
     .status { border-radius: var(--rsm); padding: 12px 14px; font-size: 13px; line-height: 1.6; margin-top: 12px; }
-    .status.info    { background: var(--bdim); border: 1px solid rgba(61,126,255,.25); color: #7eb3ff; }
+    .status.info    { background: var(--bdim); border: 1px solid rgba(61,126,255,.25); color: var(--fx-accent); }
     .status.success { background: var(--tdim); border: 1px solid rgba(0,212,170,.25); color: var(--teal); }
     .status.error   { background: rgba(255,77,106,.07); border: 1px solid rgba(255,77,106,.25); color: var(--red); }
     .status-title   { font-weight: 700; margin-bottom: 5px; }
@@ -429,10 +431,10 @@ function renderPayMode() {
             ${sym}
           </div>
           ${hasFixed && isFinite(fxRate) && fxRate > 0 && (fxToken === "USDC" || fxToken === "EURC") ? `
-          <div style="margin-top:10px;font-size:12px;color:#64748b;line-height:1.6;">
+          <div style="margin-top:10px;font-size:12px;color:var(--fx-muted);line-height:1.6;">
             ≈ ${fmtAmt(parseFloat(fixedAmt) / fxRate, 2)} ${fxToken}
             &nbsp;·&nbsp; 1 ${fxToken} = ${fxRate.toFixed(4)} ${sym}
-            <br><span style="font-size:11px;color:#475569;">Indicative FX quote${fxAt ? " from " + new Date(fxAt).toLocaleDateString() : ""} — settles in ${sym}</span>
+            <br><span style="font-size:11px;color:var(--fx-muted);">Indicative FX quote${fxAt ? " from " + new Date(fxAt).toLocaleDateString() : ""} — settles in ${sym}</span>
           </div>` : ""}
         </div>
 

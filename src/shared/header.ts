@@ -36,6 +36,7 @@ import { arcfxWallet } from './wallet';
 // here because every page mounts this header, so the token layer arrives
 // everywhere from one place. Vite bundles it into the page's CSS.
 import './tokens.css';
+import { arcfxMark } from './brand';
 
 export type PageKey =
   | 'index' | 'app' | 'trade' | 'multisend' | 'pay' | 'invoice' | 'history'
@@ -180,74 +181,81 @@ const CANONICAL_CSS = `
   }
 
   /* ═══ App register ═══════════════════════════════════════════════════════
-     A page opts in with <html data-register="app">. The nav and stats bar are
+     A page opts in with data-register on <html> — either register. The nav and
+     stats bar are app chrome and stay light in both. The nav and stats bar are
      built from inline styles, so they are overridden here rather than
      rewritten — which means pages that have not been converted yet keep the
      dark chrome and nothing changes for them until they opt in.
      Remove this block once every page has been converted. */
-  [data-register="app"] .arcfx-nav {
+  [data-register] .arcfx-nav {
     background: var(--fx-bg) !important;
     border-bottom: 1px solid var(--fx-line) !important;
     backdrop-filter: none !important;
   }
-  [data-register="app"] .arcfx-nav a,
-  [data-register="app"] .arcfx-nav button { color: var(--fx-muted) !important; }
-  [data-register="app"] .arcfx-nav a span { color: var(--fx-ink) !important; }
-  [data-register="app"] .arcfx-nav a:hover,
-  [data-register="app"] .arcfx-nav button:hover { color: var(--fx-ink) !important; }
-  [data-register="app"] .arcfx-nav img { border-color: var(--fx-line) !important; }
+  [data-register] .arcfx-nav a,
+  [data-register] .arcfx-nav button { color: var(--fx-muted) !important; }
+  [data-register] .arcfx-nav a span { color: var(--fx-ink) !important; }
+  [data-register] .arcfx-nav a:hover,
+  [data-register] .arcfx-nav button:hover { color: var(--fx-ink) !important; }
+  /* The mark is stroke-based and inherits colour, so it needs ink rather than
+     a border to sit correctly on a light ground. */
+  [data-register] .arcfx-nav > a { color: var(--fx-ink) !important; }
+  [data-register] .arcfx-wordmark { color: var(--fx-ink) !important; }
 
-  [data-register="app"] .arcfx-testnet-pill {
+  [data-register] .arcfx-testnet-pill {
     background: var(--fx-surface) !important;
     border-color: var(--fx-line) !important;
   }
   /* Every chip in the nav, not just Connect: the Contacts and hamburger buttons
      keep their own dark background otherwise, leaving grey text on a dark chip
      at 3.8:1. */
-  [data-register="app"] #connect-btn,
-  [data-register="app"] .arcfx-nav button[id^="arcfx-contacts-btn"],
-  [data-register="app"] .arcfx-hamburger {
+  [data-register] #connect-btn,
+  [data-register] .arcfx-nav button[id^="arcfx-contacts-btn"],
+  [data-register] .arcfx-hamburger {
     background: var(--fx-surface) !important;
     border-color: var(--fx-line) !important;
     color: var(--fx-ink) !important;
   }
-  [data-register="app"] .arcfx-hamburger svg { stroke: var(--fx-ink) !important; }
+  [data-register] .arcfx-hamburger svg { stroke: var(--fx-ink) !important; }
 
-  [data-register="app"] .stats-bar {
+  [data-register] .stats-bar {
     background: var(--fx-surface) !important;
     border-bottom: 1px solid var(--fx-line) !important;
   }
   /* --fx-muted, not --fx-faint: these labels are 11px, and faint on the raised
      surface measures 2.4:1, well under the 4.5:1 that small text needs. */
-  [data-register="app"] .stats-bar-label { color: var(--fx-muted) !important; }
-  [data-register="app"] .stats-bar-val   { color: var(--fx-muted) !important; }
-  [data-register="app"] .stats-bar-sep   { background: var(--fx-line) !important; }
+  [data-register] .stats-bar-label { color: var(--fx-muted) !important; }
+  [data-register] .stats-bar-val   { color: var(--fx-muted) !important; }
+  [data-register] .stats-bar-sep   { background: var(--fx-line) !important; }
 
   /* Dropdowns and the contacts modal are dark panels in the legacy chrome. */
-  [data-register="app"] .arcfx-nav div[id^="arcfx-tools-dd"],
-  [data-register="app"] .arcfx-nav div[id^="arcfx-more-dd"],
-  [data-register="app"] div[id^="arcfx-mobile-menu"],
-  [data-register="app"] #arcfx-contacts-inner {
+  [data-register] .arcfx-nav div[id^="arcfx-tools-dd"],
+  [data-register] .arcfx-nav div[id^="arcfx-more-dd"],
+  [data-register] div[id^="arcfx-mobile-menu"],
+  [data-register] #arcfx-contacts-inner {
     background: var(--fx-surface) !important;
     border-color: var(--fx-line) !important;
     box-shadow: 0 16px 40px rgba(0,0,0,.10) !important;
   }
-  [data-register="app"] div[id^="arcfx-tools-dd"] a,
-  [data-register="app"] div[id^="arcfx-more-dd"] a,
-  [data-register="app"] div[id^="arcfx-mobile-menu"] a { color: var(--fx-ink) !important; }
-  /* The active link in the nav and mobile menu paints a dark chip inline,
-     which survives on a light ground as near-black on near-black. */
-  [data-register="app"] .arcfx-nav-center a[style*="background"],
-  [data-register="app"] div[id^="arcfx-mobile-menu"] a[style*="background"] {
+  [data-register] div[id^="arcfx-tools-dd"] a,
+  [data-register] div[id^="arcfx-more-dd"] a,
+  [data-register] div[id^="arcfx-mobile-menu"] a { color: var(--fx-ink) !important; }
+  /* Active state paints a dark chip inline — on links AND on the Tools/More
+     dropdown buttons. Targeting the exact inline value is what distinguishes
+     an active chip from the transparent inactive ones, so the active state
+     survives instead of being flattened away. */
+  [data-register] .arcfx-nav [style*="background:#1e293b"],
+  [data-register] .arcfx-nav [style*="background: #1e293b"],
+  [data-register] div[id^="arcfx-mobile-menu"] [style*="background:#1e293b"] {
     background: var(--fx-sunken) !important;
     color: var(--fx-ink) !important;
   }
-  [data-register="app"] div[id^="arcfx-tools-dd"] a div,
-  [data-register="app"] div[id^="arcfx-more-dd"] a div { color: var(--fx-muted) !important; }
-  [data-register="app"] #arcfx-contacts-inner,
-  [data-register="app"] #arcfx-contacts-inner * { color: var(--fx-ink); }
-  [data-register="app"] #arcfx-contact-name,
-  [data-register="app"] #arcfx-contact-addr {
+  [data-register] div[id^="arcfx-tools-dd"] a div,
+  [data-register] div[id^="arcfx-more-dd"] a div { color: var(--fx-muted) !important; }
+  [data-register] #arcfx-contacts-inner,
+  [data-register] #arcfx-contacts-inner * { color: var(--fx-ink); }
+  [data-register] #arcfx-contact-name,
+  [data-register] #arcfx-contact-addr {
     background: var(--fx-bg) !important;
     border-color: var(--fx-line) !important;
     color: var(--fx-ink) !important;
@@ -332,8 +340,8 @@ function buildMarketingNav(activeLink: ActiveLink): string {
   return `
 <nav class="arcfx-nav" style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;backdrop-filter:blur(12px);">
   <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
-    <img src="/logo.png" alt="ArcFX" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #334155;" />
-    <span style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.3px;">ArcFX</span>
+    ${arcfxMark(26)}
+    <span class="arcfx-wordmark" style="font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:16px;font-weight:700;color:#f1f5f9;letter-spacing:-0.02em;">ArcFX</span>
   </a>
   <div class="arcfx-nav-center" style="display:flex;align-items:center;gap:2px;">
     ${links}
@@ -399,8 +407,8 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
   return `
 <nav class="arcfx-nav" style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;">
   <a href="/app" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
-    <img src="/logo.png" alt="ArcFX" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #334155;" />
-    <span style="font-size:15px;font-weight:600;color:#f1f5f9;letter-spacing:-0.3px;">ArcFX</span>
+    ${arcfxMark(26)}
+    <span class="arcfx-wordmark" style="font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:16px;font-weight:700;color:#f1f5f9;letter-spacing:-0.02em;">ArcFX</span>
   </a>
   <div class="arcfx-nav-center" style="display:flex;align-items:center;gap:2px;">
     ${tradeLink}
