@@ -18,16 +18,15 @@ interface IERC20 {
 }
 
 contract ArcFXMultisender {
-
     // ── State ─────────────────────────────────────────────────────────────────
 
     address public owner;
-    address public treasury;             // collects protocol fees
+    address public treasury; // collects protocol fees
 
-    uint256 public constant FREE_LIMIT   = 5;       // max recipients on free tier
-    uint256 public constant MAX_LIMIT    = 500;     // max recipients on pro tier
-    uint256 public constant FEE_BPS      = 10;      // 0.10% = 10 basis points
-    uint256 public constant BPS_DENOM    = 10_000;  // basis point denominator
+    uint256 public constant FREE_LIMIT = 5; // max recipients on free tier
+    uint256 public constant MAX_LIMIT = 500; // max recipients on pro tier
+    uint256 public constant FEE_BPS = 10; // 0.10% = 10 basis points
+    uint256 public constant BPS_DENOM = 10_000; // basis point denominator
     // Math: fee = (total * 10) / 10_000 — multiply before divide prevents precision loss
 
     // ── Events ────────────────────────────────────────────────────────────────
@@ -38,7 +37,7 @@ contract ArcFXMultisender {
         uint256 totalAmount,
         uint256 recipientCount,
         uint256 fee,
-        bool    isPro
+        bool isPro
     );
 
     event OwnershipTransferred(address indexed previous, address indexed next);
@@ -48,7 +47,7 @@ contract ArcFXMultisender {
 
     constructor(address _treasury) {
         require(_treasury != address(0), "Invalid treasury address");
-        owner    = msg.sender;
+        owner = msg.sender;
         treasury = _treasury;
     }
 
@@ -64,11 +63,7 @@ contract ArcFXMultisender {
     /**
      * Free tier: send to up to 5 recipients, no fee.
      */
-    function multisendFree(
-        address         token,
-        address[] calldata recipients,
-        uint256[] calldata amounts
-    ) external {
+    function multisendFree(address token, address[] calldata recipients, uint256[] calldata amounts) external {
         _validateInputs(recipients, amounts, FREE_LIMIT);
         _execute(token, recipients, amounts, false);
     }
@@ -77,40 +72,27 @@ contract ArcFXMultisender {
      * Pro tier: send to up to 500 recipients.
      * A 0.10% protocol fee is added on top of the total amount.
      */
-    function multisend(
-        address         token,
-        address[] calldata recipients,
-        uint256[] calldata amounts
-    ) external {
+    function multisend(address token, address[] calldata recipients, uint256[] calldata amounts) external {
         _validateInputs(recipients, amounts, MAX_LIMIT);
         _execute(token, recipients, amounts, true);
     }
 
     // ── Internal ──────────────────────────────────────────────────────────────
 
-    function _validateInputs(
-        address[] calldata recipients,
-        uint256[] calldata amounts,
-        uint256 maxLen
-    ) internal pure {
-        require(recipients.length > 0,                        "No recipients");
-        require(recipients.length <= maxLen,                  "Too many recipients");
-        require(recipients.length == amounts.length,          "Length mismatch");
+    function _validateInputs(address[] calldata recipients, uint256[] calldata amounts, uint256 maxLen) internal pure {
+        require(recipients.length > 0, "No recipients");
+        require(recipients.length <= maxLen, "Too many recipients");
+        require(recipients.length == amounts.length, "Length mismatch");
     }
 
-    function _execute(
-        address         token,
-        address[] calldata recipients,
-        uint256[] calldata amounts,
-        bool    isPro
-    ) internal {
+    function _execute(address token, address[] calldata recipients, uint256[] calldata amounts, bool isPro) internal {
         IERC20 erc20 = IERC20(token);
 
         // Sum total
         uint256 total = 0;
         for (uint256 i = 0; i < amounts.length; i++) {
             require(recipients[i] != address(0), "Zero address recipient");
-            require(amounts[i] > 0,              "Zero amount");
+            require(amounts[i] > 0, "Zero amount");
             total += amounts[i];
         }
 
@@ -119,14 +101,8 @@ contract ArcFXMultisender {
         uint256 pull = total + fee;
 
         // Pull tokens from sender (must have approved this contract first)
-        require(
-            erc20.allowance(msg.sender, address(this)) >= pull,
-            "Insufficient allowance - approve first"
-        );
-        require(
-            erc20.balanceOf(msg.sender) >= pull,
-            "Insufficient balance"
-        );
+        require(erc20.allowance(msg.sender, address(this)) >= pull, "Insufficient allowance - approve first");
+        require(erc20.balanceOf(msg.sender) >= pull, "Insufficient balance");
 
         // H-02: CEI pattern — emit event before external interactions.
         // If any subsequent transfer reverts, the entire transaction (including
@@ -153,13 +129,15 @@ contract ArcFXMultisender {
 
     // ── Admin ─────────────────────────────────────────────────────────────────
 
-    function setTreasury(address newTreasury) external onlyOwner { // L-02: mixedCase param
+    function setTreasury(address newTreasury) external onlyOwner {
+        // L-02: mixedCase param
         require(newTreasury != address(0), "Invalid treasury address");
         emit TreasuryUpdated(treasury, newTreasury);
         treasury = newTreasury;
     }
 
-    function transferOwnership(address newOwner) external onlyOwner { // L-02: mixedCase param
+    function transferOwnership(address newOwner) external onlyOwner {
+        // L-02: mixedCase param
         require(newOwner != address(0), "Invalid address");
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
@@ -170,7 +148,7 @@ contract ArcFXMultisender {
      */
     function emergencyWithdraw(address token) external onlyOwner {
         IERC20 erc20 = IERC20(token);
-        uint256 bal  = erc20.balanceOf(address(this));
+        uint256 bal = erc20.balanceOf(address(this));
         require(bal > 0, "Nothing to withdraw");
         require(erc20.transfer(owner, bal), "Withdraw failed"); // H-01: checked return value
     }
@@ -181,12 +159,14 @@ contract ArcFXMultisender {
      * Calculate the total amount needed (including fee) for a given recipients list.
      */
     function quoteTotal(uint256[] calldata amounts, bool isPro)
-        external pure returns (uint256 total, uint256 fee, uint256 totalWithFee)
+        external
+        pure
+        returns (uint256 total, uint256 fee, uint256 totalWithFee)
     {
         for (uint256 i = 0; i < amounts.length; i++) {
             total += amounts[i];
         }
-        fee          = isPro ? (total * FEE_BPS) / BPS_DENOM : 0;
+        fee = isPro ? (total * FEE_BPS) / BPS_DENOM : 0;
         totalWithFee = total + fee;
     }
 }

@@ -21,10 +21,9 @@ interface IERC20 {
 }
 
 contract ArcFXPayments {
-
     // ── Constants ─────────────────────────────────────────────────────────────
 
-    uint256 public constant FEE_BPS   = 15;       // 0.15% = 15 basis points
+    uint256 public constant FEE_BPS = 15; // 0.15% = 15 basis points
     uint256 public constant BPS_DENOM = 10_000;
 
     // Fee math (for USDC with 6 decimals):
@@ -37,7 +36,7 @@ contract ArcFXPayments {
     // ── State ─────────────────────────────────────────────────────────────────
 
     address public owner;
-    address public treasury;    // receives the 0.15% protocol fee
+    address public treasury; // receives the 0.15% protocol fee
 
     // ── Events ────────────────────────────────────────────────────────────────
 
@@ -56,10 +55,10 @@ contract ArcFXPayments {
         bytes32 indexed paymentId,
         address indexed payer,
         address indexed recipient,
-        address         token,
-        uint256         gross,
-        uint256         fee,
-        uint256         net
+        address token,
+        uint256 gross,
+        uint256 fee,
+        uint256 net
     );
 
     event TreasuryUpdated(address indexed previous, address indexed next);
@@ -69,7 +68,7 @@ contract ArcFXPayments {
 
     constructor(address _treasury) {
         require(_treasury != address(0), "Invalid treasury address");
-        owner    = msg.sender;
+        owner = msg.sender;
         treasury = _treasury;
     }
 
@@ -93,29 +92,18 @@ contract ArcFXPayments {
      * @param gross       Total amount in token units (including protocol fee)
      * @param paymentId   Off-chain reference: keccak256 of invoice number or pay link ID
      */
-    function pay(
-        address token,
-        address recipient,
-        uint256 gross,
-        bytes32 paymentId
-    ) external {
+    function pay(address token, address recipient, uint256 gross, bytes32 paymentId) external {
         // ── Validate ─────────────────────────────────────────────────────────
-        require(token     != address(0), "Invalid token");
+        require(token != address(0), "Invalid token");
         require(recipient != address(0), "Invalid recipient");
-        require(gross      > 0,          "Amount must be > 0");
+        require(gross > 0, "Amount must be > 0");
         require(paymentId != bytes32(0), "Invalid payment ID");
         require(recipient != msg.sender, "Cannot pay yourself");
 
         IERC20 erc20 = IERC20(token);
 
-        require(
-            erc20.allowance(msg.sender, address(this)) >= gross,
-            "Insufficient allowance - approve first"
-        );
-        require(
-            erc20.balanceOf(msg.sender) >= gross,
-            "Insufficient balance"
-        );
+        require(erc20.allowance(msg.sender, address(this)) >= gross, "Insufficient allowance - approve first");
+        require(erc20.balanceOf(msg.sender) >= gross, "Insufficient balance");
 
         // ── Fee calculation ───────────────────────────────────────────────────
         // Multiply before divide — no precision loss
@@ -127,15 +115,7 @@ contract ArcFXPayments {
         // ── H-02: CEI pattern — emit event before external interactions ────────
         // If any subsequent transfer reverts, the whole transaction (including
         // this event) is rolled back, so no phantom events are ever recorded.
-        emit PaymentExecuted(
-            paymentId,
-            msg.sender,
-            recipient,
-            token,
-            gross,
-            fee,
-            net
-        );
+        emit PaymentExecuted(paymentId, msg.sender, recipient, token, gross, fee, net);
 
         // ── Settlement ────────────────────────────────────────────────────────
         // Pull full gross from payer in one transferFrom
@@ -164,10 +144,7 @@ contract ArcFXPayments {
      * @return fee    Protocol fee (0.15% of gross)
      * @return net    Amount recipient will receive (gross - fee)
      */
-    function quoteFee(uint256 gross)
-        external pure
-        returns (uint256 fee, uint256 net)
-    {
+    function quoteFee(uint256 gross) external pure returns (uint256 fee, uint256 net) {
         fee = (gross * FEE_BPS) / BPS_DENOM;
         net = gross - fee;
     }
@@ -176,30 +153,27 @@ contract ArcFXPayments {
      * Build the paymentId from an off-chain string reference.
      * Convenience helper for frontends: keccak256(abi.encodePacked(ref))
      */
-    function buildPaymentId(string calldata ref)
-        external pure
-        returns (bytes32)
-    {
+    function buildPaymentId(string calldata ref) external pure returns (bytes32) {
         return keccak256(abi.encodePacked(ref));
     }
 
     // ── Internal ──────────────────────────────────────────────────────────────
 
-    function _safeTransfer(IERC20 token, address to, uint256 amount)
-        internal returns (bool)
-    {
+    function _safeTransfer(IERC20 token, address to, uint256 amount) internal returns (bool) {
         return token.transfer(to, amount);
     }
 
     // ── Admin ─────────────────────────────────────────────────────────────────
 
-    function setTreasury(address newTreasury) external onlyOwner { // L-02: mixedCase param
+    function setTreasury(address newTreasury) external onlyOwner {
+        // L-02: mixedCase param
         require(newTreasury != address(0), "Invalid treasury address");
         emit TreasuryUpdated(treasury, newTreasury);
         treasury = newTreasury;
     }
 
-    function transferOwnership(address newOwner) external onlyOwner { // L-02: mixedCase param
+    function transferOwnership(address newOwner) external onlyOwner {
+        // L-02: mixedCase param
         require(newOwner != address(0), "Invalid address");
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
@@ -210,7 +184,7 @@ contract ArcFXPayments {
      */
     function emergencyWithdraw(address token) external onlyOwner {
         IERC20 erc20 = IERC20(token);
-        uint256 bal  = erc20.balanceOf(address(this));
+        uint256 bal = erc20.balanceOf(address(this));
         require(bal > 0, "Nothing to withdraw");
         require(erc20.transfer(owner, bal), "Withdraw failed"); // H-01: checked return value
     }
