@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  check:
-    name: Foundry project
+  contracts:
+    name: Contracts
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,3 +33,54 @@ jobs:
 
       - name: Run Forge tests
         run: forge test -vvv
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npx vite build
+
+      # The CSP forbids inline scripts and inline event handlers. Nothing stops
+      # someone reintroducing an onclick= later, and the page would silently
+      # stop working in production only — so the build output is checked here.
+      - name: No inline scripts or handlers in the build
+        run: node script/csp-guard.mjs
+
+  deployments:
+    name: Deployed contracts match the manifest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Reads a public RPC — no secrets. Catches the source-vs-deployed drift
+      # that let the two contracts disagree about the fee rate for weeks.
+      - name: Check chain against deployments/arc-testnet.json
+        run: node script/deployments.mjs check

@@ -48,12 +48,39 @@ redeployed**:
 That edit is the origin of the fee mismatch: the site advertised one rate while
 the two live contracts charged 0.15% (payments) and 0.10% (batches).
 
-## Four sources to reconcile before the audit
+## This is now checked automatically
 
-1. **Deployed ArcFXPayments** — this directory; equals `contracts/ArcFXPayments.sol` at `HEAD`
+Everything below used to be a thing you had to remember. It is enforced instead:
+
+```bash
+npm run check:deployments
+```
+
+`script/deployments.mjs` reads Arc Testnet directly and compares the live
+addresses, runtime-bytecode hashes and public constants against
+`deployments/arc-testnet.json`, plus the SHA-256 of every file in this
+directory. It fails on any drift, needs no secrets, and runs in CI on every
+push. Had it existed earlier, the fee mismatch would have been caught the day
+the Multisender source was edited.
+
+After a **real** deploy — and only then — regenerate the manifest:
+
+```bash
+npm run write:deployments
+```
+
+## Sources to reconcile before the audit
+
+1. **Deployed ArcFXPayments** — this directory
 2. **Deployed ArcFXMultisender** — this directory; equals `contracts/ArcFXMultisender.sol` at `e609339`
-3. **Current `contracts/`** — `pragma ^0.8.20`, `FEE_BPS = 15` in both, `treasury` naming
-4. **Slither-remediated working copy** — `pragma 0.8.35`, pinned version, further hardening
+3. **Current `contracts/`** — pinned `pragma 0.8.35`, correct `FEE_BPS` per contract
+   (15 payments / 10 multisend), `treasury` naming, CEI ordering, checked returns,
+   `forge fmt` formatting
+
+`contracts/` no longer matches either deployed source byte-for-byte, and is not
+supposed to — it carries the hardening that ships in the single audited mainnet
+deploy. The manifest is what keeps the *behaviour* honest in the meantime: the
+constants it pins are read from the chain, not from the source.
 
 ## Open items for the auditor
 

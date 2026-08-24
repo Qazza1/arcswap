@@ -8,7 +8,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy:multisender": "hardhat run scripts/deploy-multisender.cjs --network arc_testnet --config hardhat.config.cjs",
-    "deploy:multisender:local": "hardhat run scripts/deploy-multisender.cjs --network hardhat --config hardhat.config.cjs"
+    "deploy:multisender:local": "hardhat run scripts/deploy-multisender.cjs --network hardhat --config hardhat.config.cjs",
+    "check:deployments": "node script/deployments.mjs check",
+    "write:deployments": "node script/deployments.mjs write",
+    "check:csp": "node script/csp-guard.mjs",
+    "verify": "tsc --noEmit && vite build && node script/csp-guard.mjs && node script/deployments.mjs check"
   },
   "dependencies": {
     "@circle-fin/adapter-viem-v2": "^1.0.0",
