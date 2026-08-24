@@ -111,6 +111,17 @@
       activeTool: null,
       mode: 'product'
     });
+  
+    /* ── Event wiring (static markup) ──────────────────────────────
+       Replaces inline on* attributes so script-src needs no 'unsafe-inline'.
+       Each callback keeps the inline handler's semantics: a plain function, so
+       `this` is the element, and a parameter named `event`. */
+    function __fxOn(id, ev, fn) {
+      document.querySelectorAll('[data-fxh~="' + id + '"]').forEach(function (el) {
+        el.addEventListener(ev, fn);
+      });
+    }
+    __fxOn("h1", "input", function (event) { calcFee(); });
   </script>
 
   <div class="page">
@@ -193,7 +204,7 @@
         <div>
           <div class="calc-label">You send</div>
           <div class="calc-input-wrap">
-            <input class="calc-input" id="calc-amount" type="number" value="1000" min="0" oninput="calcFee()" />
+            <input data-fxh="h1" class="calc-input" id="calc-amount" type="number" value="1000" min="0" />
             <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--fx-muted);">USDC</span>
           </div>
         </div>
@@ -299,7 +310,11 @@
 
   </div>
 
-  <script>
+  <script type="module">
+    /* Converted from a classic inline <script> so Vite bundles it to a file
+       and script-src needs no 'unsafe-inline'. Module scope is not global, so
+       the declarations the event wiring calls are re-exported onto window
+       below — exactly the reachability this block had as a classic script. */
     function calcFee() {
       // Payer-pays model:the entered amount is what the recipient receives;
       // the sender pays that plus the 0.15% fee on top.
@@ -309,6 +324,9 @@
       document.getElementById('calc-fee').textContent = fee + ' USDC';
       document.getElementById('calc-net').textContent  = youPay + ' USDC';
     }
+
+    // Re-exported for the event wiring (see module-scope note above).
+    window.calcFee = calcFee;
   </script>
 
 </body>

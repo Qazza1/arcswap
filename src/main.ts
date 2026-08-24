@@ -3,6 +3,9 @@
  * Stablecoin FX swap widget on Arc Testnet. Swaps USDC <-> EURC.
  */
 
+// MUST stay first: installs the api.circle.com -> /circle-proxy fetch rewrite
+// before any Circle SDK module below it is evaluated.
+import "./shared/circle-proxy";
 import { AppKit } from "@circle-fin/app-kit";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 import { BrowserProvider, Contract, formatUnits } from "ethers";

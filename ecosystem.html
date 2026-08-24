@@ -161,6 +161,22 @@
       activeTool: null,
       mode: 'product'
     });
+  
+    /* ── Event wiring (static markup) ──────────────────────────────
+       Replaces inline on* attributes so script-src needs no 'unsafe-inline'.
+       Each callback keeps the inline handler's semantics: a plain function, so
+       `this` is the element, and a parameter named `event`. */
+    function __fxOn(id, ev, fn) {
+      document.querySelectorAll('[data-fxh~="' + id + '"]').forEach(function (el) {
+        el.addEventListener(ev, fn);
+      });
+    }
+    __fxOn("h1", "click", function (event) { filterEco('all',this); });
+    __fxOn("h2", "click", function (event) { filterEco('fx',this); });
+    __fxOn("h3", "click", function (event) { filterEco('lending',this); });
+    __fxOn("h4", "click", function (event) { filterEco('payments',this); });
+    __fxOn("h5", "click", function (event) { filterEco('agents',this); });
+    __fxOn("h6", "click", function (event) { filterEco('infrastructure',this); });
   </script>
 
   <div class="container">
@@ -197,12 +213,12 @@
 
     <!-- Filter tabs -->
     <div class="eco-filters">
-      <button class="eco-filter active" onclick="filterEco('all',this)">All</button>
-      <button class="eco-filter" onclick="filterEco('fx',this)">FX / Swap</button>
-      <button class="eco-filter" onclick="filterEco('lending',this)">Lending</button>
-      <button class="eco-filter" onclick="filterEco('payments',this)">Payments</button>
-      <button class="eco-filter" onclick="filterEco('agents',this)">Agents</button>
-      <button class="eco-filter" onclick="filterEco('infrastructure',this)">Infrastructure</button>
+      <button data-fxh="h1" class="eco-filter active">All</button>
+      <button data-fxh="h2" class="eco-filter">FX / Swap</button>
+      <button data-fxh="h3" class="eco-filter">Lending</button>
+      <button data-fxh="h4" class="eco-filter">Payments</button>
+      <button data-fxh="h5" class="eco-filter">Agents</button>
+      <button data-fxh="h6" class="eco-filter">Infrastructure</button>
     </div>
 
     <!-- Empty state -->
@@ -357,7 +373,11 @@
     </div>
   </footer>
 
-  <script>
+  <script type="module">
+    /* Converted from a classic inline <script> so Vite bundles it to a file
+       and script-src needs no 'unsafe-inline'. Module scope is not global, so
+       the declarations the event wiring calls are re-exported onto window
+       below — exactly the reachability this block had as a classic script. */
     function filterEco(cat, btn) {
       document.querySelectorAll('.eco-filter').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -374,6 +394,9 @@
       var empty = document.getElementById('eco-empty');
       if (empty) empty.style.display = visible === 0 ? 'block' : 'none';
     }
+
+    // Re-exported for the event wiring (see module-scope note above).
+    window.filterEco = filterEco;
   </script>
 
 </body>

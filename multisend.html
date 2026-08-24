@@ -356,6 +356,16 @@
     .btn-clear-file { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: var(--rsm); padding: 8px 14px; font-size: 12px; cursor: pointer; font-family: var(--fx-body); transition: all .15s; }
     .btn-clear-file:hover { border-color: var(--red); color: var(--red); }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    /* ── Hover and focus states, moved out of inline handlers ──────────
+       These were on{mouseover,mouseout,focus,blur} attributes writing straight
+       to element.style. As CSS they are overridable, they respect the register,
+       and script-src no longer needs 'unsafe-inline' to keep them working. */
+    .fx-focus-ring:focus,
+    .fx-focus-ring:focus-within { border-color: var(--fx-accent); outline: none; }
+    .fx-hover-ghost:hover { border-color: var(--fx-accent); color: var(--fx-accent); }
+    .fx-hover-link:hover  { color: var(--fx-accent); }
+    .fx-hover-row:hover   { background: var(--fx-sunken); }
+
   </style>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -456,10 +466,10 @@
             <div class="selector-group">
               <label>Token</label>
               <div class="token-selector">
-                <button class="token-btn active" id="btn-usdc" onclick="selectToken('USDC')">
+                <button data-fxh="h1" class="token-btn active" id="btn-usdc">
                   <div class="token-logo logo-usdc">$</div> USDC
                 </button>
-                <button class="token-btn" id="btn-eurc" onclick="selectToken('EURC')">
+                <button data-fxh="h2" class="token-btn" id="btn-eurc">
                   <div class="token-logo logo-eurc">€</div> EURC
                 </button>
               </div>
@@ -468,10 +478,10 @@
             <div class="selector-group">
               <label>Tier</label>
               <div class="tier-selector">
-                <button class="tier-btn active free" id="btn-free" onclick="selectTier('free')">
+                <button data-fxh="h3" class="tier-btn active free" id="btn-free">
                   Free (≤5)
                 </button>
-                <button class="tier-btn pro" id="btn-pro" onclick="selectTier('pro')">
+                <button data-fxh="h4" class="tier-btn pro" id="btn-pro">
                   Pro (≤500) — 0.10% fee
                 </button>
               </div>
@@ -491,10 +501,10 @@
           <div class="section-label">Recipients</div>
 
           <div class="upload-tabs">
-            <button class="upload-tab active" id="tab-manual" onclick="setMode('manual')">Manual</button>
-            <button class="upload-tab" id="tab-csv" onclick="setMode('csv')">Paste CSV</button>
-            <button class="upload-tab" id="tab-upload" onclick="setMode('upload')">Upload file</button>
-            <button class="upload-tab" id="tab-contacts" onclick="setMode('contacts')">
+            <button data-fxh="h5" class="upload-tab active" id="tab-manual">Manual</button>
+            <button data-fxh="h6" class="upload-tab" id="tab-csv">Paste CSV</button>
+            <button data-fxh="h7" class="upload-tab" id="tab-upload">Upload file</button>
+            <button data-fxh="h8" class="upload-tab" id="tab-contacts">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px;"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
               Contacts
             </button>
@@ -507,7 +517,7 @@
                 placeholder="0x... wallet address" autocomplete="off" aria-label="wallet address" />
               <input id="input-amount" class="add-amount" type="number"
                 min="0" step="any" placeholder="Amount" autocomplete="off" aria-label="Amount" />
-              <button class="btn-add" onclick="addRecipient()" title="Add">+</button>
+              <button data-fxh="h9" class="btn-add" title="Add">+</button>
             </div>
           </div>
 
@@ -516,7 +526,7 @@
             <textarea id="csv-input" class="csv-area"
               placeholder="0x1234...abcd, 100&#10;0x5678...efgh, 50&#10;0x9abc...ijkl, 75" aria-label="1234...abcd, 100&#10;0x5678...efgh, 50&#10;0x9abc...ijkl, 75"></textarea>
             <div class="csv-hint">One per line: <code style="color:var(--blue)">address, amount</code> — comma or tab separated.</div>
-            <button onclick="parseCSV()" style="margin-top:10px;background:var(--blue-dim);border:1px solid var(--fx-line);color:var(--blue);border-radius:var(--rsm);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--fx-body);">
+            <button data-fxh="h10" style="margin-top:10px;background:var(--blue-dim);border:1px solid var(--fx-line);color:var(--blue);border-radius:var(--rsm);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--fx-body);">
               Parse CSV →
             </button>
           </div>
@@ -527,21 +537,21 @@
             <!-- Add new contact inline -->
             <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;
                         padding:12px 0 14px;border-bottom:1px solid var(--fx-line);margin-bottom:12px;">
-              <input id="ms-ab-name" type="text" placeholder="Contact name"
+              <input class="fx-focus-ring" id="ms-ab-name" type="text" placeholder="Contact name"
                      style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:6px;
                             color:var(--fx-ink);font-size:13px;font-family:inherit;padding:8px 11px;outline:none;"
-                     onfocus="this.style.borderColor='var(--fx-accent)'" onblur="this.style.borderColor='var(--fx-line)'" aria-label="Contact name" />
-              <input id="ms-ab-addr" type="text" placeholder="0x... wallet address"
+                     aria-label="Contact name" />
+              <input class="fx-focus-ring" id="ms-ab-addr" type="text" placeholder="0x... wallet address"
                      style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:6px;
                             color:var(--fx-ink);font-size:12px;font-family:'JetBrains Mono',monospace;
                             padding:8px 11px;outline:none;"
-                     onfocus="this.style.borderColor='var(--fx-accent)'" onblur="this.style.borderColor='var(--fx-line)'" aria-label="wallet address" />
-              <button onclick="saveContactFromMultisend()"
+                     aria-label="wallet address" />
+              <button data-fxh="h11" class="fx-hover-ghost"
                       style="padding:8px 14px;background:var(--fx-surface);color:var(--fx-muted);border:1px solid var(--fx-line);
                              border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;
                              font-family:inherit;white-space:nowrap;transition:all .15s;"
-                      onmouseover="this.style.borderColor='var(--fx-accent)';this.style.color='var(--fx-accent)'"
-                      onmouseout="this.style.borderColor='var(--fx-line)';this.style.color='var(--fx-muted)'">
+                     
+                     >
                 + Save contact
               </button>
             </div>
@@ -557,10 +567,10 @@
           <div id="upload-mode" style="display:none;">
 
             <!-- Drop zone (shown when no file loaded) -->
-            <div id="drop-zone" class="drop-zone"
-              ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
-              <input type="file" id="file-input" accept=".csv,.xlsx,.xls,.tsv,.txt"
-                onchange="handleFileSelect(event)" aria-label="Choose a file" />
+            <div data-fxh="h12 h13 h14" id="drop-zone" class="drop-zone"
+             >
+              <input data-fxh="h15" type="file" id="file-input" accept=".csv,.xlsx,.xls,.tsv,.txt"
+                aria-label="Choose a file" />
               <div class="drop-zone-icon">📂</div>
               <div class="drop-zone-title">Drop your file here</div>
               <div class="drop-zone-sub">
@@ -568,8 +578,8 @@
                 Any column order — we auto-detect address and amount
               </div>
               <div class="upload-actions">
-                <button class="btn-browse" onclick="document.getElementById('file-input').click();event.stopPropagation();">Browse files</button>
-                <button class="btn-template" onclick="downloadTemplate();event.stopPropagation();">⬇ Download template</button>
+                <button data-fxh="h16" class="btn-browse">Browse files</button>
+                <button data-fxh="h17" class="btn-template">⬇ Download template</button>
               </div>
             </div>
 
@@ -581,11 +591,11 @@
                 <div class="col-map-title">Map columns — tell us which column is which</div>
                 <div class="col-map-row">
                   <span class="col-map-label">Address</span>
-                  <select id="col-address" class="col-map-select" onchange="reApplyMapping()" aria-label="Col Address"></select>
+                  <select data-fxh="h18" id="col-address" class="col-map-select" aria-label="Col Address"></select>
                 </div>
                 <div class="col-map-row">
                   <span class="col-map-label">Amount</span>
-                  <select id="col-amount" class="col-map-select" onchange="reApplyMapping()" aria-label="Col Amount"></select>
+                  <select data-fxh="h19" id="col-amount" class="col-map-select" aria-label="Col Amount"></select>
                 </div>
               </div>
 
@@ -612,8 +622,8 @@
                   <div class="import-stat errors">Errors: <strong id="stat-errors">0</strong></div>
                 </div>
                 <div style="display:flex;gap:8px;">
-                  <button class="btn-clear-file" onclick="clearFile()">✕ Clear</button>
-                  <button class="btn-import" id="btn-import-file" onclick="importValidRows()">Import valid rows →</button>
+                  <button data-fxh="h20" class="btn-clear-file">✕ Clear</button>
+                  <button data-fxh="h21" class="btn-import" id="btn-import-file">Import valid rows →</button>
                 </div>
               </div>
             </div>
@@ -665,10 +675,10 @@
           </div>
 
           <div class="action-row">
-            <button class="btn-approve" id="btn-approve" onclick="approveTokens()" disabled>
+            <button data-fxh="h22" class="btn-approve" id="btn-approve" disabled>
               1. Approve USDC
             </button>
-            <button class="btn-send" id="btn-send" onclick="sendTokens()" disabled>
+            <button data-fxh="h23" class="btn-send" id="btn-send" disabled>
               2. Send to all →
             </button>
           </div>
@@ -710,7 +720,7 @@
         <div class="tx-success-sub" id="success-sub">—</div>
         <a id="success-link" href="#" target="_blank" rel="noopener" class="tx-link">View on ArcScan ↗</a>
         <br><br>
-        <button onclick="resetForm()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:var(--r-sm);padding:8px 18px;font-size:13px;cursor:pointer;font-family:var(--fx-body);">
+        <button data-fxh="h24" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:var(--r-sm);padding:8px 18px;font-size:13px;cursor:pointer;font-family:var(--fx-body);">
           Send another batch →
         </button>
       </div>
@@ -726,7 +736,7 @@
   </div>
 
   <script type="module">
-    import { BrowserProvider, Contract, parseUnits, formatUnits } from "https://esm.sh/ethers@6";
+    import { BrowserProvider, Contract, parseUnits, formatUnits } from "ethers";
 
     // ─── Config ──────────────────────────────────────────────────────────────
     // 🔴 Replace this with your deployed contract address after running:
@@ -975,7 +985,7 @@
           <td><span class="rec-num">${i+1}</span></td>
           <td><span class="rec-addr">${r.address.slice(0,8)}…${r.address.slice(-6)}</span></td>
           <td><span class="rec-amount">${r.amount} ${selectedToken}</span></td>
-          <td><button class="btn-remove" onclick="removeRecipient(${i})" title="Remove">×</button></td>
+          <td><button class="btn-remove" data-fx-on="click" data-fx-act="removeRecipient" data-fx-n="${i}" title="Remove">×</button></td>
         </tr>
       `).join("");
     }
@@ -1292,11 +1302,72 @@
       else if (act === "del") deleteSchedule(id);
     });
     renderSchedules();
+  
+    /* ── Event wiring (static markup) ──────────────────────────────
+       Replaces inline on* attributes so script-src needs no 'unsafe-inline'.
+       Each callback keeps the inline handler's semantics: a plain function, so
+       `this` is the element, and a parameter named `event`. */
+    function __fxOn(id, ev, fn) {
+      document.querySelectorAll('[data-fxh~="' + id + '"]').forEach(function (el) {
+        el.addEventListener(ev, fn);
+      });
+    }
+    __fxOn("h1", "click", function (event) { selectToken('USDC'); });
+    __fxOn("h2", "click", function (event) { selectToken('EURC'); });
+    __fxOn("h3", "click", function (event) { selectTier('free'); });
+    __fxOn("h4", "click", function (event) { selectTier('pro'); });
+    __fxOn("h5", "click", function (event) { setMode('manual'); });
+    __fxOn("h6", "click", function (event) { setMode('csv'); });
+    __fxOn("h7", "click", function (event) { setMode('upload'); });
+    __fxOn("h8", "click", function (event) { setMode('contacts'); });
+    __fxOn("h9", "click", function (event) { addRecipient(); });
+    __fxOn("h10", "click", function (event) { parseCSV(); });
+    __fxOn("h11", "click", function (event) { saveContactFromMultisend(); });
+    __fxOn("h12", "dragover", function (event) { handleDragOver(event); });
+    __fxOn("h13", "dragleave", function (event) { handleDragLeave(event); });
+    __fxOn("h14", "drop", function (event) { handleDrop(event); });
+    __fxOn("h15", "change", function (event) { handleFileSelect(event); });
+    __fxOn("h16", "click", function (event) { document.getElementById('file-input').click();event.stopPropagation(); });
+    __fxOn("h17", "click", function (event) { downloadTemplate();event.stopPropagation(); });
+    __fxOn("h18", "change", function (event) { reApplyMapping(); });
+    __fxOn("h19", "change", function (event) { reApplyMapping(); });
+    __fxOn("h20", "click", function (event) { clearFile(); });
+    __fxOn("h21", "click", function (event) { importValidRows(); });
+    __fxOn("h22", "click", function (event) { approveTokens(); });
+    __fxOn("h23", "click", function (event) { sendTokens(); });
+    __fxOn("h24", "click", function (event) { resetForm(); });
+
+    /* ── Event wiring (rendered rows) ──────────────────────────────
+       Rows are rebuilt on every render, so these listeners live on document and
+       match by data attribute. data-fx-on carries the event type because a
+       <select> receives click as well as change and must not fire twice. */
+    function __fxDelegate(event) {
+      var el = event.target.closest('[data-fx-act]');
+      if (!el || el.getAttribute('data-fx-on') !== event.type) return;
+      var fn = window[el.getAttribute('data-fx-act')];
+      if (typeof fn !== 'function') return;
+      var args = [];
+      var n = el.getAttribute('data-fx-n');
+      var s = el.getAttribute('data-fx-s');
+      var f = el.getAttribute('data-fx-f');
+      if (n !== null) args.push(Number(n));
+      else if (s !== null) args.push(s);
+      if (f !== null) args.push(f);
+      if (el.hasAttribute('data-fx-v')) args.push(el.value);
+      fn.apply(el, args);
+    }
+    ['click', 'change', 'input'].forEach(function (ev) {
+      document.addEventListener(ev, __fxDelegate);
+    });
   </script>
 
 
   <!-- ── CSV / File upload logic ──────────────────────── -->
-  <script>
+  <script type="module">
+    /* Converted from a classic inline <script> so Vite bundles it to a file
+       and script-src needs no 'unsafe-inline'. Module scope is not global, so
+       the declarations the event wiring calls are re-exported onto window
+       below — exactly the reachability this block had as a classic script. */
     // ── State ──────────────────────────────────────────────────────────────
     let parsedRows   = [];   // { addr, amount, valid, error }
     let rawHeaders   = [];   // column headers from file
@@ -1330,7 +1401,7 @@
         html += "<div style=\"font-size:11px;color:var(--fx-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\">" + addr + "</div>";
         html += "</div>";
         html += "<input id=\"cab-" + i + "\" type=\"number\" min=\"0\" step=\"any\" placeholder=\"Amount\" aria-label=\"Amount for recipient " + (i + 1) + "\" style=\"width:86px;background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:6px;color:var(--fx-ink);font-size:12px;font-family:inherit;padding:6px 9px;outline:none;text-align:right;\" />";
-        html += "<button onclick=\"addContactAsRecipient(" + i + ")\" style=\"padding:7px 12px;background:var(--fx-accent);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;\">+ Add</button>";
+        html += "<button data-fx-on=\"click\" data-fx-act=\"addContactAsRecipient\" data-fx-n=\"" + i + "\" style=\"padding:7px 12px;background:var(--fx-accent);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;\">+ Add</button>";
         html += "</div>";
       });
       container.innerHTML = html;
@@ -1654,13 +1725,18 @@
       a.click();
       URL.revokeObjectURL(url);
     };
+
+    // Re-exported for the event wiring (see module-scope note above).
+    window.processFile = processFile;
+    window.readCSV = readCSV;
+    window.readExcel = readExcel;
+    window.handleParsedData = handleParsedData;
+    window.parseAmountLoose = parseAmountLoose;
+    window.applyMapping = applyMapping;
+    window.renderPreview = renderPreview;
   </script>
 
 
-  <script>
-    // (Removed dead address-book import block — it referenced UI elements that
-    // don't exist and called addRecipient() with the wrong signature. The
-    // Contacts tab is the working way to add saved contacts.)
-  </script>
+  
 </body>
 </html>

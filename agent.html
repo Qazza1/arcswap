@@ -118,7 +118,7 @@
         <code style="font-family:'JetBrains Mono',monospace;">/v1/x402/discovery</code>.
       </div>
       <div class="btn-row">
-        <button class="btn btn-ghost" id="btn-discover" onclick="loadDiscovery()">Fetch capabilities</button>
+        <button data-fxh="h1" class="btn btn-ghost" id="btn-discover">Fetch capabilities</button>
         <span id="discovery-badge"></span>
       </div>
       <div class="wire" id="discovery-wire" style="display:none;">
@@ -156,8 +156,8 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn" id="btn-run" onclick="runFlow()">Run the x402 exchange</button>
-        <button class="btn btn-ghost" id="btn-reset" onclick="resetFlow()">Reset</button>
+        <button data-fxh="h2" class="btn" id="btn-run">Run the x402 exchange</button>
+        <button data-fxh="h3" class="btn btn-ghost" id="btn-reset">Reset</button>
         <span id="run-badge"></span>
       </div>
     </div>
@@ -240,7 +240,7 @@
   </div>
 
   <script type="module">
-    import { BrowserProvider, getAddress, hexlify, randomBytes, parseUnits } from "https://esm.sh/ethers@6";
+    import { BrowserProvider, getAddress, hexlify, randomBytes, parseUnits } from "ethers";
     import { arcfxWallet } from "/src/shared/wallet.ts";
 
     const API = "https://arcfx-backend-production.up.railway.app";
@@ -466,6 +466,19 @@
         }
       } catch { /* an unparseable address is not worth failing the demo over */ }
     });
+  
+    /* ── Event wiring (static markup) ──────────────────────────────
+       Replaces inline on* attributes so script-src needs no 'unsafe-inline'.
+       Each callback keeps the inline handler's semantics: a plain function, so
+       `this` is the element, and a parameter named `event`. */
+    function __fxOn(id, ev, fn) {
+      document.querySelectorAll('[data-fxh~="' + id + '"]').forEach(function (el) {
+        el.addEventListener(ev, fn);
+      });
+    }
+    __fxOn("h1", "click", function (event) { loadDiscovery(); });
+    __fxOn("h2", "click", function (event) { runFlow(); });
+    __fxOn("h3", "click", function (event) { resetFlow(); });
   </script>
 </body>
 </html>

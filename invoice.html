@@ -229,29 +229,29 @@
           <div class="field-row">
             <div class="field">
               <label for="from-name">Your name / company</label>
-              <input id="from-name" type="text" placeholder="Your name / Company name" autocomplete="off" oninput="updatePreview()" />
+              <input data-fxh="h1" id="from-name" type="text" placeholder="Your name / Company name" autocomplete="off" />
             </div>
             <div class="field">
               <label for="from-email">Your email (optional)</label>
-              <input id="from-email" type="email" placeholder="you@email.com" oninput="updatePreview()" />
+              <input data-fxh="h2" id="from-email" type="email" placeholder="you@email.com" />
             </div>
           </div>
           <div class="field">
             <label for="from-wallet">Your wallet address (payments go here)</label>
-            <input id="from-wallet" class="mono" type="text" placeholder="0x4F81E393..." autocomplete="off" oninput="updatePreview()" />
+            <input data-fxh="h3" id="from-wallet" class="mono" type="text" placeholder="0x4F81E393..." autocomplete="off" />
           </div>
           <div class="field">
             <label>Your logo (optional)</label>
             <div style="display:flex;align-items:center;gap:12px;">
               <div id="logo-thumb" style="width:44px;height:44px;border-radius:8px;border:1px solid var(--border);background:var(--raised);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:var(--muted);font-size:11px;">&mdash;</div>
-              <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleLogoUpload(event)" aria-label="Choose a file" />
-              <button type="button" onclick="document.getElementById('logo-input').click()" style="padding:8px 14px;border-radius:var(--rsm);background:var(--raised);border:1px solid var(--bmed);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">Upload logo</button>
-              <button type="button" id="logo-remove" onclick="removeLogo()" style="display:none;padding:8px 12px;border-radius:var(--rsm);background:transparent;border:1px solid var(--border);color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;">Remove</button>
+              <input data-fxh="h4" id="logo-input" type="file" accept="image/png,image/jpeg,image/webp" style="display:none;" aria-label="Choose a file" />
+              <button data-fxh="h5" type="button" style="padding:8px 14px;border-radius:var(--rsm);background:var(--raised);border:1px solid var(--bmed);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">Upload logo</button>
+              <button data-fxh="h6" type="button" id="logo-remove" style="display:none;padding:8px 12px;border-radius:var(--rsm);background:transparent;border:1px solid var(--border);color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;">Remove</button>
             </div>
             <div style="font-size:11px;color:var(--muted);margin-top:6px;">PNG, JPG or WebP, under 500&nbsp;KB. Shown on your invoice and PDF.</div>
           </div>
           <div style="display:flex;align-items:center;gap:12px;margin-top:2px;">
-            <button type="button" onclick="saveProfile()" style="padding:8px 14px;border-radius:var(--rsm);background:var(--bdim);border:1px solid rgba(61,126,255,0.35);color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Save my details as default</button>
+            <button data-fxh="h7" type="button" style="padding:8px 14px;border-radius:var(--rsm);background:var(--bdim);border:1px solid rgba(61,126,255,0.35);color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Save my details as default</button>
             <span id="profile-saved-msg" style="font-size:12px;color:var(--teal);display:none;">Saved to this browser &#10003;</span>
           </div>
         </div>
@@ -267,11 +267,11 @@
           <div class="field-row">
             <div class="field">
               <label for="to-name">Client name / company</label>
-              <input id="to-name" type="text" placeholder="Client Name Ltd" oninput="updatePreview()" />
+              <input data-fxh="h8" id="to-name" type="text" placeholder="Client Name Ltd" />
             </div>
             <div class="field">
               <label for="to-email">Client email (optional)</label>
-              <input id="to-email" type="email" placeholder="client@company.com" oninput="updatePreview()" />
+              <input data-fxh="h9" id="to-email" type="email" placeholder="client@company.com" />
             </div>
           </div>
         </div>
@@ -287,15 +287,15 @@
           <div class="field-row">
             <div class="field">
               <label for="inv-number">Invoice number</label>
-              <input id="inv-number" type="text" value="INV-001" oninput="updatePreview()" />
+              <input data-fxh="h10" id="inv-number" type="text" value="INV-001" />
             </div>
             <div class="field">
               <label>Token</label>
               <div class="token-btns">
-                <button class="token-btn active" id="tok-usdc" onclick="selectToken('USDC')">
+                <button data-fxh="h11" class="token-btn active" id="tok-usdc">
                   <div class="tlogo usdc">$</div> USDC
                 </button>
-                <button class="token-btn" id="tok-eurc" onclick="selectToken('EURC')">
+                <button data-fxh="h12" class="token-btn" id="tok-eurc">
                   <div class="tlogo eurc">€</div> EURC
                 </button>
               </div>
@@ -304,11 +304,11 @@
           <div class="field-row">
             <div class="field">
               <label for="inv-date">Issue date</label>
-              <input id="inv-date" type="date" oninput="updatePreview()" />
+              <input data-fxh="h13" id="inv-date" type="date" />
             </div>
             <div class="field">
               <label for="inv-due">Due date</label>
-              <input id="inv-due" type="date" oninput="updatePreview()" />
+              <input data-fxh="h14" id="inv-due" type="date" />
             </div>
           </div>
         </div>
@@ -333,7 +333,7 @@
             </thead>
             <tbody id="items-body"></tbody>
           </table>
-          <button class="btn-add-item" onclick="addItem()">+ Add line item</button>
+          <button data-fxh="h15" class="btn-add-item">+ Add line item</button>
 
           <div class="totals">
             <div class="total-row">
@@ -363,7 +363,7 @@
         <div class="card-body">
           <div class="field">
             <label for="inv-note">Payment terms / notes (optional)</label>
-            <textarea id="inv-note" placeholder="Payment due within 14 days. Please pay via the ArcFX Pay link below." oninput="updatePreview()"></textarea>
+            <textarea data-fxh="h16" id="inv-note" placeholder="Payment due within 14 days. Please pay via the ArcFX Pay link below."></textarea>
           </div>
         </div>
       </div>
@@ -465,10 +465,10 @@
 
         <!-- Actions -->
         <div style="padding:0 16px 20px;">
-          <button class="btn-primary" onclick="downloadPDF()">⬇ Download PDF invoice</button>
-          <button class="btn-outline" onclick="openPayLink()">↗ Open Pay link in browser</button>
-          <button class="btn-copy" id="copy-pay-btn" onclick="copyPayLink()">📋 Copy Pay link</button>
-          <button class="btn-outline" id="check-paid-btn" onclick="checkInvoicePaid()" style="margin-top:8px;">🔍 Check payment status</button>
+          <button data-fxh="h17" class="btn-primary">⬇ Download PDF invoice</button>
+          <button data-fxh="h18" class="btn-outline">↗ Open Pay link in browser</button>
+          <button data-fxh="h19" class="btn-copy" id="copy-pay-btn">📋 Copy Pay link</button>
+          <button data-fxh="h20" class="btn-outline" id="check-paid-btn" style="margin-top:8px;">🔍 Check payment status</button>
           <div id="paid-status" style="display:none;margin-top:10px;padding:12px 14px;border-radius:var(--rsm);font-size:13px;line-height:1.5;"></div>
 
           <div class="pay-link-box" id="pay-link-display" style="display:none;">
@@ -490,7 +490,11 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+    /* Converted from a classic inline <script> so Vite bundles it to a file
+       and script-src needs no 'unsafe-inline'. Module scope is not global, so
+       the declarations the event wiring calls are re-exported onto window
+       below — exactly the reachability this block had as a classic script. */
 // ── State ─────────────────────────────────────────────────────────────────
 let selectedToken = "USDC";
 let items = [{ desc: "", qty: 1, price: 0 }];
@@ -644,11 +648,11 @@ function renderItems() {
   }
   body.innerHTML = items.map((item, i) => `
     <tr class="item-row">
-      <td><input type="text" value="${item.desc}" placeholder="Description" oninput="updateItem(${i},'desc',this.value)" aria-label="Description" /></td>
-      <td><input type="text" inputmode="decimal" class="right" value="${item.qty}" placeholder="1" oninput="updateItem(${i},'qty',this.value)" style="text-align:right;" aria-label="Quantity" /></td>
-      <td><input type="text" inputmode="decimal" class="right" value="${item.price || ''}" placeholder="0.00" oninput="updateItem(${i},'price',this.value)" style="text-align:right;" aria-label="Unit price" /></td>
+      <td><input type="text" value="${item.desc}" placeholder="Description" data-fx-on="input" data-fx-act="updateItem" data-fx-n="${i}" data-fx-f="desc" data-fx-v="1" aria-label="Description" /></td>
+      <td><input type="text" inputmode="decimal" class="right" value="${item.qty}" placeholder="1" data-fx-on="input" data-fx-act="updateItem" data-fx-n="${i}" data-fx-f="qty" data-fx-v="1" style="text-align:right;" aria-label="Quantity" /></td>
+      <td><input type="text" inputmode="decimal" class="right" value="${item.price || ''}" placeholder="0.00" data-fx-on="input" data-fx-act="updateItem" data-fx-n="${i}" data-fx-f="price" data-fx-v="1" style="text-align:right;" aria-label="Unit price" /></td>
       <td class="item-row-total">${((item.qty||0) * (item.price||0)).toFixed(2)}</td>
-      <td><button class="btn-remove-item" onclick="removeItem(${i})" title="Remove">×</button></td>
+      <td><button class="btn-remove-item" data-fx-on="click" data-fx-act="removeItem" data-fx-n="${i}" title="Remove">×</button></td>
     </tr>
   `).join("");
 }
@@ -1020,7 +1024,18 @@ function showStatus(msg, type) {
   if (el) el.innerHTML = msg ? `<div class="status ${type}">${msg}</div>` : "";
   setTimeout(() => { if (el) el.innerHTML = ""; }, 3000);
 }
-</script>
+
+    // Re-exported for the event wiring (see module-scope note above).
+    window.fmt = fmt;
+    window.fmtDisplay = fmtDisplay;
+    window.renderLogoThumb = renderLogoThumb;
+    window.loadProfile = loadProfile;
+    window.renderItems = renderItems;
+    window.getTotal = getTotal;
+    window.updatePreview = updatePreview;
+    window.buildPayLink = buildPayLink;
+    window.showStatus = showStatus;
+  </script>
 
   <!-- On-chain Paid status (read-only; matches keccak256(invoiceNumber) + recipient) -->
   <!-- Paid status: live backend (full history) with on-chain fallback -->
@@ -1111,7 +1126,7 @@ function showStatus(msg, type) {
   </script>
 
   <script type="module">
-    import { JsonRpcProvider, id as ethersId } from "https://esm.sh/ethers@6";
+    import { JsonRpcProvider, id as ethersId } from "ethers";
 
     const API_BASE      = "https://arcfx-backend-production.up.railway.app";
     const ARC_RPC       = "https://rpc.testnet.arc.network";
@@ -1210,6 +1225,59 @@ function showStatus(msg, type) {
         if (btn) btn.disabled=false;
       }
     };
+  
+    /* ── Event wiring (static markup) ──────────────────────────────
+       Replaces inline on* attributes so script-src needs no 'unsafe-inline'.
+       Each callback keeps the inline handler's semantics: a plain function, so
+       `this` is the element, and a parameter named `event`. */
+    function __fxOn(id, ev, fn) {
+      document.querySelectorAll('[data-fxh~="' + id + '"]').forEach(function (el) {
+        el.addEventListener(ev, fn);
+      });
+    }
+    __fxOn("h1", "input", function (event) { updatePreview(); });
+    __fxOn("h2", "input", function (event) { updatePreview(); });
+    __fxOn("h3", "input", function (event) { updatePreview(); });
+    __fxOn("h4", "change", function (event) { handleLogoUpload(event); });
+    __fxOn("h5", "click", function (event) { document.getElementById('logo-input').click(); });
+    __fxOn("h6", "click", function (event) { removeLogo(); });
+    __fxOn("h7", "click", function (event) { saveProfile(); });
+    __fxOn("h8", "input", function (event) { updatePreview(); });
+    __fxOn("h9", "input", function (event) { updatePreview(); });
+    __fxOn("h10", "input", function (event) { updatePreview(); });
+    __fxOn("h11", "click", function (event) { selectToken('USDC'); });
+    __fxOn("h12", "click", function (event) { selectToken('EURC'); });
+    __fxOn("h13", "input", function (event) { updatePreview(); });
+    __fxOn("h14", "input", function (event) { updatePreview(); });
+    __fxOn("h15", "click", function (event) { addItem(); });
+    __fxOn("h16", "input", function (event) { updatePreview(); });
+    __fxOn("h17", "click", function (event) { downloadPDF(); });
+    __fxOn("h18", "click", function (event) { openPayLink(); });
+    __fxOn("h19", "click", function (event) { copyPayLink(); });
+    __fxOn("h20", "click", function (event) { checkInvoicePaid(); });
+
+    /* ── Event wiring (rendered rows) ──────────────────────────────
+       Rows are rebuilt on every render, so these listeners live on document and
+       match by data attribute. data-fx-on carries the event type because a
+       <select> receives click as well as change and must not fire twice. */
+    function __fxDelegate(event) {
+      var el = event.target.closest('[data-fx-act]');
+      if (!el || el.getAttribute('data-fx-on') !== event.type) return;
+      var fn = window[el.getAttribute('data-fx-act')];
+      if (typeof fn !== 'function') return;
+      var args = [];
+      var n = el.getAttribute('data-fx-n');
+      var s = el.getAttribute('data-fx-s');
+      var f = el.getAttribute('data-fx-f');
+      if (n !== null) args.push(Number(n));
+      else if (s !== null) args.push(s);
+      if (f !== null) args.push(f);
+      if (el.hasAttribute('data-fx-v')) args.push(el.value);
+      fn.apply(el, args);
+    }
+    ['click', 'change', 'input'].forEach(function (ev) {
+      document.addEventListener(ev, __fxDelegate);
+    });
   </script>
 </body>
 </html>

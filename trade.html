@@ -118,21 +118,22 @@
       .tool-wrap { padding:28px 14px 60px; }
       .tool-title { font-size:22px; }
     }
+    /* ── Hover and focus states, moved out of inline handlers ──────────
+       These were on{mouseover,mouseout,focus,blur} attributes writing straight
+       to element.style. As CSS they are overridable, they respect the register,
+       and script-src no longer needs 'unsafe-inline' to keep them working. */
+    .fx-focus-ring:focus,
+    .fx-focus-ring:focus-within { border-color: var(--fx-accent); outline: none; }
+    .fx-hover-ghost:hover { border-color: var(--fx-accent); color: var(--fx-accent); }
+    .fx-hover-link:hover  { color: var(--fx-accent); }
+    .fx-hover-row:hover   { background: var(--fx-sunken); }
+
   </style>
 </head>
 <body>
-  <script>
-    (function(){
-      var _f=window.fetch.bind(window);
-      window.fetch=function(input,init){
-        if(typeof input==="string"&&input.includes("api.circle.com"))
-          input=input.replace("https://api.circle.com","/circle-proxy");
-        else if(input instanceof Request&&input.url.includes("api.circle.com"))
-          input=new Request(input.url.replace("https://api.circle.com","/circle-proxy"),input);
-        return _f(input,init);
-      };
-    })();
-  </script>
+  <!-- The api.circle.com -> /circle-proxy fetch rewrite moved to
+       src/shared/circle-proxy.ts, imported first by src/main.ts so it still
+       installs before the Circle SDK loads, without an inline script. -->
 
   <!-- Shared header (stats bar + product nav) -->
   <div id="arcfx-stats-bar"></div>
@@ -140,6 +141,21 @@
   <script type="module">
     import { arcfxMountHeader } from '/src/shared/header.ts';
     arcfxMountHeader({ pageKey: 'trade', activeLink: 'trade', activeTool: null });
+  
+    /* ── Event wiring (static markup) ──────────────────────────────
+       Replaces inline on* attributes so script-src needs no 'unsafe-inline'.
+       Each callback keeps the inline handler's semantics: a plain function, so
+       `this` is the element, and a parameter named `event`. */
+    function __fxOn(id, ev, fn) {
+      document.querySelectorAll('[data-fxh~="' + id + '"]').forEach(function (el) {
+        el.addEventListener(ev, fn);
+      });
+    }
+    __fxOn("h1", "click", function (event) { switchAppTab('swap'); });
+    __fxOn("h2", "click", function (event) { switchAppTab('bridge'); });
+    __fxOn("h3", "click", function (event) { toggleTokenMenu('in'); });
+    __fxOn("h4", "click", function (event) { toggleTokenMenu('out'); });
+    __fxOn("h5", "click", function (event) { flipBridgeDirection(); });
   </script>
 
   <main class="tool-wrap">
@@ -172,8 +188,8 @@
     <!-- App card: tabs + panels -->
     <div id="app">
       <div class="app-tabs">
-        <button id="tab-swap"   class="app-tab active"     onclick="switchAppTab('swap')">⇄ Swap</button>
-        <button id="tab-bridge" class="app-tab bridge-tab" onclick="switchAppTab('bridge')">⇅ Bridge</button>
+        <button data-fxh="h1" id="tab-swap"   class="app-tab active"    >⇄ Swap</button>
+        <button data-fxh="h2" id="tab-bridge" class="app-tab bridge-tab">⇅ Bridge</button>
       </div>
 
         <div id="panel-swap" class="app-panel">
@@ -210,8 +226,8 @@
                       style="display:block;width:100%;padding:13px;background:var(--fx-accent);color:#fff;
                              border:none;border-radius:8px;font-size:14px;font-weight:600;
                              cursor:pointer;font-family:inherit;transition:background .15s;"
-                      onmouseover="this.style.background='var(--fx-accent)'"
-                      onmouseout="this.style.background='var(--fx-accent)'">
+                     
+                     >
                 Connect MetaMask
               </button>
             </div>
@@ -239,8 +255,8 @@
             </div>
 
             <!-- You Pay input -->
-            <div style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:14px 16px;margin-bottom:4px;transition:border-color .15s;"
-                 onfocusin="this.style.borderColor='var(--fx-accent)'" onfocusout="this.style.borderColor='var(--fx-line)'">
+            <div class="fx-focus-ring" style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:14px 16px;margin-bottom:4px;transition:border-color .15s;"
+                >
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                 <span style="font-size:10px;font-weight:600;color:var(--fx-muted);text-transform:uppercase;letter-spacing:0.1em;">You Pay</span>
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -250,7 +266,7 @@
               </div>
               <div style="display:flex;align-items:center;gap:12px;">
                 <div class="token-picker" style="position:relative;flex-shrink:0;">
-                  <button type="button" id="token-in-pill" class="token-pill" onclick="toggleTokenMenu('in')">
+                  <button data-fxh="h3" type="button" id="token-in-pill" class="token-pill">
                     <span id="pay-in-logo" class="token-pill-logo" style="background:#2775ca;">$</span>
                     <span id="pay-in-name" class="token-pill-name">USDC</span>
                     <svg class="token-pill-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -273,14 +289,14 @@
 
             <!-- Flip button -->
             <div style="display:flex;justify-content:center;margin:2px 0;">
-              <button id="flip-btn" title="Flip tokens"
+              <button class="fx-hover-ghost" id="flip-btn" title="Flip tokens"
                       style="width:30px;height:30px;border-radius:6px;
                              background:var(--fx-surface);border:1px solid var(--fx-line);
                              color:var(--fx-muted);font-size:15px;cursor:pointer;
                              display:flex;align-items:center;justify-content:center;
                              transition:border-color .15s,color .15s;"
-                      onmouseover="this.style.borderColor='var(--fx-accent)';this.style.color='var(--fx-accent)'"
-                      onmouseout="this.style.borderColor='var(--fx-line)';this.style.color='var(--fx-muted)'">
+                     
+                     >
                 ⇅
               </button>
             </div>
@@ -296,7 +312,7 @@
               </div>
               <div style="display:flex;align-items:center;gap:12px;">
                 <div class="token-picker" style="position:relative;flex-shrink:0;">
-                  <button type="button" id="token-out-pill" class="token-pill" onclick="toggleTokenMenu('out')">
+                  <button data-fxh="h4" type="button" id="token-out-pill" class="token-pill">
                     <span id="pay-out-logo" class="token-pill-logo" style="background:#1a3ca8;">€</span>
                     <span id="pay-out-name" class="token-pill-name">EURC</span>
                     <svg class="token-pill-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -325,8 +341,8 @@
                      border-radius:8px;font-size:15px;font-weight:600;
                      cursor:pointer;font-family:inherit;letter-spacing:-0.1px;
                      transition:background .15s;"
-              onmouseover="this.style.background='var(--fx-accent)'"
-              onmouseout="this.style.background='var(--fx-accent)'">
+             
+             >
               Swap USDC → EURC
             </button>
 
@@ -334,14 +350,14 @@
             <div style="display:flex;justify-content:space-between;margin-top:14px;
                         padding-top:13px;border-top:1px solid var(--fx-line);
                         font-size:11px;color:var(--fx-muted);">
-              <a href="https://faucet.circle.com" target="_blank" rel="noopener"
+              <a class="fx-hover-link" href="https://faucet.circle.com" target="_blank" rel="noopener"
                  style="color:var(--fx-muted);text-decoration:none;transition:color .15s;"
-                 onmouseover="this.style.color='var(--fx-accent)'" onmouseout="this.style.color='var(--fx-muted)'">
+                >
                 Get testnet tokens →
               </a>
-              <a href="https://testnet.arcscan.app" target="_blank" rel="noopener"
+              <a class="fx-hover-link" href="https://testnet.arcscan.app" target="_blank" rel="noopener"
                  style="color:var(--fx-muted);text-decoration:none;transition:color .15s;"
-                 onmouseover="this.style.color='var(--fx-accent)'" onmouseout="this.style.color='var(--fx-muted)'">
+                >
                 ArcScan ↗
               </a>
             </div>
@@ -397,14 +413,14 @@
 
             <!-- Flip button -->
             <div style="display:flex;justify-content:center;">
-              <button id="bridge-flip-btn"
-                      onclick="flipBridgeDirection()"
+              <button data-fxh="h5" class="fx-hover-ghost" id="bridge-flip-btn"
+                     
                       style="width:34px;height:34px;border-radius:6px;background:var(--fx-surface);
                              border:1px solid var(--fx-line);color:var(--fx-muted);font-size:14px;
                              cursor:pointer;display:flex;align-items:center;justify-content:center;
                              transition:border-color .15s,color .15s;"
-                      onmouseover="this.style.borderColor='var(--fx-accent)';this.style.color='var(--fx-accent)'"
-                      onmouseout="this.style.borderColor='var(--fx-line)';this.style.color='var(--fx-muted)'">
+                     
+                     >
                 ⇄
               </button>
             </div>
@@ -428,10 +444,10 @@
           </div>
 
           <!-- Amount input -->
-          <div style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;
+          <div class="fx-focus-ring" style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;
                       padding:14px 16px;margin-bottom:12px;transition:border-color .15s;"
-               onfocusin="this.style.borderColor='var(--fx-accent)'"
-               onfocusout="this.style.borderColor='var(--fx-line)'">
+              
+              >
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
               <span style="font-size:10px;font-weight:600;color:var(--fx-muted);
                            text-transform:uppercase;letter-spacing:0.1em;">Amount to bridge</span>
@@ -528,22 +544,22 @@
                          color:#fff;border:none;border-radius:8px;font-size:15px;
                          font-weight:600;cursor:pointer;font-family:inherit;
                          letter-spacing:-0.1px;transition:background .15s;"
-                  onmouseover="this.style.background='var(--fx-accent)'"
-                  onmouseout="this.style.background='var(--fx-accent)'">
+                 
+                 >
             Bridge to Arc →
           </button>
 
           <!-- Footer -->
           <div style="display:flex;justify-content:space-between;margin-top:14px;
                       padding-top:13px;border-top:1px solid var(--fx-line);font-size:11px;">
-            <a href="https://faucet.circle.com" target="_blank" rel="noopener"
+            <a class="fx-hover-link" href="https://faucet.circle.com" target="_blank" rel="noopener"
                style="color:var(--fx-muted);text-decoration:none;transition:color .15s;"
-               onmouseover="this.style.color='var(--fx-accent)'" onmouseout="this.style.color='var(--fx-muted)'">
+              >
               Get testnet USDC →
             </a>
-            <a href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noopener"
+            <a class="fx-hover-link" href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noopener"
                style="color:var(--fx-muted);text-decoration:none;transition:color .15s;"
-               onmouseover="this.style.color='var(--fx-accent)'" onmouseout="this.style.color='var(--fx-muted)'">
+              >
               Get Sepolia ETH →
             </a>
           </div>
@@ -563,7 +579,11 @@
 
   <script type="module" src="/src/main.ts"></script>
 
-  <script>
+  <script type="module">
+    /* Converted from a classic inline <script> so Vite bundles it to a file
+       and script-src needs no 'unsafe-inline'. Module scope is not global, so
+       the declarations the event wiring calls are re-exported onto window
+       below — exactly the reachability this block had as a classic script. */
     function switchAppTab(tab){
       ["swap","bridge"].forEach(t=>{
         const panel=document.getElementById("panel-"+t);
@@ -573,6 +593,9 @@
         else{panel.style.display="none";btn.classList.remove("active");}
       });
     }
+
+    // Re-exported for the event wiring (see module-scope note above).
+    window.switchAppTab = switchAppTab;
   </script>
 
 </body>

@@ -418,7 +418,11 @@
     arcfxMountHeader({ pageKey:'developers', activeLink: 'developers', activeTool: null });
   </script>
 
-  <script>
+  <script type="module">
+    /* Converted from a classic inline <script> so Vite bundles it to a file
+       and script-src needs no 'unsafe-inline'. Module scope is not global, so
+       the declarations the event wiring calls are re-exported onto window
+       below — exactly the reachability this block had as a classic script. */
     const BASE = "https://arcfx-backend-production.up.railway.app";
 
     function syntaxHighlight(json) {
@@ -538,6 +542,10 @@
         }
       });
     }
+
+    // Re-exported for the event wiring (see module-scope note above).
+    window.syntaxHighlight = syntaxHighlight;
+    window.runTry = runTry;
   </script>
 </body>
 </html>

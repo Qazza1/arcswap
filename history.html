@@ -229,20 +229,20 @@
        read from this one window. -->
   <div class="period-bar" id="period-bar">
     <span class="period-lbl">Period</span>
-    <input type="date" class="period-input" id="period-from" onchange="applyPeriod()" aria-label="Period start" />
+    <input data-fxh="h1" type="date" class="period-input" id="period-from" aria-label="Period start" />
     <span class="period-sep">→</span>
-    <input type="date" class="period-input" id="period-to" onchange="applyPeriod()" aria-label="Period end" />
+    <input data-fxh="h2" type="date" class="period-input" id="period-to" aria-label="Period end" />
     <span class="period-presets">
-      <button class="period-preset" onclick="setPeriodPreset('m')">Month</button>
-      <button class="period-preset" onclick="setPeriodPreset('q')">Quarter</button>
-      <button class="period-preset" onclick="setPeriodPreset('ytd')">Year</button>
-      <button class="period-preset" onclick="setPeriodPreset('all')">All time</button>
+      <button data-fxh="h3" class="period-preset">Month</button>
+      <button data-fxh="h4" class="period-preset">Quarter</button>
+      <button data-fxh="h5" class="period-preset">Year</button>
+      <button data-fxh="h6" class="period-preset">All time</button>
     </span>
     <span class="period-count" id="period-count"></span>
     <span class="period-actions">
-      <button class="btn-refresh" onclick="refresh()">↻ Refresh</button>
-      <button class="btn-sync" id="sync-btn" onclick="syncCategories()" style="display:none;" title="Save your categories to your ArcFX account (one wallet signature)">☁ Sync</button>
-      <select class="btn-export" id="export-select" onchange="exportLedger(this.value); this.selectedIndex=0;" title="Export for bookkeeping" aria-label="Export ledger">
+      <button class="btn-refresh" data-fx-on="click" data-fx-act="refresh">↻ Refresh</button>
+      <button data-fxh="h7" class="btn-sync" id="sync-btn" style="display:none;" title="Save your categories to your ArcFX account (one wallet signature)">☁ Sync</button>
+      <select data-fxh="h8" class="btn-export" id="export-select" title="Export for bookkeeping" aria-label="Export ledger">
         <option value="">⬇ Export</option>
         <option value="detailed">Detailed ledger (all fields)</option>
         <option value="quickbooks">QuickBooks (3-column)</option>
@@ -293,10 +293,10 @@
   <div class="block-head" style="margin-top:34px;">
     <h2 class="block-title">Transactions</h2>
     <div class="filter-tabs" id="filter-tabs">
-      <button class="filter-tab active" onclick="setFilter('all', this)">All</button>
-      <button class="filter-tab" onclick="setFilter('swap', this)">Swaps</button>
-      <button class="filter-tab" onclick="setFilter('in', this)">Received</button>
-      <button class="filter-tab" onclick="setFilter('out', this)">Sent</button>
+      <button data-fxh="h9" class="filter-tab active">All</button>
+      <button data-fxh="h10" class="filter-tab">Swaps</button>
+      <button data-fxh="h11" class="filter-tab">Received</button>
+      <button data-fxh="h12" class="filter-tab">Sent</button>
     </div>
   </div>
 
@@ -306,7 +306,7 @@
       <div class="state-icon">🔌</div>
       <div class="state-title">Connect your wallet</div>
       <div class="state-sub">Connect MetaMask on Arc Testnet to view your<br>full transaction history.</div>
-      <button class="btn-connect-center" onclick="connectWallet()">Connect MetaMask</button>
+      <button data-fxh="h13" class="btn-connect-center">Connect MetaMask</button>
     </div>
     <table class="history-table hidden" id="history-table">
       <thead>
@@ -335,7 +335,7 @@
 </div>
 
 <script type="module">
-import { BrowserProvider, Contract, formatUnits } from "https://esm.sh/ethers@6";
+import { BrowserProvider, Contract, formatUnits } from "ethers";
 import { arcfxWallet } from "/src/shared/wallet.ts";
 
 // ── Config ─────────────────────────────────────────────────────────────────
@@ -611,12 +611,12 @@ function renderTable() {
           <div class="tx-amount ${t.amtClass}">${t.amtDisplay}</div>
         </td>
         <td class="hide-sm">
-          <select class="tx-category" onchange="setCategory('${rowId(t)}', this.value)">
+          <select class="tx-category" data-fx-on="change" data-fx-act="setCategory" data-fx-s="${rowId(t)}" data-fx-v="1">
             ${CATEGORIES.map(c => `<option value="${c}"${c === categoryOf(t) ? " selected" : ""}>${c}</option>`).join("")}
           </select>
         </td>
         <td>
-          <button class="tx-receipt-btn" onclick="downloadReceipt('${t.hash}')" title="Download PDF receipt">🧾</button>
+          <button class="tx-receipt-btn" data-fx-on="click" data-fx-act="downloadReceipt" data-fx-s="${t.hash}" title="Download PDF receipt">🧾</button>
           <a class="tx-hash-link" href="${url}" target="_blank" rel="noopener">${short} ↗</a>
         </td>
       </tr>
@@ -1192,7 +1192,7 @@ function setEmpty(msg) {
       <div class="state-icon">⚠️</div>
       <div class="state-title">Could not load history</div>
       <div class="state-sub">${msg}</div>
-      <button class="btn-connect-center" onclick="refresh()">Try again</button>
+      <button class="btn-connect-center" data-fx-on="click" data-fx-act="refresh">Try again</button>
     `;
   }
 }
@@ -1250,7 +1250,53 @@ window.connectWallet = async function () {
   }
 };
 
-</script>
+
+    /* ── Event wiring (static markup) ──────────────────────────────
+       Replaces inline on* attributes so script-src needs no 'unsafe-inline'.
+       Each callback keeps the inline handler's semantics: a plain function, so
+       `this` is the element, and a parameter named `event`. */
+    function __fxOn(id, ev, fn) {
+      document.querySelectorAll('[data-fxh~="' + id + '"]').forEach(function (el) {
+        el.addEventListener(ev, fn);
+      });
+    }
+    __fxOn("h1", "change", function (event) { applyPeriod(); });
+    __fxOn("h2", "change", function (event) { applyPeriod(); });
+    __fxOn("h3", "click", function (event) { setPeriodPreset('m'); });
+    __fxOn("h4", "click", function (event) { setPeriodPreset('q'); });
+    __fxOn("h5", "click", function (event) { setPeriodPreset('ytd'); });
+    __fxOn("h6", "click", function (event) { setPeriodPreset('all'); });
+    __fxOn("h7", "click", function (event) { syncCategories(); });
+    __fxOn("h8", "change", function (event) { exportLedger(this.value); this.selectedIndex=0; });
+    __fxOn("h9", "click", function (event) { setFilter('all', this); });
+    __fxOn("h10", "click", function (event) { setFilter('swap', this); });
+    __fxOn("h11", "click", function (event) { setFilter('in', this); });
+    __fxOn("h12", "click", function (event) { setFilter('out', this); });
+    __fxOn("h13", "click", function (event) { connectWallet(); });
+
+    /* ── Event wiring (rendered rows) ──────────────────────────────
+       Rows are rebuilt on every render, so these listeners live on document and
+       match by data attribute. data-fx-on carries the event type because a
+       <select> receives click as well as change and must not fire twice. */
+    function __fxDelegate(event) {
+      var el = event.target.closest('[data-fx-act]');
+      if (!el || el.getAttribute('data-fx-on') !== event.type) return;
+      var fn = window[el.getAttribute('data-fx-act')];
+      if (typeof fn !== 'function') return;
+      var args = [];
+      var n = el.getAttribute('data-fx-n');
+      var s = el.getAttribute('data-fx-s');
+      var f = el.getAttribute('data-fx-f');
+      if (n !== null) args.push(Number(n));
+      else if (s !== null) args.push(s);
+      if (f !== null) args.push(f);
+      if (el.hasAttribute('data-fx-v')) args.push(el.value);
+      fn.apply(el, args);
+    }
+    ['click', 'change', 'input'].forEach(function (ev) {
+      document.addEventListener(ev, __fxDelegate);
+    });
+  </script>
 
 </body>
 </html>

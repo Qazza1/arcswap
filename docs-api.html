@@ -109,6 +109,26 @@
   <script type="module">
     import { arcfxMountHeader } from '/src/shared/header.ts';
     arcfxMountHeader({ pageKey:'docs-api', activeLink: 'developers', activeTool: null });
+  
+    /* ── Event wiring (static markup) ──────────────────────────────
+       Replaces inline on* attributes so script-src needs no 'unsafe-inline'.
+       Each callback keeps the inline handler's semantics: a plain function, so
+       `this` is the element, and a parameter named `event`. */
+    function __fxOn(id, ev, fn) {
+      document.querySelectorAll('[data-fxh~="' + id + '"]').forEach(function (el) {
+        el.addEventListener(ev, fn);
+      });
+    }
+    __fxOn("h1", "click", function (event) { copyCode(this); });
+    __fxOn("h2", "click", function (event) { copyCode(this); });
+    __fxOn("h3", "click", function (event) { copyCode(this); });
+    __fxOn("h4", "click", function (event) { copyCode(this); });
+    __fxOn("h5", "click", function (event) { copyCode(this); });
+    __fxOn("h6", "click", function (event) { copyCode(this); });
+    __fxOn("h7", "click", function (event) { copyCode(this); });
+    __fxOn("h8", "click", function (event) { copyCode(this); });
+    __fxOn("h9", "click", function (event) { copyCode(this); });
+    __fxOn("h10", "click", function (event) { copyCode(this); });
   </script>
 
   <div class="page">
@@ -140,12 +160,12 @@
           <h2>Quickstart</h2>
           <p>The base URL for all endpoints is:</p>
           <div class="code-block">
-            <div class="code-block-hdr"><span class="code-block-lbl">Base URL</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <div class="code-block-hdr"><span class="code-block-lbl">Base URL</span><button data-fxh="h1" class="copy-btn">Copy</button></div>
             <pre><code>https://arcfx-backend-production.up.railway.app</code></pre>
           </div>
           <p>Three steps to your first call: request a key with your email, then send it as a Bearer token. For example, to check an invoice:</p>
           <div class="code-block">
-            <div class="code-block-hdr"><span class="code-block-lbl">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <div class="code-block-hdr"><span class="code-block-lbl">cURL</span><button data-fxh="h2" class="copy-btn">Copy</button></div>
             <pre><code><span class="tok-com"># 1. Get a key (returned once — save it)</span>
 curl -X POST https://arcfx-backend-production.up.railway.app/api/v1/keys \
   -H <span class="tok-str">"Content-Type: application/json"</span> \
@@ -162,7 +182,7 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
           <h2>Authentication</h2>
           <p>Every request to <code>/api/v1/*</code> requires an API key, sent as a Bearer token in the <code>Authorization</code> header:</p>
           <div class="code-block">
-            <div class="code-block-hdr"><span class="code-block-lbl">Header</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <div class="code-block-hdr"><span class="code-block-lbl">Header</span><button data-fxh="h3" class="copy-btn">Copy</button></div>
             <pre><code>Authorization: Bearer arcfx_sk_test_xxxxxxxxxxxxxxxx</code></pre>
           </div>
           <p>Keys are scoped to Arc Testnet and prefixed <code>arcfx_sk_test_</code>. Treat your key like a password — it's stored only as a hash on our side and shown to you exactly once at issuance.</p>
@@ -181,13 +201,13 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
                 <tr><td>email<span class="req">required</span></td><td>string</td><td>A valid email. Used to label the key and for support contact.</td></tr>
               </table>
               <div class="code-block">
-                <div class="code-block-hdr"><span class="code-block-lbl">Request</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <div class="code-block-hdr"><span class="code-block-lbl">Request</span><button data-fxh="h4" class="copy-btn">Copy</button></div>
                 <pre><code>curl -X POST https://arcfx-backend-production.up.railway.app/api/v1/keys \
   -H <span class="tok-str">"Content-Type: application/json"</span> \
   -d <span class="tok-str">'{"email":"you@example.com"}'</span></code></pre>
               </div>
               <div class="code-block">
-                <div class="code-block-hdr"><span class="code-block-lbl">Response · 201</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <div class="code-block-hdr"><span class="code-block-lbl">Response · 201</span><button data-fxh="h5" class="copy-btn">Copy</button></div>
                 <pre><code>{
   <span class="tok-key">"id"</span>: <span class="tok-str">"key_..."</span>,
   <span class="tok-key">"key"</span>: <span class="tok-str">"arcfx_sk_test_..."</span>,
@@ -226,12 +246,12 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
                 <tr><td>recipient<span class="req">required</span></td><td>address</td><td>The recipient wallet the invoice was issued to (<code>0x…</code>, 40 hex chars).</td></tr>
               </table>
               <div class="code-block">
-                <div class="code-block-hdr"><span class="code-block-lbl">Request</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <div class="code-block-hdr"><span class="code-block-lbl">Request</span><button data-fxh="h6" class="copy-btn">Copy</button></div>
                 <pre><code>curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<span class="tok-mut">?</span>number=INV-001\&recipient=0xAbC... \
   -H <span class="tok-str">"Authorization: Bearer arcfx_sk_test_..."</span></code></pre>
               </div>
               <div class="code-block">
-                <div class="code-block-hdr"><span class="code-block-lbl">Response · paid</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <div class="code-block-hdr"><span class="code-block-lbl">Response · paid</span><button data-fxh="h7" class="copy-btn">Copy</button></div>
                 <pre><code>{
   <span class="tok-key">"paid"</span>: <span class="tok-num">true</span>,
   <span class="tok-key">"invoiceNumber"</span>: <span class="tok-str">"INV-001"</span>,
@@ -250,7 +270,7 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
 }</code></pre>
               </div>
               <div class="code-block">
-                <div class="code-block-hdr"><span class="code-block-lbl">Response · not yet paid</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <div class="code-block-hdr"><span class="code-block-lbl">Response · not yet paid</span><button data-fxh="h8" class="copy-btn">Copy</button></div>
                 <pre><code>{
   <span class="tok-key">"paid"</span>: <span class="tok-num">false</span>,
   <span class="tok-key">"invoiceNumber"</span>: <span class="tok-str">"INV-001"</span>,
@@ -275,12 +295,12 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
                 <tr><td>payer<span class="opt">optional</span></td><td>address</td><td>Filter to payments sent from this wallet (<code>0x…</code>).</td></tr>
               </table>
               <div class="code-block">
-                <div class="code-block-hdr"><span class="code-block-lbl">Request</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <div class="code-block-hdr"><span class="code-block-lbl">Request</span><button data-fxh="h9" class="copy-btn">Copy</button></div>
                 <pre><code>curl https://arcfx-backend-production.up.railway.app/api/v1/payments\<span class="tok-mut">?</span>limit=5 \
   -H <span class="tok-str">"Authorization: Bearer arcfx_sk_test_..."</span></code></pre>
               </div>
               <div class="code-block">
-                <div class="code-block-hdr"><span class="code-block-lbl">Response · 200</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <div class="code-block-hdr"><span class="code-block-lbl">Response · 200</span><button data-fxh="h10" class="copy-btn">Copy</button></div>
                 <pre><code>{
   <span class="tok-key">"count"</span>: <span class="tok-num">1</span>,
   <span class="tok-key">"payments"</span>: [
@@ -325,7 +345,11 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    /* Converted from a classic inline <script> so Vite bundles it to a file
+       and script-src needs no 'unsafe-inline'. Module scope is not global, so
+       the declarations the event wiring calls are re-exported onto window
+       below — exactly the reachability this block had as a classic script. */
     function copyCode(btn) {
       var block = btn.closest('.code-block');
       var code = block.querySelector('pre code');
@@ -337,6 +361,9 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
         setTimeout(function () { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
       }).catch(function () {});
     }
+
+    // Re-exported for the event wiring (see module-scope note above).
+    window.copyCode = copyCode;
   </script>
 </body>
 </html>

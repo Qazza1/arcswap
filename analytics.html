@@ -164,6 +164,17 @@
       activeLink: 'analytics',
       activeTool: null
     });
+  
+    /* ── Event wiring (static markup) ──────────────────────────────
+       Replaces inline on* attributes so script-src needs no 'unsafe-inline'.
+       Each callback keeps the inline handler's semantics: a plain function, so
+       `this` is the element, and a parameter named `event`. */
+    function __fxOn(id, ev, fn) {
+      document.querySelectorAll('[data-fxh~="' + id + '"]').forEach(function (el) {
+        el.addEventListener(ev, fn);
+      });
+    }
+    __fxOn("h1", "click", function (event) { refreshAll(); });
   </script>
 
   <div class="page">
@@ -176,7 +187,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="last-updated">Updated <span id="last-updated">—</span></div>
-        <button id="refresh-btn" onclick="refreshAll()">
+        <button data-fxh="h1" id="refresh-btn">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
           </svg>

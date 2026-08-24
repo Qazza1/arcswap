@@ -115,17 +115,17 @@ const TOOLS: Array<{ href: string; key: ActiveTool; name: string; sub: string; s
   {
     href: '/multisend', key: 'multisend',
     name: 'Multisender', sub: 'Batch transfers',
-    svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
+    svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
   },
   {
     href: '/pay', key: 'pay',
     name: 'Pay Links', sub: 'Accept payments',
-    svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',
+    svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',
   },
   {
     href: '/invoice', key: 'invoice',
     name: 'Invoices', sub: 'PDF invoices + Pay Now',
-    svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>',
+    svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>',
   },
   {
     href: '/agent', key: 'agent',
@@ -187,11 +187,24 @@ const CANONICAL_CSS = `
      page. As real rules they follow the tokens, and six inline handlers go
      away with them. */
   .arcfx-navlink { color: #94a3b8; }
-  .arcfx-navlink:hover { color: #f1f5f9; background: #1e293b; }
-  .arcfx-dditem:hover { background: #1e293b; }
-  .arcfx-mobilelink:hover { background: #1e293b; color: #f1f5f9; }
-  #arcfx-contacts-btn:hover, [id^="arcfx-contacts-btn"]:hover { border-color: #2563eb !important; color: #94a3b8 !important; }
-  #connect-btn:hover { border-color: #2563eb; }
+  .arcfx-navlink:hover { color: var(--fx-ink); background: var(--fx-sunken); }
+  .arcfx-dditem:hover { background: var(--fx-sunken); }
+  .arcfx-mobilelink:hover { background: var(--fx-sunken); color: var(--fx-ink); }
+  #arcfx-contacts-btn:hover, [id^="arcfx-contacts-btn"]:hover { border-color: var(--fx-accent) !important; color: var(--fx-ink) !important; }
+  #connect-btn:hover { border-color: var(--fx-accent); }
+
+  /* The nav's primary call to action. This was an inline style plus an
+     onmouseover/onmouseout pair writing a dark blue straight onto the element —
+     which is both why it ignored the register and why script-src still needed
+     'unsafe-inline'. As a class it does neither. */
+  .arcfx-cta {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 18px; border-radius: 7px;
+    background: var(--fx-accent); color: var(--fx-on-accent);
+    font-size: 13.5px; font-weight: 600; text-decoration: none;
+    transition: opacity .15s;
+  }
+  .arcfx-cta:hover { opacity: .86; }
 
   [data-register] .arcfx-navlink { color: var(--fx-muted); }
   [data-register] .arcfx-navlink:hover { color: var(--fx-ink); background: var(--fx-sunken); }
@@ -327,7 +340,7 @@ function buildStatsBar(mode: Mode): string {
 // ── Nav link builder ───────────────────────────────────────────────────────
 function buildLink(href: string, label: string, isActive: boolean): string {
   if (isActive) {
-    return `<a href="${href}" style="padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;text-decoration:none;transition:all .15s;color:#f1f5f9;background:#1e293b;">${label}</a>`;
+    return `<a href="${href}" style="padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;text-decoration:none;transition:all .15s;color:var(--fx-ink);background:#1e293b;">${label}</a>`;
   }
   return `<a href="${href}" class="arcfx-navlink" style="padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;text-decoration:none;transition:all .15s;">${label}</a>`;
 }
@@ -335,7 +348,7 @@ function buildLink(href: string, label: string, isActive: boolean): string {
 function buildDropdownItem(href: string, name: string, sub: string, svg: string, isActive: boolean): string {
   const bg = isActive ? '#1e293b' : 'transparent';
   const hoverOut = isActive ? '#1e293b' : 'transparent';
-  return `<a href="${href}" class="arcfx-dditem" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;background:${bg};transition:background .15s;">${svg}<div><div style="font-size:13px;font-weight:600;color:#f1f5f9;">${name}</div><div style="font-size:11px;color:#64748b;margin-top:1px;">${sub}</div></div></a>`;
+  return `<a href="${href}" class="arcfx-dditem" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;text-decoration:none;background:${bg};transition:background .15s;">${svg}<div><div style="font-size:13px;font-weight:600;color:var(--fx-ink);">${name}</div><div style="font-size:11px;color:#64748b;margin-top:1px;">${sub}</div></div></a>`;
 }
 
 // ── Nav HTML builder (dispatches by mode) ──────────────────────────────────
@@ -365,13 +378,13 @@ function buildMarketingNav(activeLink: ActiveLink): string {
 <nav class="arcfx-nav" style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;backdrop-filter:blur(12px);">
   <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
     ${arcfxMark(26)}
-    <span class="arcfx-wordmark" style="font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:16px;font-weight:700;color:#f1f5f9;letter-spacing:-0.02em;">ArcFX</span>
+    <span class="arcfx-wordmark" style="font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:16px;font-weight:700;color:var(--fx-ink);letter-spacing:-0.02em;">ArcFX</span>
   </a>
   <div class="arcfx-nav-center" style="display:flex;align-items:center;gap:2px;">
     ${links}
   </div>
   <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">
-    <a href="/app" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:7px;background:#2563eb;color:#fff;font-size:13.5px;font-weight:600;text-decoration:none;transition:background .15s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">${ctaLabel} <span style="font-size:14px;">&rarr;</span></a>
+    <a href="/app" class="arcfx-cta">${ctaLabel} <span style="font-size:14px;">&rarr;</span></a>
   </div>
 </nav>
 `;
@@ -432,32 +445,32 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
 <nav class="arcfx-nav" style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;">
   <a href="/app" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
     ${arcfxMark(26)}
-    <span class="arcfx-wordmark" style="font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:16px;font-weight:700;color:#f1f5f9;letter-spacing:-0.02em;">ArcFX</span>
+    <span class="arcfx-wordmark" style="font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:16px;font-weight:700;color:var(--fx-ink);letter-spacing:-0.02em;">ArcFX</span>
   </a>
   <div class="arcfx-nav-center" style="display:flex;align-items:center;gap:2px;">
     ${tradeLink}
     <div style="position:relative;" id="arcfx-tools-wrap-${pageKey}">
       <button id="arcfx-tools-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;border:0;outline:none;cursor:pointer;font-family:inherit;transition:all .15s;color:${toolsBtnColor};background:${toolsBtnBg};-webkit-appearance:none;">Tools <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
-      <div id="arcfx-tools-dd-${pageKey}" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:220px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
+      <div id="arcfx-tools-dd-${pageKey}" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:220px;background:#0f172a;border:1px solid var(--fx-line);border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
         ${dropdownItems}
       </div>
     </div>
     ${productLinks}
     <div style="position:relative;" id="arcfx-more-wrap-${pageKey}">
       <button id="arcfx-more-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;border:0;outline:none;cursor:pointer;font-family:inherit;transition:all .15s;color:${moreBtnColor};background:${moreBtnBg};-webkit-appearance:none;">More <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
-      <div id="arcfx-more-dd-${pageKey}" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:160px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
+      <div id="arcfx-more-dd-${pageKey}" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:160px;background:#0f172a;border:1px solid var(--fx-line);border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
         ${moreItems}
       </div>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">
-    <div class="arcfx-testnet-pill" style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;border:1px solid #1e293b;background:#0f172a;">
+    <div class="arcfx-testnet-pill" style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;border:1px solid var(--fx-line);background:#0f172a;">
       <span style="width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.7);animation:arcfx-pulse 2s ease-in-out infinite;display:inline-block;"></span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#64748b;">Testnet</span>
     </div>
-    <button id="arcfx-contacts-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Contacts</button>
-    <button id="connect-btn" style="padding:7px 16px;border-radius:6px;border:1px solid #1e293b;background:#0f172a;color:#94a3b8;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;">Connect wallet</button>
-    <button class="arcfx-hamburger" id="arcfx-hamburger-${pageKey}" aria-label="Menu" style="align-items:center;justify-content:center;width:38px;height:38px;border-radius:8px;border:1px solid #1e293b;background:#0f172a;color:#cbd5e1;cursor:pointer;flex-shrink:0;padding:0;">
+    <button id="arcfx-contacts-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:6px;border:1px solid var(--fx-line);background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Contacts</button>
+    <button id="connect-btn" style="padding:7px 16px;border-radius:6px;border:1px solid var(--fx-line);background:#0f172a;color:#94a3b8;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;">Connect wallet</button>
+    <button class="arcfx-hamburger" id="arcfx-hamburger-${pageKey}" aria-label="Menu" style="align-items:center;justify-content:center;width:38px;height:38px;border-radius:8px;border:1px solid var(--fx-line);background:#0f172a;color:#cbd5e1;cursor:pointer;flex-shrink:0;padding:0;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
   </div>
@@ -471,10 +484,10 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
 // ── Contacts modal HTML (shared singleton — only mounted once) ─────────────
 const CONTACTS_MODAL_HTML = `
 <div id="arcfx-contacts-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
-  <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;width:480px;max-width:calc(100vw - 32px);max-height:80vh;display:flex;flex-direction:column;" id="arcfx-contacts-inner">
+  <div style="background:#0f172a;border:1px solid var(--fx-line);border-radius:12px;width:480px;max-width:calc(100vw - 32px);max-height:80vh;display:flex;flex-direction:column;" id="arcfx-contacts-inner">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #1e293b;">
       <div>
-        <div style="font-size:15px;font-weight:600;color:#f1f5f9;">Address Book</div>
+        <div style="font-size:15px;font-weight:600;color:var(--fx-ink);">Address Book</div>
         <div style="font-size:11px;color:#475569;margin-top:2px;">Synced across all pages</div>
       </div>
       <button id="arcfx-contacts-close" style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:20px;padding:4px;">&times;</button>
@@ -482,9 +495,9 @@ const CONTACTS_MODAL_HTML = `
     <div style="flex:1;overflow-y:auto;padding:12px 20px;" id="arcfx-contacts-list"></div>
     <div style="padding:14px 20px;border-top:1px solid #1e293b;">
       <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;">
-        <input id="arcfx-contact-name" type="text" placeholder="Contact name" style="background:#060b18;border:1px solid #1e293b;border-radius:6px;color:#f1f5f9;font-size:13px;font-family:inherit;padding:8px 11px;outline:none;" />
-        <input id="arcfx-contact-addr" type="text" placeholder="0x..." style="background:#060b18;border:1px solid #1e293b;border-radius:6px;color:#f1f5f9;font-size:12px;font-family:'JetBrains Mono',monospace;padding:8px 11px;outline:none;" />
-        <button id="arcfx-contact-save" style="padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Save</button>
+        <input id="arcfx-contact-name" type="text" placeholder="Contact name" style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:6px;color:var(--fx-ink);font-size:13px;font-family:inherit;padding:8px 11px;outline:none;" />
+        <input id="arcfx-contact-addr" type="text" placeholder="0x..." style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:6px;color:var(--fx-ink);font-size:12px;font-family:'JetBrains Mono',monospace;padding:8px 11px;outline:none;" />
+        <button id="arcfx-contact-save" style="padding:8px 14px;background:var(--fx-accent);color:var(--fx-on-accent);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Save</button>
       </div>
     </div>
   </div>
@@ -596,16 +609,16 @@ function renderContacts(): void {
   // name can never be parsed as markup.
   list.replaceChildren(...entries.map((c, i) => {
     const row = document.createElement('div');
-    row.setAttribute('style', 'display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;background:#0a0f1e;border:1px solid #1e293b;margin-bottom:8px;');
+    row.setAttribute('style', 'display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;background:#0a0f1e;border:1px solid var(--fx-line);margin-bottom:8px;');
 
     const avatar = document.createElement('div');
-    avatar.setAttribute('style', 'width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2563eb;flex-shrink:0;');
+    avatar.setAttribute('style', 'width:32px;height:32px;border-radius:50%;background:var(--fx-sunken);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--fx-ink);flex-shrink:0;');
     avatar.textContent = (c.name || '?').charAt(0).toUpperCase();
 
     const middle = document.createElement('div');
     middle.setAttribute('style', 'flex:1;min-width:0;');
     const name = document.createElement('div');
-    name.setAttribute('style', 'font-size:13px;font-weight:600;color:#f1f5f9;');
+    name.setAttribute('style', 'font-size:13px;font-weight:600;color:var(--fx-ink);');
     name.textContent = c.name || '';
     const addr = document.createElement('div');
     addr.setAttribute('style', 'font-size:11px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;');
@@ -615,7 +628,7 @@ function renderContacts(): void {
     const copy = document.createElement('button');
     copy.className = 'arcfx-copy-btn';
     copy.dataset.idx = String(i);
-    copy.setAttribute('style', 'background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;');
+    copy.setAttribute('style', 'background:transparent;border:1px solid var(--fx-line);border-radius:5px;color:#475569;font-size:11px;padding:4px 9px;cursor:pointer;');
     copy.textContent = 'Copy';
 
     row.append(avatar, middle, copy);

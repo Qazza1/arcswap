@@ -151,6 +151,16 @@
 
     .hidden { display: none !important; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    /* ── Hover and focus states, moved out of inline handlers ──────────
+       These were on{mouseover,mouseout,focus,blur} attributes writing straight
+       to element.style. As CSS they are overridable, they respect the register,
+       and script-src no longer needs 'unsafe-inline' to keep them working. */
+    .fx-focus-ring:focus,
+    .fx-focus-ring:focus-within { border-color: var(--fx-accent); outline: none; }
+    .fx-hover-ghost:hover { border-color: var(--fx-accent); color: var(--fx-accent); }
+    .fx-hover-link:hover  { color: var(--fx-accent); }
+    .fx-hover-row:hover   { background: var(--fx-sunken); }
+
   </style>
 </head>
 <body>
@@ -172,7 +182,7 @@
   <div class="page" id="page-root"></div>
 
 <script type="module">
-import { BrowserProvider, Contract, parseUnits, formatUnits, isAddress, id as ethersId } from "https://esm.sh/ethers@6";
+import { BrowserProvider, Contract, parseUnits, formatUnits, isAddress, id as ethersId } from "ethers";
 import { arcfxWallet } from "/src/shared/wallet.ts";
 
 // ── Config ─────────────────────────────────────────────────────────────────
@@ -271,10 +281,10 @@ function renderGenMode() {
           <input id="gen-address" class="mono-input" type="text" placeholder="0x... (connect wallet or paste manually)" autocomplete="off" />
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
             <span class="field-hint">The address that will receive the payment.</span>
-            <button type="button" id="contacts-toggle" onclick="toggleContactsPicker()"
+            <button class="fx-hover-ghost" type="button" id="contacts-toggle" data-fx-on="click" data-fx-act="toggleContactsPicker"
                     style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 11px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:border-color .15s,color .15s;"
-                    onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--text)'"
-                    onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+                   
+                   >
               📇 From contacts
             </button>
           </div>
@@ -289,10 +299,10 @@ function renderGenMode() {
           <div class="field">
             <label>Token</label>
             <div class="token-btns">
-              <button class="token-btn active" id="gen-usdc" onclick="genSelectToken('USDC')">
+              <button class="token-btn active" id="gen-usdc" data-fx-on="click" data-fx-act="genSelectToken" data-fx-s="USDC">
                 <div class="token-logo usdc">$</div> USDC
               </button>
-              <button class="token-btn" id="gen-eurc" onclick="genSelectToken('EURC')">
+              <button class="token-btn" id="gen-eurc" data-fx-on="click" data-fx-act="genSelectToken" data-fx-s="EURC">
                 <div class="token-logo eurc">€</div> EURC
               </button>
             </div>
@@ -304,14 +314,14 @@ function renderGenMode() {
           <textarea id="gen-note" placeholder="Invoice #1, freelance payment, etc."></textarea>
         </div>
 
-        <button class="btn-primary" onclick="generateLink()">Generate payment link →</button>
+        <button class="btn-primary" data-fx-on="click" data-fx-act="generateLink">Generate payment link →</button>
 
         <div id="gen-result" class="hidden" style="margin-top:20px;">
           <div class="card-sep"></div>
           <div class="link-box">
             <div class="link-label">Your payment link</div>
             <div class="link-url" id="gen-url"></div>
-            <button class="copy-btn" id="copy-btn" onclick="copyLink()">
+            <button class="copy-btn" id="copy-btn" data-fx-on="click" data-fx-act="copyLink">
               📋 Copy link
             </button>
           </div>
@@ -406,9 +416,9 @@ function renderPayMode() {
         <div class="success-sub" id="success-sub">—</div>
         <a id="success-link" href="#" target="_blank" rel="noopener" class="explorer-btn">View on ArcScan ↗</a>
         <br><br>
-        <button onclick="payAgain()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:var(--rsm);padding:9px 20px;font-size:13px;cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s;"
-                onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--text)'"
-                onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+        <button class="fx-hover-ghost" data-fx-on="click" data-fx-act="payAgain" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:var(--rsm);padding:9px 20px;font-size:13px;cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s;"
+               
+               >
           Make another payment →
         </button>
       </div>
@@ -443,7 +453,7 @@ function renderPayMode() {
           <div class="field">
             <label for="pay-custom-amount">Amount</label>
             <input id="pay-custom-amount" type="number" min="0" step="any" placeholder="0.00" autocomplete="off"
-              oninput="document.getElementById('pay-amount-display').textContent = this.value || '—'; updateFeeBreakdown();" />
+              data-fx-on="input" data-fx-act="onPayAmountInput" />
           </div>
         </div>` : ""}
 
@@ -463,7 +473,7 @@ function renderPayMode() {
 
         <!-- Connect state -->
         <div id="pay-connect">
-          <button class="btn-primary" onclick="connectAndPay()">Connect wallet to pay</button>
+          <button class="btn-primary" data-fx-on="click" data-fx-act="connectAndPay">Connect wallet to pay</button>
           <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--muted);">
             Arc Testnet · ${sym} · Non-custodial
           </div>
@@ -474,7 +484,7 @@ function renderPayMode() {
           <div style="background:var(--raised);border:1px solid var(--border);border-radius:var(--rsm);padding:11px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;">
             Balance: <strong id="pay-balance" style="color:var(--text);">—</strong> ${sym}
           </div>
-          <button class="btn-primary" id="pay-btn" onclick="sendPayment()">
+          <button class="btn-primary" id="pay-btn" data-fx-on="click" data-fx-act="sendPayment">
             Send ${hasFixed ? fmtAmt(parseFloat(fixedAmt), 2)+" " : ""}${sym} →
           </button>
         </div>
@@ -742,9 +752,9 @@ window.toggleContactsPicker = function() {
       const name = escapeHtml(c.name || "Unnamed");
       const addr = escapeHtml(c.address || "");
       const shortA = addr ? `${addr.slice(0,8)}…${addr.slice(-6)}` : "";
-      return `<div onclick="pickContact('${addr}')"
+      return `<div class="fx-hover-row" data-fx-on="click" data-fx-act="pickContact" data-fx-s="${addr}"
         style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:6px;cursor:pointer;transition:background .12s;"
-        onmouseover="this.style.background='var(--raised)'" onmouseout="this.style.background='transparent'">
+       >
         <div style="width:26px;height:26px;border-radius:50%;background:var(--blue-dim);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${name.slice(0,1).toUpperCase()}</div>
         <div style="min-width:0;">
           <div style="font-size:13px;color:var(--text);font-weight:500;">${name}</div>
@@ -762,7 +772,37 @@ window.pickContact = function(addr) {
   const picker = document.getElementById("contacts-picker");
   if (picker) picker.classList.add("hidden");
 };
-</script>
+
+    /* Was an inline oninput with two statements; named so the delegated
+       dispatcher can reach it like any other action. */
+    window.onPayAmountInput = function () {
+      document.getElementById('pay-amount-display').textContent = this.value || '\u2014';
+      updateFeeBreakdown();
+    };
+
+    /* ── Event wiring (rendered rows) ──────────────────────────────
+       Rows are rebuilt on every render, so these listeners live on document and
+       match by data attribute. data-fx-on carries the event type because a
+       <select> receives click as well as change and must not fire twice. */
+    function __fxDelegate(event) {
+      var el = event.target.closest('[data-fx-act]');
+      if (!el || el.getAttribute('data-fx-on') !== event.type) return;
+      var fn = window[el.getAttribute('data-fx-act')];
+      if (typeof fn !== 'function') return;
+      var args = [];
+      var n = el.getAttribute('data-fx-n');
+      var s = el.getAttribute('data-fx-s');
+      var f = el.getAttribute('data-fx-f');
+      if (n !== null) args.push(Number(n));
+      else if (s !== null) args.push(s);
+      if (f !== null) args.push(f);
+      if (el.hasAttribute('data-fx-v')) args.push(el.value);
+      fn.apply(el, args);
+    }
+    ['click', 'change', 'input'].forEach(function (ev) {
+      document.addEventListener(ev, __fxDelegate);
+    });
+  </script>
 
 </body>
 </html>
