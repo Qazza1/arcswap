@@ -1,26 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- Document register: paper and ink. Client-facing. src/shared/tokens.css -->
+<html lang="en" data-register="document">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ArcFX Invoice — Create crypto invoices on Arc</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:     #060810; --card:   #0b0f1a; --raised: #101420;
-      --border: #1a2035; --bmed:   #252d45; --text:   #e8edf8;
-      --muted:  #4a5578; --subtle: #2a3350;
-      --blue:   #3d7eff; --bdim:   rgba(61,126,255,0.1);
-      --teal:   #00d4aa; --tdim:   rgba(0,212,170,0.08);
-      --red:    #ff4d6a; --r: 10px; --rsm: 6px; --rlg: 14px;
+      /* Client-facing: the DOCUMENT register — paper, ink, a text serif.
+         An invoice is the most public thing ArcFX produces and it gets printed,
+         so it reads as a document rather than as software output.
+         Tokens: src/shared/tokens.css */
+      --bg:     var(--fx-bg);
+      --card:   var(--fx-surface);
+      --raised: var(--fx-sunken);
+      --border: var(--fx-line);
+      --bmed:   var(--fx-line);
+      --text:   var(--fx-ink);
+      --muted:  var(--fx-muted);
+      --subtle: var(--fx-muted);
+      --blue:   var(--fx-accent);
+      --bdim:   var(--fx-sunken);
+      --teal:   var(--fx-ok);
+      --tdim:   var(--fx-ok-bg);
+      --orange: var(--fx-warn);
+      --red:    var(--fx-bad);
+      --r: var(--fx-r); --rsm: var(--fx-r-sm); --rlg: var(--fx-r-lg);
     }
     html { scroll-behavior: smooth; }
-    body { font-family: "Space Grotesk", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: var(--fx-body); background: var(--bg); color: var(--text); min-height: 100vh; }
     a { color: var(--blue); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
@@ -34,7 +47,7 @@
     .page-header { margin-bottom: 40px; }
     .eyebrow { display: inline-flex; align-items: center; gap: 7px; background: var(--card); border: 1px solid var(--bmed); color: var(--muted); font-size: 11.5px; font-weight: 500; padding: 4px 12px; border-radius: 100px; margin-bottom: 16px; }
     h1 { font-size: clamp(28px, 4vw, 42px); font-weight: 700; letter-spacing: -1px; margin-bottom: 10px; }
-    .gradient { background: linear-gradient(135deg, #3d7eff, #00d4aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gradient { color: var(--fx-muted); font-weight: 400; }
     .sub { font-size: 14.5px; color: var(--muted); line-height: 1.7; }
 
     /* Two-column layout */
@@ -53,13 +66,13 @@
     .field label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
     .field input, .field select, .field textarea {
       background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm);
-      color: var(--text); font-size: 13.5px; font-family: "Space Grotesk", sans-serif;
+      color: var(--text); font-size: 13.5px; font-family: var(--fx-body);
       padding: 10px 12px; outline: none; transition: border-color .15s; width: 100%;
       -webkit-appearance: none;
     }
     .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); }
     .field input::placeholder, .field textarea::placeholder { color: var(--subtle); }
-    .field select option { background: #0b0f1a; color: var(--text); }
+    .field select option { background: var(--fx-surface); color: var(--text); }
     .field textarea { resize: none; min-height: 70px; font-size: 13px; line-height: 1.6; }
     .mono { font-family: "JetBrains Mono", monospace !important; font-size: 12px !important; }
     .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -67,7 +80,7 @@
 
     /* Token selector */
     .token-btns { display: flex; gap: 6px; }
-    .token-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm); padding: 9px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; color: var(--muted); font-family: "Space Grotesk", sans-serif; }
+    .token-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm); padding: 9px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; color: var(--muted); font-family: var(--fx-body); }
     .token-btn:hover { border-color: var(--bmed); color: var(--text); }
     .token-btn.active { background: var(--bdim); border-color: rgba(61,126,255,.4); color: var(--blue); }
     .tlogo { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
@@ -79,14 +92,14 @@
     .items-table th { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); padding: 0 8px 6px; text-align: left; }
     .items-table th:last-child { text-align: right; width: 40px; }
     .item-row td { padding: 4px; }
-    .item-row input { background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm); color: var(--text); font-size: 12.5px; font-family: "Space Grotesk", sans-serif; padding: 8px 10px; outline: none; width: 100%; transition: border-color .15s; }
+    .item-row input { background: var(--raised); border: 1px solid var(--border); border-radius: var(--rsm); color: var(--text); font-size: 12.5px; font-family: var(--fx-body); padding: 8px 10px; outline: none; width: 100%; transition: border-color .15s; }
     .item-row input:focus { border-color: var(--blue); }
     .item-row input::placeholder { color: var(--subtle); }
     .item-row input.right { text-align: right; font-family: "JetBrains Mono", monospace; }
     .item-row-total { font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--text); text-align: right; padding: 0 4px; white-space: nowrap; line-height: 36px; }
     .btn-remove-item { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 4px; transition: color .15s; line-height: 36px; }
     .btn-remove-item:hover { color: var(--red); }
-    .btn-add-item { display: flex; align-items: center; gap: 6px; background: transparent; border: 1px dashed var(--border); border-radius: var(--rsm); color: var(--muted); font-size: 12.5px; font-weight: 500; padding: 8px 14px; cursor: pointer; transition: all .15s; font-family: "Space Grotesk", sans-serif; width: 100%; justify-content: center; }
+    .btn-add-item { display: flex; align-items: center; gap: 6px; background: transparent; border: 1px dashed var(--border); border-radius: var(--rsm); color: var(--muted); font-size: 12.5px; font-weight: 500; padding: 8px 14px; cursor: pointer; transition: all .15s; font-family: var(--fx-body); width: 100%; justify-content: center; }
     .btn-add-item:hover { border-color: var(--blue); color: var(--blue); background: var(--bdim); }
 
     /* Totals */
@@ -97,52 +110,52 @@
     .total-row:last-child .val { color: var(--blue); }
 
     /* Buttons */
-    .btn-primary { display: block; width: 100%; background: linear-gradient(135deg, #3d7eff, #00d4aa); color: #fff; border: none; border-radius: var(--r); padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: opacity .15s; }
+    .btn-primary { display: block; width: 100%; background: var(--fx-accent); color: var(--fx-on-accent); border: none; border-radius: var(--r); padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: var(--fx-body); transition: opacity .15s; }
     .btn-primary:hover { opacity: .88; }
-    .btn-outline { display: block; width: 100%; background: transparent; border: 1px solid var(--bmed); color: var(--text); border-radius: var(--r); padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; margin-top: 10px; }
+    .btn-outline { display: block; width: 100%; background: transparent; border: 1px solid var(--bmed); color: var(--text); border-radius: var(--r); padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--fx-body); transition: all .15s; margin-top: 10px; }
     .btn-outline:hover { border-color: var(--blue); background: var(--bdim); }
-    .btn-copy { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; background: var(--bdim); border: 1px solid rgba(61,126,255,.3); color: var(--blue); border-radius: var(--r); padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: "Space Grotesk", sans-serif; transition: all .15s; margin-top: 10px; }
+    .btn-copy { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; background: var(--bdim); border: 1px solid rgba(61,126,255,.3); color: var(--blue); border-radius: var(--r); padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--fx-body); transition: all .15s; margin-top: 10px; }
     .btn-copy:hover { background: rgba(61,126,255,.18); }
     .btn-copy.copied { background: var(--tdim); border-color: rgba(0,212,170,.3); color: var(--teal); }
 
     /* Preview panel */
     .preview-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--rlg); position: sticky; top: 80px; }
-    .preview-invoice { background: #fff; margin: 16px; border-radius: 8px; overflow: hidden; font-family: "Space Grotesk", sans-serif; }
-    .inv-header { background: #060810; padding: 20px 22px 16px; }
+    .preview-invoice { background: #fff; margin: 16px; border-radius: 8px; overflow: hidden; font-family: var(--fx-body); }
+    .inv-header { background: var(--fx-surface); border-bottom: 1px solid var(--fx-line); padding: 20px 22px 16px; }
     .inv-header-top { display: flex; justify-content: space-between; align-items: flex-start; }
     .inv-logo-row { display: flex; align-items: center; gap: 8px; }
-    .inv-logo-box { width: 28px; height: 28px; background: #3d7eff; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; }
-    .inv-brand { font-size: 14px; font-weight: 700; color: #e8edf8; }
-    .inv-label { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
-    .inv-number { font-family: "JetBrains Mono", monospace; font-size: 10px; color: #4a5578; margin-top: 3px; }
-    .inv-meta { display: flex; gap: 24px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #1a2035; }
+    .inv-logo-box { width: 28px; height: 28px; background: var(--fx-accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--fx-on-accent); }
+    .inv-brand { font-size: 14px; font-weight: 700; color: var(--fx-ink); }
+    .inv-label { font-size: 22px; font-weight: 700; color: var(--fx-ink); font-family: var(--fx-display); letter-spacing: -0.5px; }
+    .inv-number { font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--fx-muted); margin-top: 3px; }
+    .inv-meta { display: flex; gap: 24px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--fx-line); }
     .inv-meta-item { }
-    .inv-meta-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: #4a5578; margin-bottom: 3px; }
-    .inv-meta-val { font-family: "JetBrains Mono", monospace; font-size: 11px; color: #e8edf8; }
+    .inv-meta-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--fx-muted); margin-bottom: 3px; }
+    .inv-meta-val { font-family: var(--fx-mono); font-size: 11px; color: var(--fx-ink); }
     .inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 22px; }
-    .inv-party-label { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #4a5578; margin-bottom: 6px; }
-    .inv-party-name { font-size: 12px; font-weight: 700; color: #060810; margin-bottom: 2px; }
-    .inv-party-detail { font-size: 10px; color: #6b7a99; line-height: 1.6; }
+    .inv-party-label { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--fx-muted); margin-bottom: 6px; }
+    .inv-party-name { font-size: 12px; font-weight: 700; color: var(--fx-ink); margin-bottom: 2px; }
+    .inv-party-detail { font-size: 10px; color: var(--fx-muted); line-height: 1.6; }
     .inv-items { padding: 0 22px 14px; }
     .inv-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
-    .inv-table th { background: #f4f6fb; color: #6b7a99; font-size: 8.5px; text-transform: uppercase; letter-spacing: .1em; padding: 7px 10px; text-align: left; font-weight: 600; }
+    .inv-table th { background: var(--fx-sunken); color: var(--fx-muted); font-size: 8.5px; text-transform: uppercase; letter-spacing: .1em; padding: 7px 10px; text-align: left; font-weight: 600; }
     .inv-table th:last-child { text-align: right; }
-    .inv-table td { padding: 8px 10px; color: #1a202c; border-bottom: 1px solid #edf0f7; }
+    .inv-table td { padding: 8px 10px; color: var(--fx-ink); border-bottom: 1px solid var(--fx-line); }
     .inv-table td:last-child { text-align: right; font-family: "JetBrains Mono", monospace; font-weight: 500; }
     .inv-totals { padding: 0 22px 16px; }
-    .inv-total-row { display: flex; justify-content: space-between; font-size: 10.5px; color: #6b7a99; margin-bottom: 4px; }
-    .inv-total-row.big { font-size: 14px; font-weight: 700; color: #060810; border-top: 2px solid #060810; padding-top: 8px; margin-top: 4px; }
+    .inv-total-row { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--fx-muted); margin-bottom: 4px; }
+    .inv-total-row.big { font-size: 14px; font-weight: 700; color: var(--fx-ink); border-top: 2px solid var(--fx-ink); padding-top: 8px; margin-top: 4px; }
     .inv-total-row .inv-total-val { font-family: "JetBrains Mono", monospace; }
-    .inv-total-row.big .inv-total-val { color: #3d7eff; }
-    .inv-pay { margin: 0 22px 16px; background: #f0f6ff; border: 1px solid #c7d9ff; border-radius: 8px; padding: 12px 14px; }
-    .inv-pay-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #3d7eff; margin-bottom: 6px; }
-    .inv-pay-link { font-family: "JetBrains Mono", monospace; font-size: 9px; color: #3d7eff; word-break: break-all; line-height: 1.6; }
-    .inv-note { margin: 0 22px; background: #f9fafb; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; }
-    .inv-note-label { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #6b7a99; margin-bottom: 4px; }
-    .inv-note-text { font-size: 10px; color: #4a5568; line-height: 1.6; }
-    .inv-footer { background: #f4f6fb; padding: 10px 22px; display: flex; justify-content: space-between; align-items: center; }
-    .inv-footer-text { font-size: 9px; color: #6b7a99; }
-    .inv-footer-brand { font-size: 9px; color: #3d7eff; font-weight: 600; }
+    .inv-total-row.big .inv-total-val { color: var(--fx-ink); }
+    .inv-pay { margin: 0 22px 16px; background: var(--fx-sunken); border: 1px solid var(--fx-line); border-radius: 8px; padding: 12px 14px; }
+    .inv-pay-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--fx-accent); margin-bottom: 6px; }
+    .inv-pay-link { font-family: "JetBrains Mono", monospace; font-size: 9px; color: var(--fx-accent); word-break: break-all; line-height: 1.6; }
+    .inv-note { margin: 0 22px; background: var(--fx-sunken); border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; }
+    .inv-note-label { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--fx-muted); margin-bottom: 4px; }
+    .inv-note-text { font-size: 10px; color: var(--fx-muted); line-height: 1.6; }
+    .inv-footer { background: var(--fx-sunken); padding: 10px 22px; display: flex; justify-content: space-between; align-items: center; }
+    .inv-footer-text { font-size: 9px; color: var(--fx-muted); }
+    .inv-footer-brand { font-size: 9px; color: var(--fx-accent); font-weight: 600; }
 
     /* Pay link display */
     .pay-link-box { background: var(--raised); border: 1px solid var(--bmed); border-radius: var(--rsm); padding: 12px 14px; margin-top: 14px; }
@@ -418,7 +431,7 @@
                 </tr>
               </thead>
               <tbody id="prev-items">
-                <tr><td colspan="4" style="text-align:center;color:#6b7a99;padding:14px;font-size:11px;">Add line items →</td></tr>
+                <tr><td colspan="4" style="text-align:center;color:var(--fx-muted);padding:14px;font-size:11px;">Add line items →</td></tr>
               </tbody>
             </table>
           </div>
@@ -706,7 +719,7 @@ function updatePreview() {
       </tr>
     `).join("");
   } else {
-    prevItems.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#6b7a99;padding:14px;font-size:11px;">Add line items →</td></tr>`;
+    prevItems.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--fx-muted);padding:14px;font-size:11px;">Add line items →</td></tr>`;
   }
 
   // Totals
@@ -810,21 +823,27 @@ window.downloadPDF = function() {
   const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
   const W   = 210; // A4 width
 
-  // ── Dark header ────────────────────────────────────────
-  doc.setFillColor(6, 8, 16);
-  doc.rect(0, 0, W, 52, "F");
+  // ── Letterhead ─────────────────────────────────────────
+  // Paper, not a dark slab. This file is printed, forwarded and filed by the
+  // client's accountant; a full-bleed dark band wastes ink, photocopies badly
+  // and reads as software output rather than as a bill.
+  // Document register: paper #FBFAF8, ink #1C1A17, accent #1F5D4C.
+  const INK   = [28, 26, 23];
+  const MUTED = [110, 104, 98];
+  const RULE  = [228, 224, 216];
+  const ACCENT = [31, 93, 76];
 
-  // Business logo (uploaded) or fallback initial box
+  // Business logo (uploaded) or a fallback initial mark
   const drawInitialBox = () => {
-    doc.setFillColor(61, 126, 255);
-    doc.roundedRect(14, 10, 14, 14, 2, 2, "F");
+    doc.setFillColor(ACCENT[0], ACCENT[1], ACCENT[2]);
+    doc.roundedRect(14, 12, 14, 14, 2, 2, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(255, 255, 255);
-    doc.text((fromName.trim().charAt(0) || "A").toUpperCase(), 21, 19.5, { align:"center" });
+    doc.text((fromName.trim().charAt(0) || "A").toUpperCase(), 21, 21.5, { align:"center" });
   };
   if (logoData) {
-    try { doc.addImage(logoData, 14, 10, 14, 14); }
+    try { doc.addImage(logoData, 14, 12, 14, 14); }
     catch (e) { drawInitialBox(); }
   } else {
     drawInitialBox();
@@ -833,28 +852,29 @@ window.downloadPDF = function() {
   // Business name
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.setTextColor(232, 237, 248);
-  doc.text(fromName || "Your business", 32, 19.5);
+  doc.setTextColor(INK[0], INK[1], INK[2]);
+  doc.text(fromName || "Your business", 32, 21.5);
 
   // INVOICE label
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
-  doc.text("INVOICE", W-14, 19.5, { align:"right" });
+  doc.setTextColor(INK[0], INK[1], INK[2]);
+  doc.text("INVOICE", W-14, 21.5, { align:"right" });
 
   // Invoice number
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(74, 85, 120);
-  doc.text(invNum, W-14, 26, { align:"right" });
+  doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
+  doc.text(invNum, W-14, 28, { align:"right" });
 
-  // Divider line
-  doc.setDrawColor(26, 32, 53);
-  doc.line(14, 31, W-14, 31);
+  // A rule carries the letterhead instead of a filled band.
+  doc.setDrawColor(RULE[0], RULE[1], RULE[2]);
+  doc.setLineWidth(0.4);
+  doc.line(14, 33, W-14, 33);
 
   // Meta row
   doc.setFontSize(7);
-  doc.setTextColor(74, 85, 120);
+  doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
   doc.setFont("helvetica", "bold");
   doc.text("ISSUED", 14, 38);
   doc.text("DUE DATE", 70, 38);
@@ -862,7 +882,7 @@ window.downloadPDF = function() {
 
   doc.setFont("courier", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(232, 237, 248);
+  doc.setTextColor(INK[0], INK[1], INK[2]);
   doc.text(fmtDisplay(invDate), 14, 44);
   doc.text(fmtDisplay(invDue),  70, 44);
   doc.text(sym,                 140, 44);
@@ -872,21 +892,21 @@ window.downloadPDF = function() {
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
-  doc.setTextColor(74, 85, 120);
+  doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
   doc.text("FROM", 14, y);
   doc.text("BILL TO", W/2+5, y);
 
   y += 6;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.setTextColor(6, 8, 16);
+  doc.setTextColor(INK[0], INK[1], INK[2]);
   doc.text(fromName, 14, y);
   doc.text(toName,   W/2+5, y);
 
   y += 5;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(74, 85, 120);
+  doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
   if (fromEmail) { doc.text(fromEmail, 14, y); }
   if (toEmail)   { doc.text(toEmail,   W/2+5, y); }
 
@@ -903,8 +923,8 @@ window.downloadPDF = function() {
       ((it.qty||0)*(it.price||0)).toFixed(2),
     ]),
     headStyles: {
-      fillColor:[244,246,251],
-      textColor:[107,122,153],
+      fillColor:[243,241,236],
+      textColor:[110,104,98],
       fontSize:7.5,
       fontStyle:"bold",
       halign:"left",
@@ -928,66 +948,66 @@ window.downloadPDF = function() {
   const totX = W - 14 - totW;
 
   // Divider
-  doc.setDrawColor(6, 8, 16);
+  doc.setDrawColor(INK[0], INK[1], INK[2]);
   doc.setLineWidth(0.5);
   doc.line(totX, y, W-14, y);
 
   y += 5;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
-  doc.setTextColor(6, 8, 16);
+  doc.setTextColor(INK[0], INK[1], INK[2]);
   doc.text("Total due", totX, y);
 
   doc.setFont("courier", "bold");
-  doc.setTextColor(61, 126, 255);
+  doc.setTextColor(ACCENT[0], ACCENT[1], ACCENT[2]);
   doc.text(`${total.toFixed(2)} ${sym}`, W-14, y, { align:"right" });
 
   // ── Pay link box ───────────────────────────────────────
   y += 10;
-  doc.setFillColor(240, 246, 255);
-  doc.setDrawColor(199, 217, 255);
+  doc.setFillColor(243, 241, 236);
+  doc.setDrawColor(RULE[0], RULE[1], RULE[2]);
   doc.roundedRect(14, y, W-28, 22, 2, 2, "FD");
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
-  doc.setTextColor(61, 126, 255);
+  doc.setTextColor(ACCENT[0], ACCENT[1], ACCENT[2]);
   doc.text("PAY WITH USDC/EURC ON ARC", 20, y+7);
 
   doc.setFont("courier", "normal");
   doc.setFontSize(8);
-  doc.setTextColor(61, 126, 255);
+  doc.setTextColor(ACCENT[0], ACCENT[1], ACCENT[2]);
   const linkLines = doc.splitTextToSize(payLink || "Add your wallet address to generate a payment link", W-40);
   doc.text(linkLines, 20, y+13);
 
   // ── Note ──────────────────────────────────────────────
   if (note.trim()) {
     y += 30;
-    doc.setFillColor(249, 250, 251);
-    doc.setDrawColor(229, 231, 235);
+    doc.setFillColor(243, 241, 236);
+    doc.setDrawColor(RULE[0], RULE[1], RULE[2]);
     const noteLines = doc.splitTextToSize(note, W-40);
     const noteH     = noteLines.length * 5 + 12;
     doc.roundedRect(14, y, W-28, noteH, 2, 2, "FD");
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.5);
-    doc.setTextColor(107, 122, 153);
+    doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
     doc.text("NOTES", 20, y+7);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.setTextColor(74, 85, 104);
+    doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
     doc.text(noteLines, 20, y+13);
   }
 
   // ── Footer ────────────────────────────────────────────
-  doc.setFillColor(244, 246, 251);
+  doc.setFillColor(243, 241, 236);
   doc.rect(0, 282, W, 15, "F");
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.setTextColor(107, 122, 153);
+  doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
   doc.text("Powered by ArcFX · arcfx.app", 14, 291);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(61, 126, 255);
+  doc.setTextColor(ACCENT[0], ACCENT[1], ACCENT[2]);
   doc.text("Arc Testnet", W-14, 291, { align:"right" });
 
   // Save
@@ -1141,7 +1161,7 @@ function showStatus(msg, type) {
       const invNum=(document.getElementById("inv-number")?.value||"").trim();
       const wallet=(document.getElementById("from-wallet")?.value||"").trim();
       if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)){
-        setBox(box,"rgba(255,77,106,0.08)","1px solid rgba(255,77,106,0.3)","#ff8da0","Enter your wallet address first.");
+        setBox(box,"var(--fx-bad-bg)","1px solid var(--fx-bad)","var(--fx-bad)","Enter your wallet address first.");
         return;
       }
       setBox(box,"var(--raised)","1px solid var(--border)","var(--muted)","Checking payment status...");
@@ -1167,8 +1187,8 @@ function showStatus(msg, type) {
             // A payment exists but doesn't cover the invoice total — do NOT show "Paid".
             const msg = "&#9888; Underpaid &mdash; received <strong>"+recd+" "+tok+"</strong> of <strong>"
                       + expected.toFixed(2)+"</strong> for this invoice."
-                      + (p.txHash ? ' &nbsp;&middot;&nbsp; <a href="https://testnet.arcscan.app/tx/'+p.txHash+'" target="_blank" rel="noopener" style="color:#ff8da0;text-decoration:underline;">view transaction &#8599;</a>' : '');
-            setBox(box,"rgba(255,166,35,0.08)","1px solid rgba(255,166,35,0.35)","#fbbf6b", msg);
+                      + (p.txHash ? ' &nbsp;&middot;&nbsp; <a href="https://testnet.arcscan.app/tx/'+p.txHash+'" target="_blank" rel="noopener" style="color:var(--fx-bad);text-decoration:underline;">view transaction &#8599;</a>' : '');
+            setBox(box,"rgba(255,166,35,0.08)","1px solid rgba(255,166,35,0.35)","var(--fx-warn)", msg);
           } else {
             // covered === true (paid in full) OR null (no expected given → legacy behaviour)
             const extra = recd ? ' &nbsp;&middot;&nbsp; '+recd+' '+tok : '';
@@ -1185,7 +1205,7 @@ function showStatus(msg, type) {
       } catch (e){
         // API unreachable -> fall back to direct on-chain scan so the button still works
         try { await onchainFallback(box, invNum, wallet); }
-        catch { setBox(box,"rgba(255,77,106,0.08)","1px solid rgba(255,77,106,0.3)","#ff8da0","Could not check right now - network error. Try again."); }
+        catch { setBox(box,"var(--fx-bad-bg)","1px solid var(--fx-bad)","var(--fx-bad)","Could not check right now - network error. Try again."); }
       } finally {
         if (btn) btn.disabled=false;
       }
