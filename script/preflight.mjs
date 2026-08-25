@@ -210,11 +210,18 @@ for (const page of pages) {
   }
 }
 
-// ── 7. Contracts still compile and pass ─────────────────────────────────────
+// ── 7. Contract formatting ──────────────────────────────────────────────────
+// Only when Foundry is actually installed. "forge is not on PATH" is an
+// environment fact, not a code defect, and reporting it as one is how a guard
+// starts crying wolf — the dedicated Contracts job runs this properly anyway.
 try {
   execFileSync("forge", ["fmt", "--check"], { stdio: "pipe" });
-} catch {
-  fail("forge fmt --check fails — CI will reject the contract sources");
+} catch (e) {
+  if (e.code === "ENOENT" || e.code === "EINVAL") {
+    note("forge not installed — skipped the contract formatting check");
+  } else {
+    fail("forge fmt --check fails — CI will reject the contract sources");
+  }
 }
 
 // ── report ──────────────────────────────────────────────────────────────────
