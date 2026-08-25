@@ -468,8 +468,10 @@
           <button data-fxh="h17" class="btn-primary">⬇ Download PDF invoice</button>
           <button data-fxh="h18" class="btn-outline">↗ Open Pay link in browser</button>
           <button data-fxh="h19" class="btn-copy" id="copy-pay-btn">📋 Copy Pay link</button>
+          <button class="btn-outline" id="save-invoice-btn" style="margin-top:8px;">💾 Save &amp; track this invoice</button>
           <button data-fxh="h20" class="btn-outline" id="check-paid-btn" style="margin-top:8px;">🔍 Check payment status</button>
           <div id="paid-status" style="display:none;margin-top:10px;padding:12px 14px;border-radius:var(--rsm);font-size:13px;line-height:1.5;"></div>
+          <div id="tracked-box" style="display:none;margin-top:10px;padding:12px 14px;border-radius:var(--rsm);font-size:13px;line-height:1.6;background:var(--raised);border:1px solid var(--border);color:var(--muted);"></div>
 
           <div class="pay-link-box" id="pay-link-display" style="display:none;">
             <div class="pay-link-label">Payment link</div>
@@ -1025,6 +1027,11 @@ function showStatus(msg, type) {
   setTimeout(() => { if (el) el.innerHTML = ""; }, 3000);
 }
 
+    // Which token this invoice is denominated in. `selectedToken` is a module
+    // binding, so the tracking code in the later module cannot see it directly —
+    // this accessor is the seam between the two blocks.
+    window.arcfxSelectedToken = () => selectedToken;
+
     // Re-exported for the event wiring (see module-scope note above).
     window.fmt = fmt;
     window.fmtDisplay = fmtDisplay;
@@ -1127,8 +1134,25 @@ function showStatus(msg, type) {
 
   <script type="module">
     import { JsonRpcProvider, id as ethersId } from "ethers";
+    import { arcfxApi, ApiError } from '/src/shared/arcfxApi.ts';
+    import { arcfxWallet } from '/src/shared/wallet.ts';
 
     const API_BASE      = "https://arcfx-backend-production.up.railway.app";
+
+    // Arc Testnet token contracts. The invoice record stores the address rather
+    // than the symbol, so decimals and formatting stay unambiguous server-side.
+    const TOKEN_ADDRESSES = {
+      USDC: "0x3600000000000000000000000000000000000000",
+      EURC: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+    };
+
+    // Everything interpolated into the status box below is user-controlled —
+    // invoice numbers, amounts, server messages — so it is escaped first.
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+      ));
+    }
     const ARC_RPC       = "https://rpc.testnet.arc.network";
     const PAYMENTS       = "0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3";
     const PAYMENT_TOPIC  = ethersId("PaymentExecuted(bytes32,address,address,address,uint256,uint256,uint256)");
@@ -1168,6 +1192,93 @@ function showStatus(msg, type) {
           "No matching payment found in the last "+SCAN_BLOCKS.toLocaleString()+" blocks.");
       }
     }
+
+    /**
+     * Save this invoice as a tracked record.
+     *
+     * Until now an invoice existed only as a link: the number went into the pay
+     * URL, and "is it paid?" meant rescanning chain events every time. Saving it
+     * creates a record the backend can reconcile against, which is what makes
+     * partial payments, receipts and a real Books entry possible.
+     *
+     * Purely additive. The pay link is unchanged, so invoices already sent to
+     * clients keep working exactly as before.
+     */
+    window.saveInvoiceRecord = async function () {
+      const box = document.getElementById("tracked-box");
+      const btn = document.getElementById("save-invoice-btn");
+      if (!box) return;
+
+      const invNum = (document.getElementById("inv-number")?.value || "").trim();
+      const wallet = (document.getElementById("from-wallet")?.value || "").trim();
+      const totalText = (document.getElementById("preview-total")?.textContent || "").trim();
+      const amount = (totalText.replace(/[^0-9.]/g, "") || "");
+
+      const show = (msg, tone) => {
+        box.style.display = "block";
+        box.style.color = tone === "bad" ? "var(--fx-bad)" : tone === "ok" ? "var(--teal)" : "var(--muted)";
+        box.style.borderColor = tone === "bad" ? "var(--fx-bad)" : tone === "ok" ? "var(--fx-ok)" : "var(--border)";
+        box.innerHTML = msg;
+      };
+
+      if (!invNum) return show("Give the invoice a number first.", "bad");
+      if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
+        return show("Enter the wallet that should receive payment first.", "bad");
+      }
+      // The record is owned by the connected wallet, so the invoice must be
+      // issued from it — otherwise you would be tracking someone else's money.
+      if (!arcfxWallet.connected) return show("Connect your wallet to save this invoice.", "bad");
+      if (arcfxWallet.address.toLowerCase() !== wallet.toLowerCase()) {
+        return show(
+          "The <em>Pay to</em> address must match your connected wallet to track this invoice.",
+          "bad"
+        );
+      }
+
+      if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+      show("Saving — approve the signature in your wallet…");
+
+      try {
+        const created = await arcfxApi.createInvoice({
+          number: invNum,
+          amount: amount && parseFloat(amount) > 0 ? amount : undefined,
+          token: TOKEN_ADDRESSES[window.arcfxSelectedToken?.() || "USDC"] || undefined,
+          dueDate: (document.getElementById("inv-due")?.value || "").trim() || undefined,
+          send: true,
+        });
+
+        const inv = created.invoice;
+        // Attach anything already on-chain for this number. Payments that
+        // predate the record are reported, not silently absorbed: they may
+        // belong to a different invoice that reused the number.
+        const rec = await arcfxApi.reconcile(inv.id);
+        const r = (rec.results && rec.results[0]) || {};
+
+        let msg = `<strong style="color:var(--teal);">Tracked.</strong> `
+                + `Invoice <strong>${escapeHtml(inv.number)}</strong> is saved to your wallet`
+                + (inv.amount ? ` for <strong>${escapeHtml(inv.amount)} ${escapeHtml(inv.token || "")}</strong>` : "")
+                + `.`;
+        if (r.allocated > 0) {
+          msg += `<br>Matched <strong>${r.allocated}</strong> payment(s) already on-chain — status: <strong>${escapeHtml(r.status || "")}</strong>.`;
+        }
+        if (r.skippedEarlier > 0) {
+          msg += `<br><span style="color:var(--fx-warn);">${r.skippedEarlier} earlier payment(s) to this number were <strong>not</strong> attached`
+               + `, because they landed before this record existed. If one of them belongs here, it may be a reused invoice number.</span>`;
+        }
+        show(msg, "ok");
+        if (btn) btn.textContent = "✓ Saved";
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          show(`An invoice numbered <strong>${escapeHtml(invNum)}</strong> is already tracked on this wallet. `
+             + `Use a different number, or check its status above.`, "bad");
+        } else {
+          show(`Could not save: ${escapeHtml(err?.message || String(err))}`, "bad");
+        }
+        if (btn) btn.textContent = "💾 Save & track this invoice";
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    };
 
     window.checkInvoicePaid = async function(){
       const box=document.getElementById("paid-status");
@@ -1255,6 +1366,7 @@ function showStatus(msg, type) {
     __fxOn("h18", "click", function (event) { openPayLink(); });
     __fxOn("h19", "click", function (event) { copyPayLink(); });
     __fxOn("h20", "click", function (event) { checkInvoicePaid(); });
+    document.getElementById("save-invoice-btn")?.addEventListener("click", function () { saveInvoiceRecord(); });
 
     /* ── Event wiring (rendered rows) ──────────────────────────────
        Rows are rebuilt on every render, so these listeners live on document and
