@@ -41,6 +41,14 @@
       "destination": "/invoice.html"
     },
     {
+      "source": "/invoices",
+      "destination": "/invoices.html"
+    },
+    {
+      "source": "/invoices/",
+      "destination": "/invoices.html"
+    },
+    {
       "source": "/invoice/",
       "destination": "/invoice.html"
     },

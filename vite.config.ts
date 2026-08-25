@@ -22,6 +22,7 @@ export default defineConfig({
         multisend: resolve(__dirname, "multisend.html"),
         pay:       resolve(__dirname, "pay.html"),
         invoice:   resolve(__dirname, "invoice.html"),
+        invoices:  resolve(__dirname, "invoices.html"),
         history:   resolve(__dirname, "history.html"),
         agent:     resolve(__dirname, "agent.html"),
         analytics: resolve(__dirname, "analytics.html"),

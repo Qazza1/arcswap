@@ -30,9 +30,9 @@ const notes = [];
 const fail = (m) => problems.push(m);
 const note = (m) => notes.push(m);
 
-// Only pages git tracks are part of the app. Scratch HTML in the project root —
-// generated reports, one-off pages — is worth mentioning but must not block a
-// deploy, since it was never meant to ship.
+// Scratch HTML in the project root — generated reports, one-off pages — is
+// worth mentioning but must not block a deploy, since it was never meant to
+// ship.
 let tracked = new Set();
 try {
   tracked = new Set(
@@ -41,8 +41,19 @@ try {
   );
 } catch { /* not a git checkout; fall back to treating everything as app pages */ }
 
+// A page counts as part of the app if git tracks it OR the build is told to
+// build it. Tracking alone was the wrong test: a brand-new page is untracked
+// until the moment it is committed, which is precisely when these checks are
+// most worth running.
+const viteConfig = fs.readFileSync(path.join(ROOT, "vite.config.ts"), "utf8");
+const registered = new Set(
+  [...viteConfig.matchAll(/resolve\(__dirname,\s*"([^"]+\.html)"\)/g)].map((m) => m[1])
+);
+
 const allHtml = fs.readdirSync(ROOT).filter((f) => f.endsWith(".html"));
-const pages = tracked.size ? allHtml.filter((f) => tracked.has(f)) : allHtml;
+const pages = (tracked.size || registered.size)
+  ? allHtml.filter((f) => tracked.has(f) || registered.has(f))
+  : allHtml;
 const strays = allHtml.filter((f) => !pages.includes(f));
 
 // ── 1. CSS structure ────────────────────────────────────────────────────────
@@ -116,9 +127,8 @@ for (const page of pages) {
 
 // ── 5. Routing ──────────────────────────────────────────────────────────────
 // A page must be built AND routed, or it 404s only in production.
-const vite = fs.readFileSync("vite.config.ts", "utf8");
 const vercel = JSON.parse(fs.readFileSync("vercel.json", "utf8"));
-const built = new Set([...vite.matchAll(/resolve\(__dirname,\s*"([^"]+\.html)"\)/g)].map((m) => m[1]));
+const built = registered;   // parsed once, at the top
 const routed = new Set((vercel.rewrites || []).map((r) => r.destination.replace(/^\//, "")));
 for (const page of pages) {
   if (!built.has(page)) fail(`${page}: not registered in vite.config.ts — it will not be built`);

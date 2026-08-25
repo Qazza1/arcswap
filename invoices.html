@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<!-- Instrument register: light, near-monochrome, colour reserved for state.
+     Tokens: src/shared/tokens.css -->
+<html lang="en" data-register="app">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcFX Invoices — What you are owed</title>
+  <meta name="description" content="Every invoice you have issued on Arc, with what has been paid, what is still outstanding, and which are overdue. Reconciled against the chain." />
+  <link rel="canonical" href="https://arcfx.app/invoices" />
+  <link rel="icon" href="/logo.png" type="image/png" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="ArcFX" />
+  <meta property="og:url" content="https://arcfx.app/invoices" />
+  <meta property="og:title" content="ArcFX Invoices — What you are owed" />
+  <meta property="og:description" content="Every invoice you have issued on Arc, reconciled against the chain." />
+  <meta property="og:image" content="https://arcfx.app/og-image.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--fx-body); background: var(--fx-bg); color: var(--fx-ink); line-height: 1.6; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    a { color: var(--fx-accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .page { max-width: 1100px; margin: 0 auto; padding: 44px 28px 80px; }
+
+    /* Header */
+    .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+    .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; color: var(--fx-muted); text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 10px; }
+    h1 { font-size: clamp(26px, 4vw, 36px); font-weight: 700; letter-spacing: -1px; }
+    .sub { font-size: 13.5px; color: var(--fx-muted); margin-top: 6px; max-width: 60ch; }
+
+    .btn { display: inline-flex; align-items: center; gap: 7px; font-family: var(--fx-body); font-size: 13px; font-weight: 600; padding: 9px 16px; border-radius: var(--fx-r-sm); cursor: pointer; border: 1px solid var(--fx-line); background: var(--fx-bg); color: var(--fx-ink); transition: border-color .15s, background .15s; }
+    .btn:hover:not(:disabled) { border-color: var(--fx-ink); }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn-primary { background: var(--fx-ink); color: var(--fx-on-accent); border-color: var(--fx-ink); }
+    .btn-primary:hover:not(:disabled) { background: var(--fx-ink); }
+    .btn-sm { font-size: 11.5px; padding: 5px 10px; font-weight: 600; }
+
+    /* Receivables summary */
+    .owed { display: flex; gap: 1px; background: var(--fx-line); border: 1px solid var(--fx-line); border-radius: var(--fx-r); overflow: hidden; margin-bottom: 22px; flex-wrap: wrap; }
+    .owed-cell { background: var(--fx-surface); padding: 16px 20px; flex: 1 1 180px; }
+    .owed-val { font-family: "JetBrains Mono", monospace; font-size: 24px; font-weight: 600; letter-spacing: -0.6px; font-variant-numeric: tabular-nums; }
+    .owed-val.warn { color: var(--fx-warn); }
+    .owed-lbl { font-size: 11.5px; color: var(--fx-muted); margin-top: 2px; }
+    .owed-empty { background: var(--fx-surface); padding: 16px 20px; flex: 1; font-size: 13.5px; color: var(--fx-muted); }
+
+    /* Toolbar */
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tab { font-size: 12.5px; font-weight: 600; padding: 6px 14px; border: 1px solid var(--fx-line); border-radius: 100px; cursor: pointer; color: var(--fx-muted); background: transparent; font-family: var(--fx-body); transition: all .15s; }
+    .tab:hover { border-color: var(--fx-ink); color: var(--fx-ink); }
+    .tab.active { background: var(--fx-sunken); border-color: var(--fx-ink); color: var(--fx-ink); }
+    .tab-count { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--fx-faint); margin-left: 5px; }
+    .tab.active .tab-count { color: var(--fx-muted); }
+
+    /* Table */
+    .table-wrap { border: 1px solid var(--fx-line); border-radius: var(--fx-r); overflow-x: auto; background: var(--fx-surface); }
+    table { width: 100%; border-collapse: collapse; min-width: 780px; }
+    thead th { text-align: left; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fx-muted); padding: 12px 16px; border-bottom: 1px solid var(--fx-line); white-space: nowrap; background: var(--fx-sunken); }
+    tbody td { padding: 14px 16px; border-bottom: 1px solid var(--fx-line-soft); font-size: 13.5px; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: var(--fx-sunken); }
+    .num { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+    .inv-number { font-weight: 600; letter-spacing: -0.2px; }
+    .inv-meta { font-size: 11.5px; color: var(--fx-muted); margin-top: 1px; }
+    td.amount { text-align: right; white-space: nowrap; }
+    th.amount { text-align: right; }
+    .paid-part { font-size: 11.5px; color: var(--fx-muted); }
+
+    /* Status pills — colour only ever means state */
+    .pill { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 9px; border-radius: 100px; white-space: nowrap; }
+    .pill.draft    { color: var(--fx-muted); background: var(--fx-sunken); }
+    .pill.sent     { color: var(--fx-info); background: var(--fx-info-bg); }
+    .pill.partial  { color: var(--fx-warn); background: var(--fx-warn-bg); }
+    .pill.paid     { color: var(--fx-ok);   background: var(--fx-ok-bg); }
+    .pill.overpaid { color: var(--fx-ok);   background: var(--fx-ok-bg); }
+    .pill.overdue  { color: var(--fx-bad);  background: var(--fx-bad-bg); }
+    .pill.cancelled{ color: var(--fx-faint); background: var(--fx-sunken); text-decoration: line-through; }
+
+    .row-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+
+    /* States */
+    .state { padding: 56px 28px; text-align: center; color: var(--fx-muted); font-size: 14px; line-height: 1.7; }
+    .state strong { color: var(--fx-ink); display: block; font-size: 16px; margin-bottom: 6px; font-weight: 600; }
+    .state .btn { margin-top: 16px; }
+    .banner { border: 1px solid var(--fx-line); border-left: 3px solid var(--fx-ink); background: var(--fx-sunken); border-radius: var(--fx-r-sm); padding: 12px 16px; font-size: 13px; color: var(--fx-muted); margin-bottom: 16px; line-height: 1.6; }
+    .banner.bad { border-left-color: var(--fx-bad); color: var(--fx-bad); background: var(--fx-bad-bg); }
+    .banner.ok  { border-left-color: var(--fx-ok);  color: var(--fx-ok);  background: var(--fx-ok-bg); }
+
+    .foot-note { font-size: 12px; color: var(--fx-muted); margin-top: 14px; line-height: 1.7; }
+
+    @media (max-width: 640px) {
+      .page { padding: 28px 16px 60px; }
+      .owed-cell { flex-basis: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header mount points — populated by /src/shared/header.ts -->
+  <div id="arcfx-stats-bar"></div>
+  <div id="arcfx-nav"></div>
+
+  <script type="module">
+    import { arcfxMountHeader } from '/src/shared/header.ts';
+    arcfxMountHeader({ pageKey: 'invoices', activeLink: 'tools', activeTool: 'invoices', mode: 'product' });
+  </script>
+
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <div class="eyebrow">Receivables</div>
+        <h1>Invoices</h1>
+        <p class="sub">
+          Every invoice you have issued, reconciled against the chain. Status is derived from
+          what has actually been received — never from a flag someone remembered to set.
+        </p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn" id="refresh-btn">Reconcile</button>
+        <a class="btn btn-primary" href="/invoice">New invoice</a>
+      </div>
+    </div>
+
+    <div id="banner"></div>
+
+    <div class="owed" id="owed" style="display:none;"></div>
+
+    <div class="toolbar">
+      <div class="tabs" id="tabs"></div>
+      <div class="num" style="font-size:11.5px;color:var(--fx-faint);" id="count-note"></div>
+    </div>
+
+    <div class="table-wrap">
+      <div id="state" class="state">Loading…</div>
+      <table id="table" style="display:none;">
+        <thead>
+          <tr>
+            <th>Invoice</th>
+            <th>Customer</th>
+            <th>Due</th>
+            <th class="amount">Amount</th>
+            <th class="amount">Outstanding</th>
+            <th>Status</th>
+            <th style="text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <p class="foot-note" id="foot"></p>
+  </div>
+
+  <script type="module">
+    import { arcfxWallet } from '/src/shared/wallet.ts';
+    import { arcfxApi, ApiError } from '/src/shared/arcfxApi.ts';
+
+    const el = (id) => document.getElementById(id);
+
+    /** Everything below is interpolated into HTML and all of it is user-supplied. */
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+      ));
+    }
+
+    let invoices = [];
+    let owedByToken = {};
+    let filter = "open";
+    // A load token, so a response for one wallet cannot paint another's list.
+    let loadToken = 0;
+
+    // "Open" is the working view: anything still expecting money. It is the
+    // default because a receivables list exists to answer "who owes me".
+    const FILTERS = [
+      { key: "open",      label: "Open",      match: (i) => ["sent", "partial", "overdue"].includes(i.status) },
+      { key: "overdue",   label: "Overdue",   match: (i) => i.status === "overdue" },
+      { key: "paid",      label: "Paid",      match: (i) => i.status === "paid" || i.status === "overpaid" },
+      { key: "draft",     label: "Drafts",    match: (i) => i.status === "draft" },
+      { key: "all",       label: "All",       match: () => true },
+    ];
+
+    function setState(html, cls) {
+      const s = el("state");
+      s.className = "state" + (cls ? " " + cls : "");
+      s.innerHTML = html;
+      s.style.display = "block";
+      el("table").style.display = "none";
+    }
+    function setBanner(html, kind) {
+      el("banner").innerHTML = html ? `<div class="banner ${kind || ""}">${html}</div>` : "";
+    }
+
+    function fmtDate(d) {
+      if (!d) return "—";
+      const dt = new Date(d);
+      return isNaN(dt) ? "—" : dt.toISOString().slice(0, 10);
+    }
+
+    /**
+     * Whole days until an invoice falls due, negative once it is late.
+     *
+     * Measured from the END of the due date, because that is when the server
+     * starts calling it overdue — an invoice due today is not late until
+     * tomorrow. Rounding from the start of the day instead reported "6d late"
+     * for something five days old, contradicting the rule that flagged it.
+     *
+     * Floored, so "1d late" means a full day has passed, not twenty minutes.
+     */
+    const DAY = 86400000;
+    function daysUntil(d) {
+      if (!d) return null;
+      const dt = new Date(d);
+      if (isNaN(dt)) return null;
+      const dueEnd = dt.getTime() + DAY;         // end of the due date
+      return Math.floor((dueEnd - Date.now()) / DAY);
+    }
+
+    function renderOwed() {
+      const box = el("owed");
+      const entries = Object.entries(owedByToken);
+      if (!entries.length) {
+        box.style.display = "flex";
+        box.innerHTML = `<div class="owed-empty">Nothing outstanding — every issued invoice has been paid.</div>`;
+        return;
+      }
+      const overdue = invoices.filter((i) => i.status === "overdue").length;
+      box.style.display = "flex";
+      box.innerHTML = entries.map(([sym, amt]) => `
+        <div class="owed-cell">
+          <div class="owed-val">${esc(trimAmount(amt))}</div>
+          <div class="owed-lbl">outstanding in ${esc(sym)}</div>
+        </div>
+      `).join("") + (overdue ? `
+        <div class="owed-cell">
+          <div class="owed-val warn">${overdue}</div>
+          <div class="owed-lbl">${overdue === 1 ? "invoice is" : "invoices are"} overdue</div>
+        </div>` : "");
+    }
+
+    /** 1000.000000 reads as noise in a summary; 1000.00 is what a person wants. */
+    function trimAmount(s) {
+      const n = Number(s);
+      if (!isFinite(n)) return s;
+      return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function renderTabs() {
+      el("tabs").innerHTML = FILTERS.map((f) => {
+        const n = invoices.filter(f.match).length;
+        return `<button class="tab${f.key === filter ? " active" : ""}" data-fx-on="click" data-fx-act="setInvoiceFilter" data-fx-s="${f.key}">
+                  ${esc(f.label)}<span class="tab-count">${n}</span>
+                </button>`;
+      }).join("");
+    }
+
+    window.setInvoiceFilter = function (key) {
+      filter = key;
+      renderTabs();
+      renderRows();
+    };
+
+    function renderRows() {
+      const f = FILTERS.find((x) => x.key === filter) || FILTERS[0];
+      const rows = invoices.filter(f.match);
+      el("count-note").textContent = `${rows.length} of ${invoices.length}`;
+
+      if (!invoices.length) {
+        setState(
+          `<strong>No invoices tracked yet</strong>
+           Create one and choose <em>Save &amp; track</em> — then its status here comes from
+           what actually settled on-chain, not from anyone ticking a box.
+           <br><a class="btn btn-primary" href="/invoice">Create an invoice</a>`
+        );
+        return;
+      }
+      if (!rows.length) {
+        setState(`<strong>Nothing in ${esc(f.label.toLowerCase())}</strong> Try another filter.`);
+        return;
+      }
+
+      el("state").style.display = "none";
+      el("table").style.display = "table";
+      el("rows").innerHTML = rows.map((i) => {
+        const due = daysUntil(i.dueDate);
+        const dueNote = i.status === "overdue" && due !== null
+          ? `<div class="inv-meta" style="color:var(--fx-bad);">${Math.abs(due)}d late</div>`
+          : (due !== null && due >= 0 && ["sent", "partial"].includes(i.status)
+              ? `<div class="inv-meta">${due === 0 ? "due today" : "in " + due + "d"}</div>` : "");
+
+        const partial = i.status === "partial"
+          ? `<div class="paid-part num">${esc(trimAmount(i.paid))} received</div>` : "";
+
+        return `
+          <tr>
+            <td>
+              <div class="inv-number">${esc(i.number)}</div>
+              <div class="inv-meta">${esc(fmtDate(i.createdAt))}${i.viewedAt ? " · viewed" : ""}</div>
+            </td>
+            <td>${i.customer && i.customer.name ? esc(i.customer.name) : '<span style="color:var(--fx-faint);">—</span>'}</td>
+            <td>${esc(fmtDate(i.dueDate))}${dueNote}</td>
+            <td class="amount num">${i.amount ? esc(trimAmount(i.amount)) + " " + esc(i.token || "") : '<span style="color:var(--fx-faint);">open</span>'}</td>
+            <td class="amount num">${i.outstanding ? esc(trimAmount(i.outstanding)) : "—"}${partial}</td>
+            <td><span class="pill ${esc(i.status)}">${esc(i.status)}</span></td>
+            <td>
+              <div class="row-actions">
+                ${i.status === "draft"
+                  ? `<button class="btn btn-sm" data-fx-on="click" data-fx-act="sendInvoice" data-fx-s="${esc(i.id)}">Mark sent</button>`
+                  : `<button class="btn btn-sm" data-fx-on="click" data-fx-act="copyInvoiceLink" data-fx-s="${esc(i.id)}">Copy link</button>`}
+                ${["paid", "overpaid", "cancelled"].includes(i.status)
+                  ? ""
+                  : `<button class="btn btn-sm" data-fx-on="click" data-fx-act="cancelInvoice" data-fx-s="${esc(i.id)}">Cancel</button>`}
+              </div>
+            </td>
+          </tr>`;
+      }).join("");
+    }
+
+    // ── Actions ──────────────────────────────────────────────────────────────
+
+    /**
+     * The payment link for an invoice.
+     *
+     * This is the SAME /pay URL the invoice builder produces, rebuilt from the
+     * stored record — not a new route. Links already sent to clients keep
+     * working, and re-copying one here gives the client exactly what they had.
+     */
+    function payLinkFor(inv) {
+      const p = new URLSearchParams();
+      p.set("to", arcfxWallet.address);
+      if (inv.amount && Number(inv.amount) > 0) p.set("amount", Number(inv.amount).toFixed(2));
+      if (inv.token) p.set("token", inv.token);
+      p.set("note", inv.number);
+      return `${location.origin}/pay?${p.toString()}`;
+    }
+
+    window.copyInvoiceLink = async function (id) {
+      const inv = invoices.find((i) => i.id === id);
+      if (!inv) return;
+      const url = payLinkFor(inv);
+      try {
+        await navigator.clipboard.writeText(url);
+        setBanner(`Payment link for <strong>${esc(inv.number)}</strong> copied.`, "ok");
+      } catch {
+        // Clipboard access can be refused; show the link so it is still usable.
+        setBanner(`Copy was blocked. The link is <span class="num">${esc(url)}</span>`, "bad");
+      }
+      setTimeout(() => setBanner(""), 6000);
+    };
+
+    window.sendInvoice = async function (id) {
+      try {
+        await arcfxApi.updateInvoice({ id, action: "send" });
+        setBanner("Marked as sent.", "ok");
+        await load();
+      } catch (err) {
+        setBanner(`Could not update: ${esc(err?.message || err)}`, "bad");
+      }
+    };
+
+    window.cancelInvoice = async function (id) {
+      const inv = invoices.find((i) => i.id === id);
+      if (!confirm(`Cancel invoice ${inv ? inv.number : id}?\n\nThis cannot be undone.`)) return;
+      try {
+        await arcfxApi.updateInvoice({ id, action: "cancel" });
+        setBanner("Invoice cancelled.", "ok");
+        await load();
+      } catch (err) {
+        // The server refuses to cancel an invoice that has received money, and
+        // says why — surface that rather than a generic failure.
+        const hint = err instanceof ApiError && err.body?.hint ? ` ${err.body.hint}` : "";
+        setBanner(`${esc(err?.message || err)}.${esc(hint)}`, "bad");
+      }
+    };
+
+    window.reconcileAll = async function () {
+      const btn = el("refresh-btn");
+      if (btn) { btn.disabled = true; btn.textContent = "Reconciling…"; }
+      try {
+        const r = await arcfxApi.reconcile();
+        const matched = (r.results || []).reduce((n, x) => n + (x.allocated || 0), 0);
+        const skipped = (r.results || []).reduce((n, x) => n + (x.skippedEarlier || 0), 0);
+        let msg = matched
+          ? `Matched ${matched} new payment${matched === 1 ? "" : "s"}.`
+          : "No new payments found.";
+        if (skipped) {
+          msg += ` ${skipped} payment${skipped === 1 ? "" : "s"} predate their invoice and were not attached.`;
+        }
+        setBanner(msg, matched ? "ok" : "");
+        await load();
+      } catch (err) {
+        setBanner(`Could not reconcile: ${esc(err?.message || err)}`, "bad");
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "Reconcile"; }
+      }
+    };
+
+    // ── Load ─────────────────────────────────────────────────────────────────
+
+    async function load() {
+      if (!arcfxWallet.connected) return;
+      const myToken = ++loadToken;
+      try {
+        const data = await arcfxApi.listInvoices();
+        if (myToken !== loadToken) return;   // the wallet changed while in flight
+        invoices = data.invoices || [];
+        owedByToken = data.outstandingByToken || {};
+        renderOwed();
+        renderTabs();
+        renderRows();
+        el("foot").textContent = invoices.length
+          ? "Status is derived from settlements on Arc. Reconcile pulls in anything that landed since the last check."
+          : "";
+      } catch (err) {
+        if (myToken !== loadToken) return;
+        if (err instanceof ApiError && err.status === 404) {
+          setState(
+            `<strong>The invoice API is not deployed yet</strong>
+             This page needs the backend redeployed before it can show anything.`
+          );
+        } else {
+          setState(`<strong>Could not load invoices</strong> ${esc(err?.message || err)}`);
+        }
+      }
+    }
+
+    // ── Wallet session ───────────────────────────────────────────────────────
+
+    arcfxWallet.onChange((state) => {
+      loadToken++;                 // invalidate anything in flight
+      invoices = []; owedByToken = {};
+      el("owed").style.display = "none";
+      el("tabs").innerHTML = "";
+      el("count-note").textContent = "";
+
+      if (!state.connected) {
+        setState(
+          `<strong>Connect your wallet</strong>
+           Invoices are stored against the wallet that issued them, so this list is
+           private to you.`
+        );
+        return;
+      }
+      if (!state.onArc) {
+        setState(`<strong>Switch to Arc Testnet</strong> Your invoices settle on Arc.`);
+        return;
+      }
+      setState("Loading…");
+      load();
+    });
+
+    // ── Event wiring ─────────────────────────────────────────────────────────
+    el("refresh-btn")?.addEventListener("click", () => window.reconcileAll());
+
+    /* Rows are rebuilt on every render, so these listeners live on document and
+       match by data attribute. data-fx-on carries the event type because a
+       control can receive more than one. */
+    function __fxDelegate(event) {
+      const node = event.target.closest("[data-fx-act]");
+      if (!node || node.getAttribute("data-fx-on") !== event.type) return;
+      const fn = window[node.getAttribute("data-fx-act")];
+      if (typeof fn !== "function") return;
+      const s = node.getAttribute("data-fx-s");
+      fn(s);
+    }
+    document.addEventListener("click", __fxDelegate);
+  </script>
+</body>
+</html>
