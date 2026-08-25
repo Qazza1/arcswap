@@ -350,10 +350,11 @@ import { arcfxApi } from "/src/shared/arcfxApi.ts";
  */
 let attribution = { invoicesByTx: {}, invoicesByRef: {}, customersByAddress: {} };
 
-async function loadAttribution() {
+async function loadAttribution(myToken = loadToken) {
   if (!userAddress) return;
   try {
     const a = await arcfxApi.get("/v1/attribution", "attribution read");
+    if (myToken !== loadToken) return;   // the wallet changed while this was in flight
     attribution = {
       invoicesByTx: a.invoicesByTx || {},
       invoicesByRef: a.invoicesByRef || {},
@@ -452,8 +453,21 @@ const hide  = id => { const n = el(id); if (n) n.classList.add("hidden"); };
 // the arcfxWallet.onChange subscription at the bottom of this module.
 
 // ── Load history ───────────────────────────────────────────────────────────
+/**
+ * Which load is currently on screen.
+ *
+ * The two enrichment passes \u2014 payer resolution and invoice attribution \u2014 finish
+ * after loadHistory has returned. If the user switches account while one is in
+ * flight, its response belongs to a ledger that is no longer displayed, and
+ * applying it would paint one wallet's counterparties and invoice numbers onto
+ * another wallet's transactions. Each pass captures the token it started under
+ * and drops its result if that is no longer current.
+ */
+let loadToken = 0;
+
 async function loadHistory() {
   if (!provider || !userAddress) return;
+  const myToken = ++loadToken;
   setLoading("Fetching transactions\u2026");
 
   // Pull this wallet's full ERC-20 transfer history from the Blockscout API.
@@ -606,14 +620,15 @@ async function loadHistory() {
       }
     }
 
+    if (myToken !== loadToken) return;   // a newer load superseded this one
     allTxs = processed;
     await loadCategories();
     await loadFeeBps();
     updateStats();
     renderTable();
     renderPnl();
-    enrichPayers();      // fire-and-forget; re-renders itself once the payers land
-    loadAttribution();   // same — names the rows that belong to a tracked invoice
+    enrichPayers(myToken);      // fire-and-forget; re-renders itself once the payers land
+    loadAttribution(myToken);   // same — names the rows that belong to a tracked invoice
 
   } catch (err) {
     setEmpty(`Could not load history. ${err.message}`);
@@ -869,12 +884,13 @@ async function sha256Hex(s) {
 // On-chain, a received payment appears to come from the ArcFXPayments contract.
 // Only the indexed PaymentExecuted event knows who actually paid, so fill the
 // counterparty in from the backend where we can.
-async function enrichPayers() {
+async function enrichPayers(myToken = loadToken) {
   if (!userAddress) return;
   try {
     const r = await fetch(`${ARCFX_API}/v1/payments?recipient=${userAddress}&limit=100`);
     if (!r.ok) return;
     const j = await r.json();
+    if (myToken !== loadToken) return;   // the wallet changed while this was in flight
     const byHash = new Map((j.payments || []).map(p => [String(p.txHash).toLowerCase(), p.payer]));
     let n = 0;
     for (const t of allTxs) {
@@ -1309,6 +1325,11 @@ function setEmpty(msg) {
 // The shared session now owns all of it. This page only says what to do when
 // the session changes.
 async function adoptSession(state) {
+  // Invalidate anything in flight and drop the previous wallet's names: an
+  // invoice number or customer belongs to the account it was loaded for.
+  loadToken++;
+  attribution = { invoicesByTx: {}, invoicesByRef: {}, customersByAddress: {} };
+
   if (!state.connected || !window.ethereum) {
     provider = signer = userAddress = null;
     setEmpty("Connect your wallet to view your transaction history.");

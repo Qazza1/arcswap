@@ -91,7 +91,22 @@ async function readAuth(action: string): Promise<{ wallet: string; ts: number; s
 
 /** Drop cached read signatures — call when the account changes. */
 export function clearAuthCache(): void { readCache.clear(); }
-arcfxWallet.onChange(() => clearAuthCache());
+
+// Only an ACCOUNT change invalidates these. A signature is bound to the wallet
+// and the clock, not the chain, so clearing on every emit — which includes
+// chainChanged and the switch performed during connect — would force a fresh
+// MetaMask prompt for no security benefit. Entries are keyed by address anyway;
+// this clears them so one account's credential does not sit in memory while
+// another is in use.
+let lastSeenAddress: string | null =
+  arcfxWallet.address ? arcfxWallet.address.toLowerCase() : null;
+arcfxWallet.onChange((state) => {
+  const now = state.address ? state.address.toLowerCase() : null;
+  if (now !== lastSeenAddress) {
+    lastSeenAddress = now;
+    clearAuthCache();
+  }
+});
 
 export class ApiError extends Error {
   status: number;
