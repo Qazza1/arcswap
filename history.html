@@ -337,6 +337,82 @@
 <script type="module">
 import { BrowserProvider, Contract, formatUnits } from "ethers";
 import { arcfxWallet } from "/src/shared/wallet.ts";
+import { arcfxApi } from "/src/shared/arcfxApi.ts";
+
+/**
+ * What each row was FOR.
+ *
+ * Books reads transfers from the chain, so a row arrives as an address and an
+ * amount with no idea what it settled. The backend knows: it holds the invoice
+ * allocations and the customer address book. Filled in after the table has
+ * already rendered, so a slow or unreachable API costs nothing — the ledger is
+ * complete without it, just less legible.
+ */
+let attribution = { invoicesByTx: {}, invoicesByRef: {}, customersByAddress: {} };
+
+async function loadAttribution() {
+  if (!userAddress) return;
+  try {
+    const a = await arcfxApi.get("/v1/attribution", "attribution read");
+    attribution = {
+      invoicesByTx: a.invoicesByTx || {},
+      invoicesByRef: a.invoicesByRef || {},
+      customersByAddress: a.customersByAddress || {},
+    };
+    renderTable();
+  } catch (err) {
+    // Not signed, offline, or nothing tracked yet. All fine: the ledger stands
+    // on its own and this only ever adds names to it.
+    console.debug("[books] attribution unavailable:", err?.message || err);
+  }
+}
+
+/**
+ * The invoice a row settled, if any.
+ *
+ * Keyed by transaction hash only. These rows come from the ERC-20 transfer feed,
+ * whose log index is not the PaymentExecuted log index, so the precise
+ * per-settlement map cannot be addressed from here without mismatching them.
+ * When one transaction settled several invoices the backend says so, and the
+ * row reports that rather than guessing which one.
+ */
+function invoiceFor(t) {
+  return attribution.invoicesByTx[String(t.hash).toLowerCase()] || null;
+}
+
+/** The customer name for a counterparty address, if it is in the address book. */
+function customerFor(address) {
+  if (!address) return null;
+  return attribution.customersByAddress[String(address).toLowerCase()] || null;
+}
+
+/**
+ * The sub-line under a row's type: what it settled and who it was with.
+ * Falls back to the token symbol, which is what the row showed before, so a row
+ * with no attribution is unchanged rather than emptier.
+ */
+function attributionLine(t) {
+  const inv = invoiceFor(t);
+  const cus = inv?.customerName || customerFor(t.counterparty)?.name || null;
+  if (!inv && !cus) return "";
+
+  const parts = [];
+  if (inv) {
+    const label = inv.count > 1
+      ? `${esc(inv.number)} +${inv.count - 1} more`   // several invoices, one transaction
+      : esc(inv.number);
+    parts.push(`<span style="color:var(--fx-ink);font-weight:600;">${label}</span>`);
+  }
+  if (cus) parts.push(esc(cus));
+  return parts.join(" · ") + ` <span style="color:var(--fx-faint);">· ${esc(t.sym)}</span>`;
+}
+
+/** Everything above is interpolated into HTML, and all of it is user-supplied. */
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
 
 // ── Config ─────────────────────────────────────────────────────────────────
 const USDC   = "0x3600000000000000000000000000000000000000";
@@ -536,7 +612,8 @@ async function loadHistory() {
     updateStats();
     renderTable();
     renderPnl();
-    enrichPayers(); // fire-and-forget; re-renders itself once the payers land
+    enrichPayers();      // fire-and-forget; re-renders itself once the payers land
+    loadAttribution();   // same — names the rows that belong to a tracked invoice
 
   } catch (err) {
     setEmpty(`Could not load history. ${err.message}`);
@@ -598,7 +675,7 @@ function renderTable() {
             <div class="tx-icon ${t.iconClass}">${t.icon}</div>
             <div>
               <div class="tx-type-name">${t.type}</div>
-              <div class="tx-type-sub">${t.sym}</div>
+              <div class="tx-type-sub">${attributionLine(t) || t.sym}</div>
             </div>
           </div>
         </td>
@@ -885,6 +962,19 @@ const csvCell = (val) => {
 };
 
 function downloadCsv(rows, suffix) {
+  // Every row must have exactly as many cells as the header. A mismatch shifts
+  // every later column — an amount landing under "Block" imports as a date, and
+  // nothing about the file looks wrong until the books do. This has happened
+  // once already, by adding a column to a header and not to the rows.
+  const width = rows[0]?.length ?? 0;
+  const bad = rows.findIndex(r => r.length !== width);
+  if (bad > 0) {
+    const msg = `Export aborted: row ${bad} has ${rows[bad].length} columns, header has ${width}.`;
+    console.error("[books]", msg, rows[0], rows[bad]);
+    alert(msg + "\n\nThis is a bug — the file was not written, because misaligned columns would corrupt your accounts.");
+    return;
+  }
+
   // CRLF + BOM so Excel and QuickBooks read the file without mangling it.
   const csv  = String.fromCharCode(0xFEFF) + rows.map(r => r.map(csvCell).join(",")).join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -1049,7 +1139,9 @@ window.exportLedger = function(format) {
   }
 
   if (format === "detailed") {
-    const rows = [["Date","Description","Category","Direction","Token","Amount","Counterparty","Block","Transaction Hash","ArcScan URL"]];
+    // Invoice and Customer make an exported row traceable back to the document
+    // it settled, which is the whole point of reconciliation.
+    const rows = [["Date","Description","Category","Direction","Token","Amount","Counterparty","Invoice","Customer","Block","Transaction Hash","ArcScan URL"]];
     for (const t of rowsSrc) {
       for (const leg of ledgerLegs(t)) {
         rows.push([
@@ -1060,6 +1152,8 @@ window.exportLedger = function(format) {
           leg.sym,
           leg.amt.toFixed(6),
           leg.payee || t.counterparty || "",
+          invoiceFor(t)?.number || "",
+          invoiceFor(t)?.customerName || customerFor(t.counterparty)?.name || "",
           t.block,
           t.hash,
           `https://testnet.arcscan.app/tx/${t.hash}`,
@@ -1075,7 +1169,9 @@ window.exportLedger = function(format) {
     const rows = [["Date","Description","Amount"]];
     for (const t of rowsSrc) {
       for (const leg of ledgerLegs(t)) {
-        rows.push([usDate(t), `${leg.desc} [${leg.category || categoryOf(t)}]`, leg.amt.toFixed(6)]);
+        const inv = invoiceFor(t);
+        const ref = inv ? ` (${inv.number}${inv.customerName ? " · " + inv.customerName : ""})` : "";
+        rows.push([usDate(t), `${leg.desc}${ref} [${leg.category || categoryOf(t)}]`, leg.amt.toFixed(6)]);
       }
     }
     downloadCsv(rows, "quickbooks");
@@ -1090,9 +1186,14 @@ window.exportLedger = function(format) {
         rows.push([
           ukDate(t),
           leg.amt.toFixed(6),
-          leg.payee || (t.counterparty ? shortAddr(t.counterparty) : (t.isSwap ? "FX conversion" : "Multiple recipients")),
+          leg.payee
+            || invoiceFor(t)?.customerName
+            || customerFor(t.counterparty)?.name
+            || (t.counterparty ? shortAddr(t.counterparty) : (t.isSwap ? "FX conversion" : "Multiple recipients")),
           `${leg.desc} [${leg.category || categoryOf(t)}]`,
-          t.hash,
+          // Reference is where Xero expects an invoice number; the transaction
+          // hash is the fallback when the row settled nothing tracked.
+          invoiceFor(t)?.number || t.hash,
         ]);
       }
     }
