@@ -65,12 +65,34 @@ const BUILD = {
 
 // ── chain helpers ───────────────────────────────────────────────────────────
 
-async function rpc(method, params) {
-  const res = await fetch(RPC, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-  });
+/** Raised when the chain could not be reached at all, as opposed to disagreeing. */
+class Unreachable extends Error {}
+
+async function rpc(method, params, attempt = 0) {
+  let res;
+  try {
+    res = await fetch(RPC, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch (err) {
+    // A public testnet RPC from a CI runner is not always available. Retry
+    // before concluding anything, and never let a network blip read as drift.
+    if (attempt < 2) {
+      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+      return rpc(method, params, attempt + 1);
+    }
+    throw new Unreachable(`${RPC} unreachable: ${err.message}`);
+  }
+  if (res.status >= 500 || res.status === 429) {
+    if (attempt < 2) {
+      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+      return rpc(method, params, attempt + 1);
+    }
+    throw new Unreachable(`${RPC} returned HTTP ${res.status}`);
+  }
   if (!res.ok) throw new Error(`${method}: HTTP ${res.status}`);
   const json = await res.json();
   if (json.error) throw new Error(`${method}: ${JSON.stringify(json.error)}`);
@@ -228,4 +250,16 @@ async function check() {
 const cmd = process.argv[2] || "check";
 const run = { check, write }[cmd];
 if (!run) { console.error(`unknown command "${cmd}" (use check | write)`); process.exit(1); }
-run().catch((err) => { console.error("FAILED: " + err.message); process.exit(1); });
+run().catch((err) => {
+  // An unreachable chain is not evidence of drift, and failing CI for it would
+  // train everyone to ignore a red build — which defeats the whole guard. Say
+  // so loudly and pass; a real disagreement still fails.
+  if (err instanceof Unreachable) {
+    console.warn("SKIPPED: " + err.message);
+    console.warn("The chain could not be read, so nothing was verified. This is");
+    console.warn("not a pass — re-run when the RPC is available.");
+    process.exit(0);
+  }
+  console.error("FAILED: " + err.message);
+  process.exit(1);
+});

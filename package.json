@@ -12,7 +12,8 @@
     "check:deployments": "node script/deployments.mjs check",
     "write:deployments": "node script/deployments.mjs write",
     "check:csp": "node script/csp-guard.mjs",
-    "verify": "tsc --noEmit && vite build && node script/csp-guard.mjs && node script/deployments.mjs check"
+    "verify": "node script/preflight.mjs && tsc --noEmit && vite build && node script/csp-guard.mjs && node script/deployments.mjs check",
+    "preflight": "node script/preflight.mjs"
   },
   "dependencies": {
     "@circle-fin/adapter-viem-v2": "^1.0.0",

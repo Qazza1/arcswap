@@ -51,6 +51,12 @@ jobs:
 
       - run: npm ci
 
+      # Structural checks that a build cannot catch: mangled CSS, malformed
+      # tags, duplicate ids, event wiring with no listener, unrouted pages,
+      # and an incomplete lockfile.
+      - name: Preflight
+        run: node script/preflight.mjs
+
       - name: Typecheck
         run: npx tsc --noEmit
 
