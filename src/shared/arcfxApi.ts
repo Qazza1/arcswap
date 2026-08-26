@@ -36,6 +36,29 @@ function canonical(v: unknown): string {
     .join(",") + "}";
 }
 
+/**
+ * Drop keys whose value is undefined, recursively.
+ *
+ * This has to happen BEFORE both the digest and the request body, because the
+ * two disagree about undefined: canonical() sees the key via Object.keys and
+ * encodes it as null, while JSON.stringify omits it entirely. The client then
+ * signs `{a, b, c:null}` and the server receives `{a, b}` — different digests,
+ * and a 403 that reads like a wallet fault.
+ *
+ * It is a natural thing for a caller to write: `customerId: id || undefined`.
+ * Normalising here means no caller has to know.
+ */
+function stripUndefined<T>(v: T): T {
+  if (Array.isArray(v)) return v.map(stripUndefined) as unknown as T;
+  if (v === null || typeof v !== "object") return v;
+  const out: Record<string, unknown> = {};
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (val === undefined) continue;
+    out[k] = stripUndefined(val);
+  }
+  return out as T;
+}
+
 export async function digestOf(payload: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(canonical(payload));
   const hash = await crypto.subtle.digest("SHA-256", bytes);
@@ -144,12 +167,14 @@ async function post(path: string, action: string, payload: unknown): Promise<any
   const wallet = arcfxWallet.address;
   if (!wallet) throw new Error("Connect your wallet first.");
   const ts = Date.now();
-  const digest = await digestOf(payload ?? null);
+  // Normalise once, then sign and send the SAME object — see stripUndefined.
+  const clean = stripUndefined(payload ?? null);
+  const digest = await digestOf(clean);
   const signature = await sign(messageFor(action, wallet, digest, ts));
   return parse(await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ wallet, ts, signature, payload }),
+    body: JSON.stringify({ wallet, ts, signature, payload: clean }),
   }));
 }
 

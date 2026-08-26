@@ -264,6 +264,16 @@
           <h3>Client details</h3>
         </div>
         <div class="card-body">
+          <!-- Saved customers. Hidden until the wallet is connected and has
+               some, so a first-time user never sees an empty dropdown. -->
+          <div class="field" id="customer-picker-field" style="display:none;margin-bottom:14px;">
+            <label for="customer-picker">Saved customer</label>
+            <select id="customer-picker">
+              <option value="">— new client —</option>
+            </select>
+            <div id="customer-picker-note" style="font-size:11.5px;color:var(--fx-muted);margin-top:5px;line-height:1.5;"></div>
+          </div>
+
           <div class="field-row">
             <div class="field">
               <label for="to-name">Client name / company</label>
@@ -274,6 +284,11 @@
               <input data-fxh="h9" id="to-email" type="email" placeholder="client@company.com" />
             </div>
           </div>
+
+          <label id="save-customer-row" style="display:none;align-items:center;gap:8px;margin-top:12px;font-size:12.5px;color:var(--fx-muted);cursor:pointer;font-weight:400;text-transform:none;letter-spacing:0;">
+            <input type="checkbox" id="save-customer" style="width:auto;margin:0;" />
+            <span>Save this client for next time</span>
+          </label>
         </div>
       </div>
 
@@ -1193,6 +1208,87 @@ function showStatus(msg, type) {
       }
     }
 
+    // ── Saved customers ──────────────────────────────────────────────────────
+    //
+    // Until now an invoice was linked to a customer only by address coincidence:
+    // the ledger matched a payer address to the address book afterwards. Picking
+    // the customer here links the record at creation, which is what makes
+    // "everything owed by Acme" answerable.
+
+    let customers = [];
+    let selectedCustomerId = null;
+    // Invalidates an in-flight load if the wallet changes underneath it.
+    let customerToken = 0;
+
+    async function loadCustomers() {
+      const field = document.getElementById("customer-picker-field");
+      const saveRow = document.getElementById("save-customer-row");
+      if (!arcfxWallet.connected) {
+        if (field) field.style.display = "none";
+        if (saveRow) saveRow.style.display = "none";
+        return;
+      }
+      // Offer to save a new client as soon as there is a wallet to own it.
+      if (saveRow) saveRow.style.display = "flex";
+
+      const myToken = ++customerToken;
+      try {
+        const data = await arcfxApi.listCustomers();
+        if (myToken !== customerToken) return;
+        customers = data.customers || [];
+      } catch (err) {
+        // Not signed, offline, or the API is not deployed. The form still works
+        // exactly as it did before saved customers existed.
+        console.debug("[invoice] customers unavailable:", err?.message || err);
+        return;
+      }
+      if (!customers.length) { if (field) field.style.display = "none"; return; }
+
+      const sel = document.getElementById("customer-picker");
+      sel.innerHTML = '<option value="">— new client —</option>' +
+        customers.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join("");
+      if (field) field.style.display = "";
+    }
+
+    function applyCustomer(id) {
+      selectedCustomerId = id || null;
+      const note = document.getElementById("customer-picker-note");
+      const saveRow = document.getElementById("save-customer-row");
+      const c = customers.find((x) => x.id === id);
+
+      if (!c) {
+        if (note) note.textContent = "";
+        if (saveRow) saveRow.style.display = arcfxWallet.connected ? "flex" : "none";
+        return;
+      }
+      // Fill the fields rather than replace them: the name on this invoice
+      // stays editable, so a one-off "c/o" line does not require a new customer.
+      const name = document.getElementById("to-name");
+      const email = document.getElementById("to-email");
+      if (name) name.value = c.name || "";
+      if (email) email.value = c.email || "";
+      if (saveRow) saveRow.style.display = "none";   // already saved
+
+      const addr = (c.addresses || []).find((a) => a.isDefault) || (c.addresses || [])[0];
+      if (note) {
+        note.textContent = addr
+          ? `Payments from ${addr.address.slice(0, 10)}…${addr.address.slice(-6)} will be matched to this customer.`
+          : "No wallet address on file — add one so their payments are recognised automatically.";
+      }
+      if (typeof updatePreview === "function") updatePreview();
+    }
+
+    document.getElementById("customer-picker")?.addEventListener("change", (e) => {
+      applyCustomer(e.target.value);
+    });
+
+    arcfxWallet.onChange(() => {
+      customerToken++;
+      customers = [];
+      selectedCustomerId = null;
+      loadCustomers();
+    });
+
     /**
      * Save this invoice as a tracked record.
      *
@@ -1239,11 +1335,32 @@ function showStatus(msg, type) {
       show("Saving — approve the signature in your wallet…");
 
       try {
+        // A new client can be saved as a customer in the same step, so the link
+        // exists from the first invoice rather than only from the second.
+        let customerId = selectedCustomerId;
+        const wantsSave = document.getElementById("save-customer")?.checked;
+        const clientName = (document.getElementById("to-name")?.value || "").trim();
+        if (!customerId && wantsSave && clientName) {
+          try {
+            const saved = await arcfxApi.saveCustomer({
+              name: clientName,
+              email: (document.getElementById("to-email")?.value || "").trim() || null,
+            });
+            customerId = saved.customer.id;
+            await loadCustomers();
+          } catch (e) {
+            // A duplicate name is not a reason to lose the invoice — carry on
+            // without the link and say so afterwards.
+            console.debug("[invoice] could not save customer:", e?.message || e);
+          }
+        }
+
         const created = await arcfxApi.createInvoice({
           number: invNum,
           amount: amount && parseFloat(amount) > 0 ? amount : undefined,
           token: TOKEN_ADDRESSES[window.arcfxSelectedToken?.() || "USDC"] || undefined,
           dueDate: (document.getElementById("inv-due")?.value || "").trim() || undefined,
+          customerId: customerId || undefined,
           send: true,
         });
 
@@ -1257,7 +1374,14 @@ function showStatus(msg, type) {
         let msg = `<strong style="color:var(--teal);">Tracked.</strong> `
                 + `Invoice <strong>${escapeHtml(inv.number)}</strong> is saved to your wallet`
                 + (inv.amount ? ` for <strong>${escapeHtml(inv.amount)} ${escapeHtml(inv.token || "")}</strong>` : "")
+                + (inv.customer && inv.customer.name
+                    ? ` for <strong>${escapeHtml(inv.customer.name)}</strong>` : "")
                 + `.`;
+        // Saying so only when a save was attempted keeps the normal case quiet.
+        if (!inv.customer && wantsSave && clientName) {
+          msg += `<br><span style="color:var(--fx-warn);">The client was not saved — you may already have a customer named `
+               + `<strong>${escapeHtml(clientName)}</strong>. The invoice is tracked either way.</span>`;
+        }
         if (r.allocated > 0) {
           msg += `<br>Matched <strong>${r.allocated}</strong> payment(s) already on-chain — status: <strong>${escapeHtml(r.status || "")}</strong>.`;
         }
