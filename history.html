@@ -195,7 +195,6 @@
     .page-footer a:hover { color: var(--blue); text-decoration: none; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
   <!-- Header mount points — populated by /src/shared/header.ts -->
@@ -338,6 +337,7 @@
 import { BrowserProvider, Contract, formatUnits } from "ethers";
 import { arcfxWallet } from "/src/shared/wallet.ts";
 import { arcfxApi } from "/src/shared/arcfxApi.ts";
+import { downloadReceiptPdf } from "/src/shared/receipt.ts";
 
 /**
  * What each row was FOR.
@@ -1222,72 +1222,38 @@ window.exportLedger = function(format) {
 window.downloadReceipt = async function(hash) {
   const tx = (allTxs || []).find(t => t.hash === hash);
   if (!tx) { alert("Transaction not found."); return; }
-  const ns = window.jspdf;
-  if (!ns || !ns.jsPDF) { alert("PDF library still loading — try again in a moment."); return; }
-  const { jsPDF } = ns;
 
-  let dateStr = "—";
+  // Block timestamps are best-effort; the row's own timestamp is the fallback.
+  let when = tx.ts ? new Date(tx.ts) : null;
   try {
-    if (provider && tx.block) {
+    if (!when && provider && tx.block) {
       const blk = await provider.getBlock(tx.block);
-      if (blk && blk.timestamp) dateStr = new Date(blk.timestamp * 1000).toLocaleString("en-GB");
+      if (blk && blk.timestamp) when = new Date(blk.timestamp * 1000);
     }
-  } catch (e) { /* timestamp is best-effort */ }
+  } catch (e) { /* keep whatever we have */ }
 
-  const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
-  const W = 210;
+  // If this payment settled a tracked invoice, the receipt says which one.
+  const inv = invoiceFor(tx);
+  const customer = inv?.customerName || customerFor(tx.counterparty)?.name || null;
 
-  // Dark header
-  doc.setFillColor(6, 8, 16);
-  doc.rect(0, 0, W, 46, "F");
-  doc.setFillColor(61, 126, 255);
-  doc.roundedRect(14, 13, 14, 14, 2, 2, "F");
-  doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(255,255,255);
-  doc.text("A", 21, 22.5, { align:"center" });
-  doc.setFontSize(11); doc.setTextColor(232,237,248);
-  doc.text("ArcFX", 32, 22.5);
-  doc.setFontSize(18); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-  doc.text("PAYMENT RECEIPT", W-14, 22.5, { align:"right" });
-
-  // Amount highlight
-  let y = 66;
-  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(120,130,160);
-  doc.text("Amount", 14, y);
-  doc.setFont("helvetica","bold"); doc.setFontSize(22); doc.setTextColor(20,24,40);
-  const amountLine = tx.isSwap ? (tx.amtDisplay + "  " + tx.sym)
-                               : (tx.amtDisplay.replace(/[+\u2212-]/g,"") + " " + tx.sym);
-  doc.text(amountLine, 14, y + 10);
-
-  // Detail rows
-  y += 28;
-  const rows = [["Type", tx.type], ["Token", tx.sym], ["Account", userAddress || "—"]];
-  if (!tx.isSwap && tx.counterparty) rows.push([tx.dir === "out" ? "To" : "From", tx.counterparty]);
-  rows.push(["Network", "Arc Testnet"]);
-  rows.push(["Block", String(tx.block)]);
-  rows.push(["Date", dateStr]);
-  rows.push(["Status", "Confirmed on-chain"]);
-  rows.push(["Transaction hash", tx.hash]);
-
-  doc.setFontSize(10);
-  for (const pair of rows) {
-    doc.setFont("helvetica","normal"); doc.setTextColor(120,130,160);
-    doc.text(pair[0], 14, y);
-    doc.setFont("helvetica","bold"); doc.setTextColor(30,36,56);
-    const lines = doc.splitTextToSize(String(pair[1]), 120);
-    doc.text(lines, W-14, y, { align:"right" });
-    y += (lines.length * 5) + 4;
-    doc.setDrawColor(235, 237, 242);
-    doc.line(14, y - 3, W-14, y - 3);
+  try {
+    await downloadReceiptPdf({
+      amount: tx.amtDisplay.replace(/[+−-]/g, "").trim(),
+      token: tx.sym,
+      account: userAddress || "",
+      counterparty: tx.isSwap ? null : (tx.counterparty || null),
+      direction: tx.dir === "out" ? "out" : "in",
+      txHash: tx.hash,
+      block: tx.block,
+      date: when,
+      invoiceNumber: inv ? inv.number : null,
+      customerName: customer,
+      note: tx.isSwap ? "FX conversion" : null,
+    });
+  } catch (err) {
+    console.error("[books] receipt failed:", err);
+    alert("Could not generate the receipt: " + (err?.message || err));
   }
-
-  // ArcScan link + footer
-  y += 5;
-  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(61,126,255);
-  doc.textWithLink("View transaction on ArcScan", 14, y, { url: "https://testnet.arcscan.app/tx/" + tx.hash });
-  doc.setFontSize(8); doc.setTextColor(150,158,180);
-  doc.text("Powered by ArcFX · arcfx.app · Generated " + new Date().toLocaleDateString("en-GB"), 14, 287);
-
-  doc.save("arcfx-receipt-" + tx.hash.slice(0,10) + ".pdf");
 };
 
 // ── UI states ─────────────────────────────────────────────────────────────

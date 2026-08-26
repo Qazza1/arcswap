@@ -177,6 +177,17 @@ export const arcfxApi = {
   updateInvoice: (payload: unknown) => post("/v1/invoice-records/update", "invoice update", payload),
   reconcile: (id?: string) => post("/v1/invoice-records/reconcile", "invoice reconcile", id ? { id } : {}),
   publicInvoice: (id: string) => publicGet(`/v1/invoice-records/public/${encodeURIComponent(id)}`),
+
+  /**
+   * Every settlement against an invoice number, with transaction hashes.
+   * The record endpoints report totals; this one lists the individual payments,
+   * which is what a receipt has to cite.
+   */
+  invoiceSettlements: (number: string, recipient: string, expected?: string | null) => {
+    const q = new URLSearchParams({ number, recipient });
+    if (expected) q.set("expected", expected);
+    return publicGet(`/v1/invoices/status?${q.toString()}`);
+  },
 };
 
 if (typeof window !== "undefined") (window as any).arcfxApi = arcfxApi;

@@ -166,7 +166,7 @@ for (const page of pages) {
       "npm ci would fail on this lockfile" +
       (missing.length ? ` — missing: ${[...new Set(missing)].join(", ")}` : "") +
       (why ? `\n      npm said: ${why}` : "") +
-      "\n      Regenerate with node_modules moved aside, or add the missing entries."
+      "\n      Fix with: npm run fix:lock"
     );
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
@@ -213,7 +213,7 @@ for (const page of pages) {
           `package-lock.json: ${owner} declares optional peer ${dep}@${range}, ` +
           `but the nearest entry is ${found.version}.\n` +
           `      Linux \`npm ci\` will report this as "Missing: ${dep}@<x> from lock file".\n` +
-          `      Add the nested entry, or regenerate the lock with node_modules moved aside.`
+          `      Fix with: npm run fix:lock`
         );
       }
     }

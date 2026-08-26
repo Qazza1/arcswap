@@ -159,6 +159,7 @@
   <script type="module">
     import { arcfxWallet } from '/src/shared/wallet.ts';
     import { arcfxApi, ApiError } from '/src/shared/arcfxApi.ts';
+    import { downloadReceiptPdf } from '/src/shared/receipt.ts';
 
     const el = (id) => document.getElementById(id);
 
@@ -312,6 +313,9 @@
                 ${i.status === "draft"
                   ? `<button class="btn btn-sm" data-fx-on="click" data-fx-act="sendInvoice" data-fx-s="${esc(i.id)}">Mark sent</button>`
                   : `<button class="btn btn-sm" data-fx-on="click" data-fx-act="copyInvoiceLink" data-fx-s="${esc(i.id)}">Copy link</button>`}
+                ${Number(i.paid) > 0
+                  ? `<button class="btn btn-sm" data-fx-on="click" data-fx-act="downloadInvoiceReceipt" data-fx-s="${esc(i.id)}">Receipt</button>`
+                  : ""}
                 ${["paid", "overpaid", "cancelled"].includes(i.status)
                   ? ""
                   : `<button class="btn btn-sm" data-fx-on="click" data-fx-act="cancelInvoice" data-fx-s="${esc(i.id)}">Cancel</button>`}
@@ -349,6 +353,47 @@
       } catch {
         // Clipboard access can be refused; show the link so it is still usable.
         setBanner(`Copy was blocked. The link is <span class="num">${esc(url)}</span>`, "bad");
+      }
+      setTimeout(() => setBanner(""), 6000);
+    };
+
+    /**
+     * A receipt for what has been received against an invoice.
+     *
+     * The list carries totals but not transaction hashes, and a receipt has to
+     * cite the payment it records — so the settlements are fetched, and the most
+     * recent one is the transaction named on the document. When several partial
+     * payments have landed, the receipt shows the running total and says plainly
+     * that the invoice is not yet settled.
+     */
+    window.downloadInvoiceReceipt = async function (id) {
+      const inv = invoices.find((i) => i.id === id);
+      if (!inv) return;
+      setBanner("Preparing receipt…");
+      try {
+        const s = await arcfxApi.invoiceSettlements(
+          inv.number, arcfxWallet.address, inv.amount || null
+        );
+        const settlements = s.settlements || [];
+        const latest = settlements[settlements.length - 1] || null;
+
+        await downloadReceiptPdf({
+          amount: Number(inv.paid).toFixed(2),
+          token: inv.token || "",
+          account: arcfxWallet.address,
+          counterparty: latest ? latest.payer : null,
+          direction: "in",
+          txHash: latest ? latest.txHash : null,
+          date: latest ? latest.at : null,
+          invoiceNumber: inv.number,
+          customerName: inv.customer ? inv.customer.name : null,
+          invoiceTotal: inv.amount,
+          invoicePaid: inv.paid,
+          note: inv.note || null,
+        });
+        setBanner(`Receipt for <strong>${esc(inv.number)}</strong> downloaded.`, "ok");
+      } catch (err) {
+        setBanner(`Could not generate the receipt: ${esc(err?.message || err)}`, "bad");
       }
       setTimeout(() => setBanner(""), 6000);
     };
