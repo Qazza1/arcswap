@@ -85,6 +85,14 @@ async function sign(message: string): Promise<string> {
   return eth.request({ method: "personal_sign", params: [message, address] });
 }
 
+/** Sign the server-prepared Agent Mandate message; never a transaction. */
+async function signMandate(message: string): Promise<string> {
+  if (!String(message).startsWith("ArcFX Agent Mandate\nversion: arcfx.agent-mandate-signature.v1\n")) {
+    throw new Error("The server returned an invalid Agent Mandate message.");
+  }
+  return sign(message);
+}
+
 /**
  * Read signatures are valid for 12 hours server-side, so one signature covers a
  * whole session per action. Without this cache the user would get a MetaMask
@@ -202,6 +210,14 @@ export const arcfxApi = {
   updateInvoice: (payload: unknown) => post("/v1/invoice-records/update", "invoice update", payload),
   reconcile: (id?: string) => post("/v1/invoice-records/reconcile", "invoice reconcile", id ? { id } : {}),
   publicInvoice: (id: string) => publicGet(`/v1/invoice-records/public/${encodeURIComponent(id)}`),
+
+  prepareAgentMandate: (invoiceId: string) =>
+    post("/v1/agent-mandates/prepare", "agent mandate prepare", { invoiceId }),
+  submitAgentMandate: (preparationToken: string, mandateSignature: string) =>
+    post("/v1/agent-mandates", "agent mandate submit", { preparationToken, mandateSignature }),
+  createAgentRun: (invoiceId: string, mandateId: string) =>
+    post("/v1/agent-runs", "agent run create", { invoiceId, mandateId }),
+  signAgentMandate: signMandate,
 
   /**
    * Every settlement against an invoice number, with transaction hashes.

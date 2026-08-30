@@ -316,6 +316,9 @@
                 ${Number(i.paid) > 0
                   ? `<button class="btn btn-sm" data-fx-on="click" data-fx-act="downloadInvoiceReceipt" data-fx-s="${esc(i.id)}">Receipt</button>`
                   : ""}
+                ${i.amount && i.tokenAddress && !["paid", "overpaid", "cancelled"].includes(i.status)
+                  ? `<button class="btn btn-sm" data-fx-on="click" data-fx-act="generateAgentEvidence" data-fx-s="${esc(i.id)}">Generate Agent Evidence</button>`
+                  : ""}
                 ${["paid", "overpaid", "cancelled"].includes(i.status)
                   ? ""
                   : `<button class="btn btn-sm" data-fx-on="click" data-fx-act="cancelInvoice" data-fx-s="${esc(i.id)}">Cancel</button>`}
@@ -326,6 +329,32 @@
     }
 
     // ── Actions ──────────────────────────────────────────────────────────────
+
+    window.generateAgentEvidence = async function (id) {
+      const inv = invoices.find((item) => item.id === id);
+      if (!inv) return;
+      setBanner(`Preparing Agent Mandate for <strong>${esc(inv.number)}</strong>…`);
+      try {
+        // The opaque preparation token intentionally remains in this stack
+        // frame only. It is never written to browser storage or the DOM.
+        const prepared = await arcfxApi.prepareAgentMandate(id);
+        const mandateSignature = await arcfxApi.signAgentMandate(prepared.signingMessage);
+        const submitted = await arcfxApi.submitAgentMandate(prepared.preparationToken, mandateSignature);
+        const result = await arcfxApi.createAgentRun(id, submitted.mandate.mandateId);
+        const d = result.decision;
+        setBanner(
+          `<strong>Agent Evidence created.</strong> `
+          + `Decision: <strong>${esc(d.outcome)}</strong> · `
+          + `${d.authorizedToExecute ? "authorized" : "not authorized"} · `
+          + `execution: <strong>${esc(result.execution)}</strong><br>`
+          + `Bundle: <span class="num">${esc(result.bundle.bundleId)}</span> · `
+          + `verification: <strong>${esc(result.bundle.verificationState)}</strong>`,
+          result.bundle.verificationState === "VALID" ? "ok" : "bad"
+        );
+      } catch (err) {
+        setBanner(`Agent Evidence could not be generated: ${esc(err?.message || err)}`, "bad");
+      }
+    };
 
     /**
      * The payment link for an invoice.
