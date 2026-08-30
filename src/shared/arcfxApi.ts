@@ -1,9 +1,10 @@
 /**
  * Client for the wallet-authenticated ArcFX API.
  *
- * The backend has no accounts. A wallet proves it owns its records by signing a
- * message per request, binding the action, the wallet, a digest of the payload
- * and a timestamp. This module is the browser half of that contract.
+ * The backend has no accounts. A wallet first proves it owns its records with a
+ * short-lived signed bootstrap request. The opaque, server-authenticated owner
+ * session then covers approved reads in this browser tab; ordinary writes still
+ * require a distinct signed request.
  *
  * The canonical form below MUST stay byte-identical to `canonical()` in the
  * backend's src/walletauth.ts — a digest that disagrees produces a 403 that
@@ -93,50 +94,96 @@ async function signMandate(message: string): Promise<string> {
   return sign(message);
 }
 
-/**
- * Read signatures are valid for 12 hours server-side, so one signature covers a
- * whole session per action. Without this cache the user would get a MetaMask
- * prompt on every list refresh, which is the kind of friction that makes people
- * stop using a tool.
- *
- * Cached in memory only: a signature is a credential, and localStorage is
- * readable by any script that manages to run on the page.
- */
-const READ_TTL_MS = 11 * 60 * 60 * 1000;  // under the server's 12h, with margin
-const readCache = new Map<string, { ts: number; signature: string; wallet: string }>();
+const OWNER_SESSION_STORAGE_KEY = "arcfx:owner-session:v1";
 
-async function readAuth(action: string): Promise<{ wallet: string; ts: number; signature: string }> {
-  const wallet = arcfxWallet.address;
-  if (!wallet) throw new Error("Connect your wallet first.");
-  const key = `${action}|${wallet.toLowerCase()}`;
-  const hit = readCache.get(key);
-  if (hit && Date.now() - hit.ts < READ_TTL_MS && hit.wallet === wallet.toLowerCase()) {
-    return { wallet, ts: hit.ts, signature: hit.signature };
-  }
-  const ts = Date.now();
-  const digest = await digestOf(null);
-  const signature = await sign(messageFor(action, wallet, digest, ts));
-  readCache.set(key, { ts, signature, wallet: wallet.toLowerCase() });
-  return { wallet, ts, signature };
+interface OwnerSession {
+  sessionToken: string;
+  wallet: string;
+  expiresAt: string;
 }
 
-/** Drop cached read signatures — call when the account changes. */
-export function clearAuthCache(): void { readCache.clear(); }
+function browserStorage(): Storage | null {
+  try { return typeof sessionStorage === "undefined" ? null : sessionStorage; }
+  catch { return null; }
+}
 
-// Only an ACCOUNT change invalidates these. A signature is bound to the wallet
-// and the clock, not the chain, so clearing on every emit — which includes
-// chainChanged and the switch performed during connect — would force a fresh
-// MetaMask prompt for no security benefit. Entries are keyed by address anyway;
-// this clears them so one account's credential does not sit in memory while
-// another is in use.
-let lastSeenAddress: string | null =
-  arcfxWallet.address ? arcfxWallet.address.toLowerCase() : null;
-arcfxWallet.onChange((state) => {
-  const now = state.address ? state.address.toLowerCase() : null;
-  if (now !== lastSeenAddress) {
-    lastSeenAddress = now;
+/** Never persist a wallet signature. Only this opaque server-issued bearer is tab-scoped. */
+function storedOwnerSession(): OwnerSession | null {
+  const wallet = arcfxWallet.address?.toLowerCase();
+  if (!wallet) return null;
+  try {
+    const raw = browserStorage()?.getItem(OWNER_SESSION_STORAGE_KEY);
+    const value = raw ? JSON.parse(raw) : null;
+    if (!value || typeof value.sessionToken !== "string" || !/^[A-Za-z0-9._-]+$/.test(value.sessionToken)
+        || typeof value.wallet !== "string" || value.wallet.toLowerCase() !== wallet
+        || typeof value.expiresAt !== "string" || !Number.isFinite(Date.parse(value.expiresAt))
+        || Date.now() >= Date.parse(value.expiresAt)) {
+      clearAuthCache();
+      return null;
+    }
+    return { sessionToken: value.sessionToken, wallet, expiresAt: value.expiresAt };
+  } catch {
     clearAuthCache();
+    return null;
   }
+}
+
+/** Drop the opaque owner session on account, chain, expiry, or authentication failure. */
+export function clearAuthCache(): void {
+  try { browserStorage()?.removeItem(OWNER_SESSION_STORAGE_KEY); } catch { /* private mode */ }
+}
+
+let ownerSessionPending: Promise<OwnerSession> | null = null;
+
+async function signedPost(path: string, action: string, payload: unknown): Promise<any> {
+  const wallet = arcfxWallet.address;
+  if (!wallet) throw new Error("Connect your wallet first.");
+  const ts = Date.now();
+  const clean = stripUndefined(payload ?? null);
+  const digest = await digestOf(clean);
+  const signature = await sign(messageFor(action, wallet, digest, ts));
+  return parse(await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ wallet, ts, signature, payload: clean }),
+  }));
+}
+
+async function bootstrapOwnerSession(): Promise<OwnerSession> {
+  const wallet = arcfxWallet.address?.toLowerCase();
+  if (!wallet) throw new Error("Connect your wallet first.");
+  const result = await signedPost("/v1/auth/session", "session create", null);
+  if (!result || typeof result.sessionToken !== "string" || typeof result.wallet !== "string"
+      || result.wallet.toLowerCase() !== wallet || typeof result.expiresAt !== "string"
+      || !Number.isFinite(Date.parse(result.expiresAt)) || Date.now() >= Date.parse(result.expiresAt)) {
+    throw new Error("The server returned an invalid owner session.");
+  }
+  const session: OwnerSession = { sessionToken: result.sessionToken, wallet, expiresAt: result.expiresAt };
+  try { browserStorage()?.setItem(OWNER_SESSION_STORAGE_KEY, JSON.stringify(session)); } catch { /* tab still works */ }
+  return session;
+}
+
+async function ownerSession(): Promise<OwnerSession> {
+  const existing = storedOwnerSession();
+  if (existing) return existing;
+  if (!ownerSessionPending) {
+    ownerSessionPending = bootstrapOwnerSession().finally(() => { ownerSessionPending = null; });
+  }
+  return ownerSessionPending;
+}
+
+// Do not discard a valid tab session during the initial silent wallet restore.
+// After an address was observed, disconnects and account changes clear it. A
+// known non-Arc chain also clears it so a token cannot survive a context switch.
+let lastSeenAddress: string | null = arcfxWallet.address?.toLowerCase() || null;
+arcfxWallet.onChange((state) => {
+  const nextAddress = state.address?.toLowerCase() || null;
+  if (nextAddress !== lastSeenAddress) {
+    const saved = (() => { try { return browserStorage()?.getItem(OWNER_SESSION_STORAGE_KEY); } catch { return null; } })();
+    if (lastSeenAddress !== null || (nextAddress !== null && !saved)) clearAuthCache();
+    lastSeenAddress = nextAddress;
+  }
+  if (state.chainId && !state.onArc) clearAuthCache();
 });
 
 export class ApiError extends Error {
@@ -157,13 +204,21 @@ async function parse(res: Response): Promise<any> {
   return body;
 }
 
-/** Authenticated GET. `params` are added to the query string. */
-async function get(path: string, action: string, params: Record<string, string> = {}): Promise<any> {
-  const auth = await readAuth(action);
-  const qs = new URLSearchParams({
-    wallet: auth.wallet, ts: String(auth.ts), signature: auth.signature, ...params,
-  });
-  return parse(await fetch(`${API_BASE}${path}?${qs}`));
+/** Authenticated owner GET. The action is retained for page-call compatibility. */
+async function get(path: string, _action: string, params: Record<string, string> = {}, retry = true): Promise<any> {
+  const session = await ownerSession();
+  const qs = new URLSearchParams(params);
+  try {
+    return await parse(await fetch(`${API_BASE}${path}?${qs}`, {
+      headers: { authorization: `Bearer ${session.sessionToken}` },
+    }));
+  } catch (error) {
+    if (retry && error instanceof ApiError && error.status === 401) {
+      clearAuthCache();
+      return get(path, _action, params, false);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -172,17 +227,35 @@ async function get(path: string, action: string, params: Record<string, string> 
  * never cached.
  */
 async function post(path: string, action: string, payload: unknown): Promise<any> {
-  const wallet = arcfxWallet.address;
-  if (!wallet) throw new Error("Connect your wallet first.");
-  const ts = Date.now();
-  // Normalise once, then sign and send the SAME object — see stripUndefined.
+  return signedPost(path, action, payload);
+}
+
+/** Narrow session-authorized POST for endpoints that explicitly opt in server-side. */
+async function sessionPost(path: string, payload: unknown, retry = true): Promise<any> {
+  const session = await ownerSession();
   const clean = stripUndefined(payload ?? null);
-  const digest = await digestOf(clean);
-  const signature = await sign(messageFor(action, wallet, digest, ts));
+  try {
+    return await parse(await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${session.sessionToken}` },
+      body: JSON.stringify({ payload: clean }),
+    }));
+  } catch (error) {
+    if (retry && error instanceof ApiError && error.status === 401) {
+      clearAuthCache();
+      return sessionPost(path, payload, false);
+    }
+    throw error;
+  }
+}
+
+/** The mandate itself is the authorization; this sends no generic wallet credential. */
+async function mandatePost(path: string, payload: unknown): Promise<any> {
+  const clean = stripUndefined(payload ?? null);
   return parse(await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ wallet, ts, signature, payload: clean }),
+    body: JSON.stringify({ payload: clean }),
   }));
 }
 
@@ -212,9 +285,9 @@ export const arcfxApi = {
   publicInvoice: (id: string) => publicGet(`/v1/invoice-records/public/${encodeURIComponent(id)}`),
 
   prepareAgentMandate: (invoiceId: string) =>
-    post("/v1/agent-mandates/prepare", "agent mandate prepare", { invoiceId }),
+    sessionPost("/v1/agent-mandates/prepare", { invoiceId }),
   submitAgentMandate: (preparationToken: string, mandateSignature: string) =>
-    post("/v1/agent-mandates", "agent mandate submit", { preparationToken, mandateSignature }),
+    mandatePost("/v1/agent-mandates", { preparationToken, mandateSignature }),
   createAgentRun: (invoiceId: string, mandateId: string) =>
     post("/v1/agent-runs", "agent run create", { invoiceId, mandateId }),
   signAgentMandate: signMandate,

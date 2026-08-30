@@ -340,7 +340,9 @@
         const prepared = await arcfxApi.prepareAgentMandate(id);
         const mandateSignature = await arcfxApi.signAgentMandate(prepared.signingMessage);
         const submitted = await arcfxApi.submitAgentMandate(prepared.preparationToken, mandateSignature);
-        const result = await arcfxApi.createAgentRun(id, submitted.mandate.mandateId);
+        // The exact Agent Mandate signature authorizes this server-side,
+        // analysis-only orchestration. It never opens a transaction request.
+        const result = submitted.run;
         const d = result.decision;
         setBanner(
           `<strong>Agent Evidence created.</strong> `

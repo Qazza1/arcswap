@@ -788,33 +788,14 @@ function categoryOf(t) { return catOverrides[rowId(t)] || autoCategory(t); }
 // Categories persist locally on every edit (instant, no wallet prompt) and are
 // pushed to the backend in one signed batch. Signing per-keystroke would mean a
 // wallet popup for every dropdown change.
-// Reads are signature-authenticated: category labels are private bookkeeping,
-// and a wallet address is public. One signature is reused for the session
-// rather than prompting on every load.
-async function readAuth() {
-  if (!signer || !userAddress) return null;
-  const key = `arcfx:catread:${userAddress.toLowerCase()}`;
-  try {
-    const cached = JSON.parse(sessionStorage.getItem(key) || "null");
-    if (cached && Math.abs(Date.now() - cached.ts) < 11 * 60 * 60 * 1000) return cached;
-  } catch { /* fall through and re-sign */ }
-  const ts = Date.now();
-  const message = `ArcFX category read\nwallet: ${userAddress.toLowerCase()}\nts: ${ts}`;
-  const signature = await signer.signMessage(message);
-  const auth = { ts, signature };
-  try { sessionStorage.setItem(key, JSON.stringify(auth)); } catch {}
-  return auth;
-}
+// Category labels are private bookkeeping. They use the same opaque owner
+// session as the other owner reads; no reusable wallet signature is stored.
 
 async function loadCategories() {
   loadCategoriesLocal();
   if (!userAddress) return;
   try {
-    const auth = await readAuth();
-    if (!auth) return; // no signer yet — local categories still apply
-    const r = await fetch(`${ARCFX_API}/v1/categories?wallet=${userAddress}&ts=${auth.ts}&signature=${auth.signature}`);
-    if (!r.ok) return;
-    const j = await r.json();
+    const j = await arcfxApi.get("/v1/categories", "category read");
     // Local edits that haven't synced yet must win, or the user loses work.
     catOverrides = { ...(j.categories || {}), ...pickDirty() };
     saveCategories();
