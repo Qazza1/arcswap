@@ -1277,7 +1277,7 @@ async function adoptSession(state) {
   loadToken++;
   attribution = { invoicesByTx: {}, invoicesByRef: {}, customersByAddress: {} };
 
-  if (!state.connected || !window.ethereum) {
+  if (!state.connected || !arcfxWallet.provider) {
     provider = signer = userAddress = null;
     setEmpty("Connect your wallet to view your transaction history.");
     return;
@@ -1287,7 +1287,7 @@ async function adoptSession(state) {
     setEmpty("Switch to Arc Testnet to view your history.");
     return;
   }
-  provider    = new BrowserProvider(window.ethereum);
+  provider    = new BrowserProvider(arcfxWallet.provider);
   signer      = await provider.getSigner();
   userAddress = state.address;
 

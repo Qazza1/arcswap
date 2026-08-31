@@ -319,7 +319,7 @@
 
     async function readBalance(token, addr){
       try {
-        var res = await window.ethereum.request({ method:'eth_call', params:[{ to:token, data:balanceOfData(addr) }, 'latest'] });
+        var res = await arcfxWallet.request({ method:'eth_call', params:[{ to:token, data:balanceOfData(addr) }, 'latest'] });
         if (!res || res === '0x') return 0;
         return parseInt(res, 16) / Math.pow(10, DECIMALS);
       } catch (e) { return null; }
@@ -328,22 +328,22 @@
     // ── Wrong-network detection ──
     async function checkNetwork(){
       var banner = document.getElementById('netBanner');
-      if (!banner || !window.ethereum) return true;
+      if (!banner || !arcfxWallet.provider) return true;
       try {
-        var cid = await window.ethereum.request({ method:'eth_chainId' });
+        var cid = await arcfxWallet.request({ method:'eth_chainId' });
         var ok = String(cid || '').toLowerCase() === ARC_CHAIN_ID;
         banner.style.display = ok ? 'none' : 'flex';
         return ok;
       } catch (e) { return true; }
     }
     async function switchNetwork(){
-      if (!window.ethereum) return;
+      if (!arcfxWallet.provider) return;
       try {
-        await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId: ARC_CHAIN_ID }] });
+        await arcfxWallet.request({ method:'wallet_switchEthereumChain', params:[{ chainId: ARC_CHAIN_ID }] });
       } catch (err) {
         if (err && err.code === 4902) { // chain not added to wallet
           try {
-            await window.ethereum.request({ method:'wallet_addEthereumChain', params:[{
+            await arcfxWallet.request({ method:'wallet_addEthereumChain', params:[{
               chainId: ARC_CHAIN_ID,
               chainName: 'Arc Testnet',
               nativeCurrency: { name: 'USD Coin', symbol: 'USDC', decimals: 18 },
@@ -391,7 +391,7 @@
       for (var from = fromBlock; from <= toBlock; from += chunk){
         var to = Math.min(from + chunk - 1, toBlock);
         try {
-          var logs = await window.ethereum.request({ method:'eth_getLogs', params:[{
+          var logs = await arcfxWallet.request({ method:'eth_getLogs', params:[{
             address: address, topics: topics,
             fromBlock: '0x' + from.toString(16), toBlock: '0x' + to.toString(16)
           }]});
@@ -423,9 +423,9 @@
     }
 
     async function loadActivity(addr){
-      if (!window.ethereum) return;
+      if (!arcfxWallet.provider) return;
       try {
-        var latest = parseInt(await window.ethereum.request({ method:'eth_blockNumber' }), 16);
+        var latest = parseInt(await arcfxWallet.request({ method:'eth_blockNumber' }), 16);
         if (!latest) return;
         var fromBlock = Math.max(0, latest - 20000);
         var padded = pad32(addr);
@@ -451,7 +451,7 @@
         var blockTs = {};
         await Promise.all(hashes.map(function(h){
           var bn = groups[h][0].log.blockNumber;
-          return window.ethereum.request({ method:'eth_getBlockByNumber', params:[bn, false] })
+          return arcfxWallet.request({ method:'eth_getBlockByNumber', params:[bn, false] })
             .then(function(b){ if (b && b.timestamp) blockTs[bn] = parseInt(b.timestamp, 16); })
             .catch(function(){});
         }));

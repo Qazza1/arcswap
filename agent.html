@@ -355,7 +355,7 @@
         // Steps 1–2 above need no wallet, so they always run: the 402 challenge
         // is the interesting part for a visitor who is only reading. Only the
         // signature needs a wallet, so that is where we stop if there isn't one.
-        if (!window.ethereum) {
+        if (!arcfxWallet.provider) {
           show("wallet-warn");
           setStep("s3", "failed", "No wallet detected — connect one to sign the authorization.");
           el("run-badge").innerHTML = '<span class="badge warn">challenge received · wallet needed to sign</span>';
@@ -368,7 +368,7 @@
         // eth_requestAccounts is rejected by the wallet as "already processing".
         if (!arcfxWallet.connected) await arcfxWallet.connect();
         if (!arcfxWallet.onArc) await arcfxWallet.ensureArc();
-        const provider = new BrowserProvider(window.ethereum);
+        const provider = new BrowserProvider(arcfxWallet.provider);
         const signer = await provider.getSigner();
         const from = await signer.getAddress();
 
@@ -457,7 +457,7 @@
     // Prefill the recipient with the connected wallet, so the demo is one click
     // away from being runnable.
     arcfxWallet.onChange(state => {
-      if (!window.ethereum) { show("wallet-warn"); return; }
+      if (!arcfxWallet.provider) { show("wallet-warn"); return; }
       if (!state.connected || !state.address) return;
       try {
         if (!el("inv-recipient").value) {

@@ -78,12 +78,9 @@ export function messageFor(action: string, wallet: string, digest: string, ts: n
 }
 
 async function sign(message: string): Promise<string> {
-  const eth = (window as any).ethereum;
-  const address = arcfxWallet.address;
-  if (!eth || !address) throw new Error("Connect your wallet first.");
-  // personal_sign takes (message, address). MetaMask accepts a UTF-8 string and
-  // applies the EIP-191 prefix, which is what verifyMessage expects server-side.
-  return eth.request({ method: "personal_sign", params: [message, address] });
+  // `arcfxWallet` owns provider selection. Reading window.ethereum here could
+  // sign with a different extension after an EIP-6963 injection race.
+  return arcfxWallet.signMessage(message);
 }
 
 /** Sign the server-prepared Agent Mandate message; never a transaction. */

@@ -5,6 +5,8 @@
  *  - Recent transaction feed-> /v1/payments     (full history, newest first)
  */
 
+import { arcfxWallet } from "./shared/wallet";
+
 const API_BASE = "https://arcfx-backend-production.up.railway.app";
 
 // ── DOM helpers ───────────────────────────────────────────────────────────
@@ -216,12 +218,8 @@ async function fetchFeed(): Promise<void> {
 // ── Wallet (read already-connected account; never forces a popup) ──────────
 let currentAddr: string | null = null;
 async function getConnectedAddress(): Promise<string | null> {
-  const eth = (window as any).ethereum;
-  if (!eth) return null;
-  try {
-    const accts: string[] = await eth.request({ method: "eth_accounts" });
-    return accts && accts.length ? accts[0] : null;
-  } catch { return null; }
+  await arcfxWallet.restore();
+  return arcfxWallet.address;
 }
 
 // ── Refresh ────────────────────────────────────────────────────────────────
@@ -246,13 +244,10 @@ async function refreshAll(): Promise<void> {
 (window as any).refreshAll = refreshAll;
 
 // React to wallet changes without a full reload
-const eth = (window as any).ethereum;
-if (eth && eth.on) {
-  eth.on("accountsChanged", (accts: string[]) => {
-    currentAddr = accts && accts.length ? accts[0] : null;
-    loadBreakdown(currentAddr);
-  });
-}
+arcfxWallet.onChange((state) => {
+  currentAddr = state.address;
+  loadBreakdown(currentAddr);
+});
 
 refreshAll();
 setInterval(() => { if (!document.hidden) refreshAll(); }, 15_000);

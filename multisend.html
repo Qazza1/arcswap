@@ -806,7 +806,7 @@
         }
         return;
       }
-      provider    = new BrowserProvider(window.ethereum);
+      provider    = new BrowserProvider(arcfxWallet.provider);
       signer      = await provider.getSigner();
       userAddress = state.address;
 

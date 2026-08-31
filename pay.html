@@ -502,7 +502,7 @@ function renderPayMode() {
 // module deliberately holds no ethers objects, so each page constructs them
 // with the ethers build it already imports.
 async function adoptSession(state) {
-  if (!state.connected || !window.ethereum) {
+  if (!state.connected || !arcfxWallet.provider) {
     provider = signer = userAddress = null;
     document.getElementById("pay-action")?.classList.add("hidden");
     document.getElementById("pay-connect")?.classList.remove("hidden");
@@ -516,7 +516,7 @@ async function adoptSession(state) {
     return;
   }
 
-  provider    = new BrowserProvider(window.ethereum);
+  provider    = new BrowserProvider(arcfxWallet.provider);
   signer      = await provider.getSigner();
   userAddress = state.address;
 
@@ -684,9 +684,6 @@ arcfxWallet.onChange(state => {
   if (inp && !inp.value && state.connected && state.address) inp.value = state.address;
 });
 
-window.ethereum?.on("chainChanged", () => window.location.reload());
-window.ethereum?.on("accountsChanged", (a) => { if (!a.length) window.location.reload(); });
-
 // expose for pay mode
 window.connectAndPay = connectAndPay;
 window.sendPayment   = sendPayment;
@@ -696,7 +693,7 @@ window.sendPayment   = sendPayment;
 let payFeeBps = 15n;
 async function loadPayFeeBps() {
   try {
-    const p = new Contract(PAYMENTS_ADDRESS, PAYMENTS_ABI, provider || new BrowserProvider(window.ethereum));
+    const p = new Contract(PAYMENTS_ADDRESS, PAYMENTS_ABI, provider || new BrowserProvider(arcfxWallet.provider));
     payFeeBps = BigInt(await p.FEE_BPS());
   } catch { payFeeBps = 15n; }
   updateFeeBreakdown();

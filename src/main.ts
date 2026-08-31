@@ -87,7 +87,7 @@ async function adoptSession(state: WalletState): Promise<void> {
   if (!state.onArc) {
     // Authorized but on the wrong network — surface it instead of a swap card
     // whose balances read "—" and whose actions fail with opaque kit errors.
-    ethersProvider = new BrowserProvider(window.ethereum!);
+    ethersProvider = new BrowserProvider(arcfxWallet.provider!);
     userAddress    = state.address;
     if (btn) btn.textContent = "Wrong network";
     el("swap-card")?.classList.add("hidden");
@@ -95,7 +95,7 @@ async function adoptSession(state: WalletState): Promise<void> {
     showStatus("You're connected but not on Arc Testnet. Click Connect to switch networks.", "error");
     return;
   }
-  ethersProvider = new BrowserProvider(window.ethereum!);
+  ethersProvider = new BrowserProvider(arcfxWallet.provider!);
   userAddress    = state.address;
   removeClass("swap-card", "hidden");
   addClass("connect-card", "hidden");
@@ -105,8 +105,8 @@ async function adoptSession(state: WalletState): Promise<void> {
 }
 
 async function connectWallet(): Promise<void> {
-  if (!window.ethereum) {
-    showStatus("MetaMask not found — install it from metamask.io", "error");
+  if (!arcfxWallet.provider) {
+    showStatus("No EVM wallet detected — install or enable one to continue.", "error");
     return;
   }
   const btn = el("connect-btn");
@@ -295,7 +295,7 @@ function flipTokens(): void {
 
 async function estimateSwap(amountIn: string): Promise<void> {
   const amount = amountIn;
-  if (!amount || parseFloat(amount) <= 0 || !window.ethereum) {
+  if (!amount || parseFloat(amount) <= 0 || !arcfxWallet.provider) {
     setText("estimate-output", "—");
     addClass("estimate-row", "hidden");
     return;
@@ -303,7 +303,7 @@ async function estimateSwap(amountIn: string): Promise<void> {
   setText("estimate-output", "loading…");
   removeClass("estimate-row", "hidden");
   try {
-    const adapter = await createViemAdapterFromProvider({ provider: window.ethereum as any });
+    const adapter = await createViemAdapterFromProvider({ provider: arcfxWallet.provider as any });
     const est = await kit.estimateSwap({
       from: { adapter, chain: "Arc_Testnet" },
       tokenIn, tokenOut, amountIn: amount,
@@ -329,7 +329,7 @@ async function estimateSwap(amountIn: string): Promise<void> {
 }
 
 async function executeSwap(): Promise<void> {
-  if (isSwapping || !window.ethereum) return;
+  if (isSwapping || !arcfxWallet.provider) return;
   const inp = el<HTMLInputElement>("amount-input");
   const amount = inp?.value.trim() ?? "";
   if (!amount || parseFloat(amount) <= 0) { showStatus("Enter an amount.", "error"); return; }
@@ -342,7 +342,7 @@ async function executeSwap(): Promise<void> {
   showStatus("Confirm in MetaMask…", "info");
 
   try {
-    const adapter = await createViemAdapterFromProvider({ provider: window.ethereum as any });
+    const adapter = await createViemAdapterFromProvider({ provider: arcfxWallet.provider as any });
     const result = await kit.swap({
       from: { adapter, chain: "Arc_Testnet" },
       tokenIn, tokenOut, amountIn: amount,
@@ -568,8 +568,8 @@ function flipBridgeDirection(): void {
 
 async function executeBridge(): Promise<void> {
   if (isBridging) return;
-  if (!window.ethereum) {
-    showBridgeStatus("No wallet detected. Install MetaMask to bridge.", "error");
+  if (!arcfxWallet.provider) {
+    showBridgeStatus("No EVM wallet detected. Install or enable one to bridge.", "error");
     return;
   }
   if (!ethersProvider || !userAddress) {
@@ -598,12 +598,12 @@ async function executeBridge(): Promise<void> {
   try {
     // Switch wallet to source chain (add it if the wallet doesn't have it).
     try {
-      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:fromDef.chainId}] });
+        await arcfxWallet.request({ method:"wallet_switchEthereumChain", params:[{chainId:fromDef.chainId}] });
     } catch (e: any) {
       const code = e.code ?? e.error?.code ?? e.info?.error?.code;
       const msg  = e.message ?? "";
       if (code===4902||msg.includes("4902")||msg.includes("wallet_addEthereumChain")) {
-        await window.ethereum.request({ method:"wallet_addEthereumChain", params:[{
+        await arcfxWallet.request({ method:"wallet_addEthereumChain", params:[{
           chainId: fromDef.chainId,
           chainName: fromDef.chainName,
           nativeCurrency: fromDef.nativeCurrency,
@@ -614,7 +614,7 @@ async function executeBridge(): Promise<void> {
     }
 
     showBridgeStatus("Confirm the transaction in MetaMask…","info");
-    const adapter = await createViemAdapterFromProvider({ provider: window.ethereum as any });
+    const adapter = await createViemAdapterFromProvider({ provider: arcfxWallet.provider as any });
     setBridgeStep("bstep-approve","active");
 
     const result = await (kit as any).bridge({
@@ -649,9 +649,9 @@ async function executeBridge(): Promise<void> {
 
     // Switch back to Arc and reinitialize provider so the wallet stays on Arc.
     try {
-      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:ARC_CHAIN.chainId}] });
+      await arcfxWallet.request({ method:"wallet_switchEthereumChain", params:[{chainId:ARC_CHAIN.chainId}] });
       await new Promise(r => setTimeout(r, 500));
-      ethersProvider = new BrowserProvider(window.ethereum!);
+      ethersProvider = new BrowserProvider(arcfxWallet.provider!);
       ethersSigner   = await ethersProvider.getSigner();
       await loadBalances();
     } catch { /* non-critical */ }
