@@ -397,6 +397,12 @@ test("late EIP-6963 announcements cannot replace a pinned provider or affect its
   const storage = new MemoryStorage();
   const local = new MemoryStorage();
   const prompts = [];
+  const ownerSession = JSON.stringify({
+    sessionToken: "session-owner",
+    wallet: owner.address.toLowerCase(),
+    expiresAt: "2099-08-30T18:00:00.000Z",
+  });
+  storage.setItem("arcfx:owner-session:v1", ownerSession);
   const fallback = mockProvider(owner.address, prompts);
   const late = mockProvider(other.address, prompts);
   const win = new FakeWindow(fallback);
@@ -427,6 +433,7 @@ test("late EIP-6963 announcements cannot replace a pinned provider or affect its
     await late.emit("chainChanged", "0x1");
     assert.equal(walletModule.arcfxWallet.provider, fallback, "late non-selected provider events are ignored");
     assert.equal(walletModule.arcfxWallet.address, owner.address, "late non-selected provider events cannot change wallet state");
+    assert.equal(storage.getItem("arcfx:owner-session:v1"), ownerSession, "late non-selected provider events cannot disturb the owner session");
   } finally {
     await server.close();
     globalThis.window = originalWindow;
