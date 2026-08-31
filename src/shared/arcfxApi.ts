@@ -17,6 +17,7 @@
  */
 
 import { arcfxWallet } from "./wallet";
+import { arcfxAuth, type OwnerSession } from "./auth";
 
 /**
  * Backend origin. Production by default; `window.ARCFX_API_BASE` overrides it so
@@ -91,46 +92,8 @@ async function signMandate(message: string): Promise<string> {
   return sign(message);
 }
 
-const OWNER_SESSION_STORAGE_KEY = "arcfx:owner-session:v1";
-
-interface OwnerSession {
-  sessionToken: string;
-  wallet: string;
-  expiresAt: string;
-}
-
-function browserStorage(): Storage | null {
-  try { return typeof sessionStorage === "undefined" ? null : sessionStorage; }
-  catch { return null; }
-}
-
-/** Never persist a wallet signature. Only this opaque server-issued bearer is tab-scoped. */
-function storedOwnerSession(): OwnerSession | null {
-  const wallet = arcfxWallet.address?.toLowerCase();
-  if (!wallet) return null;
-  try {
-    const raw = browserStorage()?.getItem(OWNER_SESSION_STORAGE_KEY);
-    const value = raw ? JSON.parse(raw) : null;
-    if (!value || typeof value.sessionToken !== "string" || !/^[A-Za-z0-9._-]+$/.test(value.sessionToken)
-        || typeof value.wallet !== "string" || value.wallet.toLowerCase() !== wallet
-        || typeof value.expiresAt !== "string" || !Number.isFinite(Date.parse(value.expiresAt))
-        || Date.now() >= Date.parse(value.expiresAt)) {
-      clearAuthCache();
-      return null;
-    }
-    return { sessionToken: value.sessionToken, wallet, expiresAt: value.expiresAt };
-  } catch {
-    clearAuthCache();
-    return null;
-  }
-}
-
 /** Drop the opaque owner session on account, chain, expiry, or authentication failure. */
-export function clearAuthCache(): void {
-  try { browserStorage()?.removeItem(OWNER_SESSION_STORAGE_KEY); } catch { /* private mode */ }
-}
-
-let ownerSessionPending: Promise<OwnerSession> | null = null;
+export function clearAuthCache(): void { arcfxAuth.clearAuthCache(); }
 
 async function signedPost(path: string, action: string, payload: unknown): Promise<any> {
   const wallet = arcfxWallet.address;
@@ -155,33 +118,14 @@ async function bootstrapOwnerSession(): Promise<OwnerSession> {
       || !Number.isFinite(Date.parse(result.expiresAt)) || Date.now() >= Date.parse(result.expiresAt)) {
     throw new Error("The server returned an invalid owner session.");
   }
-  const session: OwnerSession = { sessionToken: result.sessionToken, wallet, expiresAt: result.expiresAt };
-  try { browserStorage()?.setItem(OWNER_SESSION_STORAGE_KEY, JSON.stringify(session)); } catch { /* tab still works */ }
-  return session;
+  return { sessionToken: result.sessionToken, wallet, expiresAt: result.expiresAt };
 }
 
 async function ownerSession(): Promise<OwnerSession> {
-  const existing = storedOwnerSession();
-  if (existing) return existing;
-  if (!ownerSessionPending) {
-    ownerSessionPending = bootstrapOwnerSession().finally(() => { ownerSessionPending = null; });
-  }
-  return ownerSessionPending;
+  // This gates all protected reads behind silent provider restoration and
+  // shares a single session-create signature when a page starts several reads.
+  return arcfxAuth.ensureOwnerSession(bootstrapOwnerSession);
 }
-
-// Do not discard a valid tab session during the initial silent wallet restore.
-// After an address was observed, disconnects and account changes clear it. A
-// known non-Arc chain also clears it so a token cannot survive a context switch.
-let lastSeenAddress: string | null = arcfxWallet.address?.toLowerCase() || null;
-arcfxWallet.onChange((state) => {
-  const nextAddress = state.address?.toLowerCase() || null;
-  if (nextAddress !== lastSeenAddress) {
-    const saved = (() => { try { return browserStorage()?.getItem(OWNER_SESSION_STORAGE_KEY); } catch { return null; } })();
-    if (lastSeenAddress !== null || (nextAddress !== null && !saved)) clearAuthCache();
-    lastSeenAddress = nextAddress;
-  }
-  if (state.chainId && !state.onArc) clearAuthCache();
-});
 
 export class ApiError extends Error {
   status: number;
@@ -205,16 +149,24 @@ async function parse(res: Response): Promise<any> {
 async function get(path: string, _action: string, params: Record<string, string> = {}, retry = true): Promise<any> {
   const session = await ownerSession();
   const qs = new URLSearchParams(params);
+  const read = arcfxAuth.beginOwnerRead();
   try {
-    return await parse(await fetch(`${API_BASE}${path}?${qs}`, {
+    const result = await parse(await fetch(`${API_BASE}${path}?${qs}`, {
       headers: { authorization: `Bearer ${session.sessionToken}` },
+      signal: read.signal,
     }));
+    if (!arcfxAuth.isCurrentGeneration(read.generation)) {
+      throw new Error("Owner session changed while loading data.");
+    }
+    return result;
   } catch (error) {
     if (retry && error instanceof ApiError && error.status === 401) {
       clearAuthCache();
       return get(path, _action, params, false);
     }
     throw error;
+  } finally {
+    read.finish();
   }
 }
 
@@ -246,6 +198,12 @@ async function sessionPost(path: string, payload: unknown, retry = true): Promis
   }
 }
 
+/** Explicit owner connection: one wallet connect followed by one shared owner session. */
+async function connectOwner(): Promise<void> {
+  await arcfxWallet.connect();
+  await ownerSession();
+}
+
 /** The mandate itself is the authorization; this sends no generic wallet credential. */
 async function mandatePost(path: string, payload: unknown): Promise<any> {
   const clean = stripUndefined(payload ?? null);
@@ -263,7 +221,7 @@ async function publicGet(path: string): Promise<any> {
 
 export const arcfxApi = {
   base: API_BASE,
-  get, post, publicGet, digestOf, messageFor, clearAuthCache,
+  get, post, publicGet, digestOf, messageFor, clearAuthCache, connectOwner,
 
   // ── Convenience wrappers, so pages do not repeat action strings ──────────
   listCustomers: (opts: { archived?: boolean } = {}) =>

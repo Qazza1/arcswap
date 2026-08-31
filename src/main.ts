@@ -10,6 +10,7 @@ import { AppKit } from "@circle-fin/app-kit";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 import { BrowserProvider, Contract, formatUnits } from "ethers";
 import { arcfxWallet, type WalletState } from "./shared/wallet";
+import { arcfxApi } from "./shared/arcfxApi";
 
 const ARC_TESTNET = {
   chainId: "0x4CEF52",
@@ -112,7 +113,8 @@ async function connectWallet(): Promise<void> {
   const btn = el("connect-btn");
   try {
     if (btn) btn.textContent = "Connecting…";
-    const state = await arcfxWallet.connect();
+    await arcfxApi.connectOwner();
+    const state = arcfxWallet.state;
     await adoptSession(state);
     if (state.onArc) showStatus("Connected to Arc Testnet ✓", "success");
   } catch (err: any) {

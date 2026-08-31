@@ -31,6 +31,8 @@
 // restore, a working Connect button and chain guarding — without each page
 // re-implementing it and drifting out of sync.
 import { arcfxWallet } from './wallet';
+import { arcfxAuth } from './auth';
+import { arcfxApi } from './arcfxApi';
 
 // Design tokens for both registers (app + client-facing document). Imported
 // here because every page mounts this header, so the token layer arrives
@@ -474,7 +476,18 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
       <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#64748b;">Testnet</span>
     </div>
     <button id="arcfx-contacts-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:6px;border:1px solid var(--fx-line);background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Contacts</button>
-    <button id="connect-btn" style="padding:7px 16px;border-radius:6px;border:1px solid var(--fx-line);background:#0f172a;color:#94a3b8;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;">Connect wallet</button>
+    <div id="arcfx-account-wrap" style="position:relative;">
+      <button id="connect-btn" aria-haspopup="menu" aria-expanded="false" style="padding:7px 16px;border-radius:6px;border:1px solid var(--fx-line);background:#0f172a;color:#94a3b8;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;">Connect wallet</button>
+      <div id="arcfx-account-menu" role="menu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);width:250px;background:#0f172a;border:1px solid var(--fx-line);border-radius:10px;padding:8px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
+        <div style="padding:8px 9px 10px;border-bottom:1px solid var(--fx-line);">
+          <div id="arcfx-account-address" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fx-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+          <div id="arcfx-account-provider" style="margin-top:4px;font-size:12px;color:#94a3b8;"></div>
+          <div id="arcfx-account-network" style="margin-top:7px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#10b981;"></div>
+        </div>
+        <!-- Future account surfaces (profile, balances and activity) belong here. -->
+        <button id="arcfx-disconnect-btn" role="menuitem" style="width:100%;margin-top:6px;padding:9px;text-align:left;border:0;border-radius:6px;background:transparent;color:#fca5a5;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;">Disconnect</button>
+      </div>
+    </div>
     <button class="arcfx-hamburger" id="arcfx-hamburger-${pageKey}" aria-label="Menu" style="align-items:center;justify-content:center;width:38px;height:38px;border-radius:8px;border:1px solid var(--fx-line);background:#0f172a;color:#cbd5e1;cursor:pointer;flex-shrink:0;padding:0;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
@@ -574,23 +587,40 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
   const saveBtn = document.getElementById('arcfx-contact-save');
   if (saveBtn) saveBtn.addEventListener('click', saveContact);
 
-  // Connect wallet button. The shared session (src/shared/wallet.ts) owns
-  // prompting, the Arc chain switch, silent restore and painting this button —
-  // importing it above is what gives every page a session that survives
-  // navigation. A page that defines its own window.connectWallet still wins,
-  // so pages with bespoke flows (pay, trade) keep control.
+  // A disconnected click creates one wallet connection and one shared ArcFX
+  // owner session. A connected click opens the app-level account menu instead
+  // of repeating either prompt.
   const connectBtn = document.getElementById('connect-btn');
+  const accountMenu = document.getElementById('arcfx-account-menu') as HTMLElement | null;
+  const accountWrap = document.getElementById('arcfx-account-wrap');
+  const disconnectBtn = document.getElementById('arcfx-disconnect-btn');
+  const closeAccountMenu = () => {
+    if (accountMenu) accountMenu.style.display = 'none';
+    connectBtn?.setAttribute('aria-expanded', 'false');
+  };
   if (connectBtn) {
     connectBtn.addEventListener('click', () => {
-      const fn = (window as any).connectWallet;
-      if (typeof fn === 'function') { fn(); return; }
-      arcfxWallet.connect().catch(() => { /* dismissed */ });
+      if (arcfxWallet.connected) {
+        const open = accountMenu?.style.display !== 'block';
+        if (accountMenu) accountMenu.style.display = open ? 'block' : 'none';
+        connectBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        return;
+      }
+      arcfxApi.connectOwner().catch(() => { /* dismissed or unavailable */ });
     });
   }
+  if (disconnectBtn) disconnectBtn.addEventListener('click', () => {
+    closeAccountMenu();
+    arcfxAuth.disconnect();
+  });
+  if (accountWrap) document.addEventListener('click', (e) => {
+    if (!accountWrap.contains(e.target as Node)) closeAccountMenu();
+  });
 
   // The marketing nav reads this to show "Back to app" instead of "Launch
   // ArcFX" for people who have connected before.
   arcfxWallet.onChange((s) => {
+    if (!s.connected) closeAccountMenu();
     if (s.connected) {
       try { localStorage.setItem('arcfx_returning', '1'); } catch (e) { /* storage blocked */ }
     }
@@ -711,6 +741,9 @@ export function arcfxMountHeader(config: MountConfig): void {
 
   // Wire behavior
   wireBehavior(pageKey, mode);
+  // The wallet may have silently restored before this document finished
+  // mounting its header; paint the current snapshot into the new DOM.
+  arcfxWallet.refreshHeader();
 }
 
 // Expose globally so plain (non-module) scripts can call it

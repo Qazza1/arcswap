@@ -55,6 +55,7 @@ export interface WalletState {
 type Listener = (state: WalletState) => void;
 
 const OWNER_SESSION_STORAGE_KEY = "arcfx:owner-session:v1";
+export const ARCFX_SIGNED_OUT_STORAGE_KEY = "arcfx:owner-signed-out:v1";
 const PROVIDER_PREFERENCE_STORAGE_KEY = "arcfx:wallet-provider-preference:v1";
 const PROVIDER_DISCOVERY_WAIT_MS = 60;
 
@@ -88,12 +89,23 @@ function paintHeader(): void {
   const button = document.getElementById("connect-btn");
   if (button) {
     if (state.connected && state.address) {
-      button.textContent = shortAddress(state.address);
+      button.textContent = `${shortAddress(state.address)} ▾`;
       button.classList.add("connected");
     } else {
       button.textContent = "Connect wallet";
       button.classList.remove("connected");
     }
+  }
+  const menu = document.getElementById("arcfx-account-menu") as HTMLElement | null;
+  const fullAddress = document.getElementById("arcfx-account-address");
+  const providerLabel = document.getElementById("arcfx-account-provider");
+  const networkLabel = document.getElementById("arcfx-account-network");
+  if (!state.connected || !state.address) {
+    if (menu) menu.style.display = "none";
+  } else {
+    if (fullAddress) fullAddress.textContent = state.address;
+    if (providerLabel) providerLabel.textContent = selectedProvider?.info?.name || selectedProvider?.info?.rdns || "Browser wallet";
+    if (networkLabel) networkLabel.textContent = state.onArc ? "Arc Testnet" : "Wrong network";
   }
   const display = document.getElementById("wallet-display");
   if (display) {
@@ -154,6 +166,19 @@ function storedProviderPreference(): ProviderPreference | null {
     if (!value || typeof value.rdns !== "string" || !value.rdns || typeof value.name !== "string") return null;
     return { rdns: value.rdns, name: value.name };
   } catch { return null; }
+}
+
+function explicitlySignedOut(): boolean {
+  try { return sessionStorage.getItem(ARCFX_SIGNED_OUT_STORAGE_KEY) === "1"; }
+  catch { return false; }
+}
+
+function clearSignedOutMarker(): void {
+  try { sessionStorage.removeItem(ARCFX_SIGNED_OUT_STORAGE_KEY); } catch { /* private mode */ }
+}
+
+function setSignedOutMarker(): void {
+  try { sessionStorage.setItem(ARCFX_SIGNED_OUT_STORAGE_KEY, "1"); } catch { /* private mode */ }
 }
 
 function persistProviderPreference(entry: ProviderEntry): void {
@@ -296,6 +321,14 @@ async function chooseProvider(entries: ProviderEntry[]): Promise<ProviderEntry> 
 async function restore(): Promise<WalletState> {
   if (restoring) return restoring;
   restoring = (async () => {
+    // Wallet extensions retain account permission after a dapp-level logout.
+    // Respect the ArcFX-local marker so a new document cannot silently undo an
+    // explicit Disconnect action.
+    if (explicitlySignedOut()) {
+      state = { connected: false, address: null, chainId: null, onArc: false };
+      emit();
+      return snapshot();
+    }
     const entries = await discoverProviders();
     const entry = await selectForRestore(entries);
     if (!entry) {
@@ -348,6 +381,7 @@ async function connect(): Promise<WalletState> {
     const accounts = await entry.provider.request({ method: "eth_requestAccounts" });
     await ensureArc();
     await hydrate(entry.provider, Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null);
+    if (state.connected) clearSignedOutMarker();
     emit();
     return snapshot();
   })();
@@ -355,7 +389,9 @@ async function connect(): Promise<WalletState> {
 }
 
 function disconnect(): void {
-  state = { connected: false, address: null, chainId: state.chainId, onArc: state.onArc };
+  setSignedOutMarker();
+  detachSelectedEvents();
+  state = { connected: false, address: null, chainId: null, onArc: false };
   emit();
 }
 
@@ -385,7 +421,8 @@ export const arcfxWallet = {
   get onArc(): boolean { return state.onArc; },
   get provider(): Eip1193Provider | null { return selectedProvider?.provider || null; },
   get providerInfo(): Readonly<Eip6963Info> | null { return selectedProvider?.info || null; },
-  restore, connect, disconnect, ensureArc, request, signMessage, onChange, shortAddress,
+  get isExplicitlySignedOut(): boolean { return explicitlySignedOut(); },
+  restore, connect, disconnect, ensureArc, request, signMessage, onChange, shortAddress, refreshHeader: paintHeader,
   ARC_TESTNET, ARC_CHAIN_ID_HEX, ARC_CHAIN_ID_DEC,
 };
 

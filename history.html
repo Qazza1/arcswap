@@ -1311,7 +1311,8 @@ arcfxWallet.onChange(state => {
 window.connectWallet = async function () {
   try {
     setLoading("Connecting…");
-    const state = await arcfxWallet.connect();
+    await arcfxApi.connectOwner();
+    const state = arcfxWallet.state;
     if (!state.onArc) { setEmpty("Switch to Arc Testnet to continue."); return; }
     await adoptSession(state);
   } catch (err) {

@@ -123,7 +123,7 @@ test("tab-scoped owner session survives navigation and leaves Generate Agent Evi
     return response({ count: 0, categories: {}, wallet: activeAddress.toLowerCase() });
   };
 
-  const server = await createServer({ root: process.cwd(), server: { middlewareMode: true }, appType: "custom" });
+  const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, appType: "custom" });
   try {
     const walletModule = await server.ssrLoadModule("/src/shared/wallet.ts");
     await walletModule.arcfxWallet.restore();
@@ -215,7 +215,7 @@ test("EIP-6963 keeps the selected provider across full document navigation despi
   async function documentNavigation(path, fallback, order) {
     globalThis.window = announcedWindow(fallback, order);
     globalThis.window.ARCFX_API_BASE = "https://arcfx.test";
-    const server = await createServer({ root: process.cwd(), server: { middlewareMode: true }, appType: "custom" });
+    const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, appType: "custom" });
     try {
       // New dev server = new Vite module graph, which models a fresh document
       // rather than re-importing arcfxApi in the old JavaScript context.
@@ -256,6 +256,131 @@ test("EIP-6963 keeps the selected provider across full document navigation despi
     // transition and therefore clears the bearer and requires re-authentication.
     await providerA.emit("accountsChanged", [other.address]);
     assert.equal(storage.getItem("arcfx:owner-session:v1"), null, "selected wallet account changes clear the owner session");
+  } finally {
+    globalThis.window = originalWindow;
+    globalThis.sessionStorage = originalStorage;
+    globalThis.localStorage = originalLocalStorage;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("universal owner auth survives navigation, supports real ArcFX disconnect, and re-authenticates only after reconnect", async () => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const originalLocalStorage = globalThis.localStorage;
+  const originalFetch = globalThis.fetch;
+  const storage = new MemoryStorage();
+  const local = new MemoryStorage();
+  const prompts = [];
+  const calls = [];
+  let selectedAddress = owner.address;
+  let serial = 0;
+  let documentSerial = 0;
+  const provider = mockProvider(owner.address, prompts);
+  const originalRequest = provider.request;
+  provider.request = async (args) => {
+    calls.push(args.method);
+    if (args.method === "eth_accounts" || args.method === "eth_requestAccounts") return [selectedAddress];
+    if (args.method === "personal_sign") {
+      prompts.push({ address: args.params[1].toLowerCase(), message: args.params[0] });
+      const signer = args.params[1].toLowerCase() === owner.address.toLowerCase() ? owner : other;
+      return signer.signMessage(args.params[0]);
+    }
+    return originalRequest(args);
+  };
+  const announcement = { info: { uuid: "owner", name: "Owner wallet", rdns: "io.owner" }, provider };
+
+  globalThis.sessionStorage = storage;
+  globalThis.localStorage = local;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : null;
+    if (url.pathname === "/v1/auth/session") {
+      assert.equal(body.payload, null);
+      return response({
+        sessionToken: `v1.iv_${++serial}.ciphertext.tag`,
+        wallet: selectedAddress.toLowerCase(),
+        expiresAt: "2099-08-30T18:00:00.000Z",
+      }, 201);
+    }
+    if (url.pathname === "/v1/agent-mandates/prepare") {
+      assert.match(header(init, "authorization"), /^Bearer v1\./);
+      return response({
+        preparationToken: "prepared-token",
+        signingMessage: `ArcFX Agent Mandate\nversion: arcfx.agent-mandate-signature.v1\nprincipal: ${selectedAddress.toLowerCase()}\nmandate_id: mandate_test\ndigest: sha256:test`,
+      });
+    }
+    if (url.pathname === "/v1/agent-mandates") {
+      assert.equal(header(init, "authorization"), undefined);
+      return response({ run: { execution: "NOT_SUBMITTED", decision: { outcome: "REQUIRE_APPROVAL" }, bundle: { verificationState: "VALID" } } }, 201);
+    }
+    assert.match(header(init, "authorization"), /^Bearer v1\./);
+    return response({ wallet: selectedAddress.toLowerCase(), invoices: [], categories: {}, customers: [] });
+  };
+
+  async function newDocument() {
+    globalThis.window = announcedWindow(provider, [announcement]);
+    globalThis.window.ARCFX_API_BASE = "https://arcfx.test";
+    const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, appType: "custom" });
+    const api = await server.ssrLoadModule(`/src/shared/arcfxApi.ts?navigation=universal-${++documentSerial}`);
+    const auth = await server.ssrLoadModule("/src/shared/auth.ts");
+    const walletModule = await server.ssrLoadModule("/src/shared/wallet.ts");
+    return { server, api, auth, walletModule };
+  }
+
+  try {
+    const first = await newDocument();
+    await first.api.arcfxApi.connectOwner();
+    assert.equal(first.auth.arcfxAuth.status, "AUTHENTICATED");
+    assert.equal(prompts.filter((p) => /^ArcFX session create\n/.test(p.message)).length, 1);
+    await first.api.arcfxApi.get("/v1/invoice-records", "invoice read");
+    await first.api.arcfxApi.get("/v1/attribution", "attribution read");
+    await first.api.arcfxApi.get("/v1/customers", "customer read");
+    await first.api.arcfxApi.get("/v1/categories", "category read");
+    assert.equal(prompts.length, 1, "all normal owner reads reuse one opaque bearer");
+    await first.server.close();
+
+    const second = await newDocument();
+    await second.api.arcfxApi.get("/v1/invoice-records", "invoice read");
+    await second.api.arcfxApi.get("/v1/attribution", "attribution read");
+    assert.equal(prompts.length, 1, "refresh/navigation with a valid session signs nothing");
+
+    second.auth.arcfxAuth.disconnect();
+    assert.equal(storage.getItem("arcfx:owner-session:v1"), null, "disconnect clears the bearer");
+    assert.equal(storage.getItem("arcfx:owner-signed-out:v1"), "1", "disconnect records only a non-secret signed-out marker");
+    assert.equal(second.walletModule.arcfxWallet.connected, false, "disconnect resets the visible wallet state");
+    await second.server.close();
+
+    calls.length = 0;
+    const signedOut = await newDocument();
+    await signedOut.auth.arcfxAuth.ready();
+    assert.equal(signedOut.auth.arcfxAuth.status, "DISCONNECTED");
+    assert.equal(calls.includes("eth_accounts"), false, "an explicit sign-out prevents silent wallet restoration on the next document");
+    await assert.rejects(() => signedOut.api.arcfxApi.get("/v1/invoice-records", "invoice read"), /Connect your wallet first/);
+    assert.equal(prompts.length, 1, "signed-out navigation cannot create a login signature");
+
+    await signedOut.api.arcfxApi.connectOwner();
+    assert.equal(storage.getItem("arcfx:owner-signed-out:v1"), null, "an explicit reconnect clears the local marker");
+    assert.equal(prompts.filter((p) => /^ArcFX session create\n/.test(p.message)).length, 2, "reconnect creates exactly one fresh owner session");
+
+    selectedAddress = other.address;
+    await provider.emit("accountsChanged", [other.address]);
+    assert.equal(storage.getItem("arcfx:owner-session:v1"), null, "account A → B invalidates A's bearer");
+    await signedOut.api.arcfxApi.get("/v1/customers", "customer read");
+    assert.equal(prompts.filter((p) => /^ArcFX session create\n/.test(p.message)).length, 3, "account B gets one fresh owner session when it needs owner data");
+    assert.equal(prompts.at(-1).address, other.address.toLowerCase());
+
+    const prepared = await signedOut.api.arcfxApi.prepareAgentMandate("inv_test");
+    await signedOut.api.arcfxApi.submitAgentMandate(prepared.preparationToken, await signedOut.api.arcfxApi.signAgentMandate(prepared.signingMessage));
+    const mandatePrompts = prompts.filter((p) => /^ArcFX Agent Mandate\n/.test(p.message));
+    assert.equal(mandatePrompts.length, 1, "Agent Evidence adds exactly the separate Agent Mandate signature");
+    assert.equal(prompts.filter((p) => /^ArcFX session create\n/.test(p.message)).length, 3, "Agent Evidence does not reauthenticate a valid owner session");
+
+    const headerSource = fs.readFileSync(new URL("../src/shared/header.ts", import.meta.url), "utf8");
+    assert.match(headerSource, /arcfx-account-menu/);
+    assert.match(headerSource, /arcfx-disconnect-btn/);
+    assert.match(headerSource, /arcfxAuth\.disconnect\(\)/);
+    await signedOut.server.close();
   } finally {
     globalThis.window = originalWindow;
     globalThis.sessionStorage = originalStorage;
