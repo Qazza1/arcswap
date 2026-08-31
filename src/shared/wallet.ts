@@ -64,6 +64,10 @@ const listeners = new Set<Listener>();
 const announcedProviders: ProviderEntry[] = [];
 let discoveryInstalled = false;
 let selectedProvider: ProviderEntry | null = null;
+// Every asynchronous state update captures this revision. A later Disconnect,
+// provider choice, account change, or chain change invalidates older work
+// before it can repaint state for a provider the owner no longer selected.
+let walletRevision = 0;
 let wiredProvider: Eip1193Provider | null = null;
 let restoring: Promise<WalletState> | null = null;
 let connecting: Promise<WalletState> | null = null;
@@ -201,10 +205,15 @@ function storedSessionWallet(): string | null {
   } catch { return null; }
 }
 
-function preferred(entries: ProviderEntry[]): ProviderEntry | null {
+function preferenceMatches(entries: ProviderEntry[]): ProviderEntry[] {
   const preference = storedProviderPreference();
-  if (!preference) return null;
-  return entries.find((entry) => entry.info?.rdns === preference.rdns) || null;
+  if (!preference) return [];
+  // EIP-6963 metadata is only a UX hint. It can narrow a set of candidates,
+  // but it can never break a tie: duplicate or spoofed entries require an
+  // explicit choice before ArcFX sends a new wallet request.
+  return entries.filter((entry) =>
+    entry.info?.rdns === preference.rdns && entry.info?.name === preference.name,
+  );
 }
 
 function detachSelectedEvents(): void {
@@ -216,19 +225,27 @@ function detachSelectedEvents(): void {
   selectedChainChanged = null;
 }
 
-async function hydrate(provider: Eip1193Provider, address: string | null): Promise<void> {
+function isCurrentProvider(provider: Eip1193Provider, revision: number): boolean {
+  return walletRevision === revision && selectedProvider?.provider === provider;
+}
+
+async function hydrate(provider: Eip1193Provider, address: string | null, isCurrent: () => boolean): Promise<boolean> {
+  if (!isCurrent()) return false;
   if (!address) {
+    if (!isCurrent()) return false;
     state = { connected: false, address: null, chainId: state.chainId, onArc: state.onArc };
-    return;
+    return true;
   }
   let chainId: string | null = state.chainId;
   try { chainId = await provider.request({ method: "eth_chainId" }); } catch { /* keep last known */ }
+  if (!isCurrent()) return false;
   state = {
     connected: true,
     address,
     chainId,
     onArc: String(chainId).toLowerCase() === ARC_CHAIN_ID_HEX.toLowerCase(),
   };
+  return true;
 }
 
 function wireSelectedEvents(entry: ProviderEntry): void {
@@ -237,15 +254,21 @@ function wireSelectedEvents(entry: ProviderEntry): void {
   const provider = entry.provider;
   selectedAccountsChanged = async (accounts: string[]) => {
     if (selectedProvider?.provider !== provider) return;
-    await hydrate(provider, accounts && accounts.length ? accounts[0] : null);
-    if (selectedProvider?.provider === provider) emit();
+    const revision = ++walletRevision;
+    if (await hydrate(provider, accounts && accounts.length ? accounts[0] : null, () => isCurrentProvider(provider, revision))) emit();
   };
   selectedChainChanged = async (chainId: string) => {
     if (selectedProvider?.provider !== provider) return;
+    const revision = ++walletRevision;
+    const address = state.connected ? state.address : null;
+    if (address) {
+      if (await hydrate(provider, address, () => isCurrentProvider(provider, revision))) emit();
+      return;
+    }
+    if (!isCurrentProvider(provider, revision)) return;
     state.chainId = chainId;
     state.onArc = String(chainId).toLowerCase() === ARC_CHAIN_ID_HEX.toLowerCase();
-    if (state.connected && state.address) await hydrate(provider, state.address);
-    if (selectedProvider?.provider === provider) emit();
+    emit();
   };
   provider.on("accountsChanged", selectedAccountsChanged);
   provider.on("chainChanged", selectedChainChanged);
@@ -256,6 +279,7 @@ function selectProvider(entry: ProviderEntry, persist = false): void {
   if (selectedProvider?.provider !== entry.provider) {
     detachSelectedEvents();
     selectedProvider = entry;
+    walletRevision++;
   }
   wireSelectedEvents(entry);
   if (persist) persistProviderPreference(entry);
@@ -273,9 +297,16 @@ async function selectForRestore(entries: ProviderEntry[]): Promise<ProviderEntry
   if (sessionWallet) {
     const accountLists = await Promise.all(entries.map(accountsFor));
     const matching = entries.filter((_, index) => accountLists[index].some((account) => account.toLowerCase() === sessionWallet));
-    if (matching.length) return preferred(matching) || matching[0];
+    const preferredMatching = preferenceMatches(matching);
+    if (preferredMatching.length === 1) return preferredMatching[0];
+    if (matching.length === 1) return matching[0];
+    // More than one provider claims the expected account and no single stored
+    // UX preference distinguishes it. Announcement order is not identity.
+    return null;
   }
-  return preferred(entries) || (entries.length === 1 ? entries[0] : null);
+  const preferredEntries = preferenceMatches(entries);
+  if (preferredEntries.length === 1) return preferredEntries[0];
+  return entries.length === 1 ? entries[0] : null;
 }
 
 async function chooseProvider(entries: ProviderEntry[]): Promise<ProviderEntry> {
@@ -321,6 +352,7 @@ async function chooseProvider(entries: ProviderEntry[]): Promise<ProviderEntry> 
 async function restore(): Promise<WalletState> {
   if (restoring) return restoring;
   restoring = (async () => {
+    let revision = walletRevision;
     // Wallet extensions retain account permission after a dapp-level logout.
     // Respect the ArcFX-local marker so a new document cannot silently undo an
     // explicit Disconnect action.
@@ -329,17 +361,27 @@ async function restore(): Promise<WalletState> {
       emit();
       return snapshot();
     }
+    // Provider discovery is a catalogue, not a re-selection mechanism. Once a
+    // document has chosen an exact provider object, later announcements must
+    // never replace it without an explicit owner action.
+    if (selectedProvider) {
+      const entry = selectedProvider;
+      const accounts = await accountsFor(entry);
+      if (await hydrate(entry.provider, accounts[0] || null, () => isCurrentProvider(entry.provider, revision))) emit();
+      return snapshot();
+    }
     const entries = await discoverProviders();
     const entry = await selectForRestore(entries);
+    if (revision !== walletRevision) return snapshot();
     if (!entry) {
       state = { connected: false, address: null, chainId: state.chainId, onArc: state.onArc };
       emit();
       return snapshot();
     }
     selectProvider(entry);
+    revision = walletRevision;
     const accounts = await accountsFor(entry);
-    await hydrate(entry.provider, accounts[0] || null);
-    emit();
+    if (await hydrate(entry.provider, accounts[0] || null, () => isCurrentProvider(entry.provider, revision))) emit();
     return snapshot();
   })();
   try { return await restoring; } finally { restoring = null; }
@@ -348,6 +390,7 @@ async function restore(): Promise<WalletState> {
 async function ensureArc(): Promise<boolean> {
   const provider = selectedProvider?.provider;
   if (!provider) return false;
+  const revision = walletRevision;
   try {
     await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_CHAIN_ID_HEX }] });
   } catch (error: any) {
@@ -357,8 +400,10 @@ async function ensureArc(): Promise<boolean> {
       catch { return false; }
     } else return false;
   }
+  if (!isCurrentProvider(provider, revision)) return false;
   try {
     const chainId = await provider.request({ method: "eth_chainId" });
+    if (!isCurrentProvider(provider, revision)) return false;
     state.chainId = chainId;
     state.onArc = String(chainId).toLowerCase() === ARC_CHAIN_ID_HEX.toLowerCase();
   } catch { /* keep last known */ }
@@ -370,19 +415,26 @@ async function ensureArc(): Promise<boolean> {
 async function connect(): Promise<WalletState> {
   if (connecting) return connecting;
   connecting = (async () => {
+    let revision = ++walletRevision;
     let entry = selectedProvider;
     if (!entry) {
       const entries = await discoverProviders();
+      if (revision !== walletRevision) return snapshot();
       if (!entries.length) throw new Error("No wallet detected. Install MetaMask, Backpack, Rabby, or another EVM wallet.");
       entry = await chooseProvider(entries);
+      if (revision !== walletRevision) return snapshot();
       selectProvider(entry, true);
+      revision = walletRevision;
     }
     wireSelectedEvents(entry);
     const accounts = await entry.provider.request({ method: "eth_requestAccounts" });
+    if (!isCurrentProvider(entry.provider, revision)) return snapshot();
     await ensureArc();
-    await hydrate(entry.provider, Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null);
-    if (state.connected) clearSignedOutMarker();
-    emit();
+    if (!isCurrentProvider(entry.provider, revision)) return snapshot();
+    if (await hydrate(entry.provider, Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null, () => isCurrentProvider(entry.provider, revision))) {
+      clearSignedOutMarker();
+      emit();
+    }
     return snapshot();
   })();
   try { return await connecting; } finally { connecting = null; }
@@ -390,7 +442,11 @@ async function connect(): Promise<WalletState> {
 
 function disconnect(): void {
   setSignedOutMarker();
+  walletRevision++;
   detachSelectedEvents();
+  // A later explicit Connect starts a new provider choice. Until Disconnect,
+  // restore() above pins the exact selected provider object for this document.
+  selectedProvider = null;
   state = { connected: false, address: null, chainId: null, onArc: false };
   emit();
 }

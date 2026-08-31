@@ -6,6 +6,7 @@
  */
 
 import { arcfxWallet } from "./shared/wallet";
+import { createWalletLoadGuard } from "./shared/walletLoadGuard";
 
 const API_BASE = "https://arcfx-backend-production.up.railway.app";
 
@@ -71,7 +72,17 @@ async function fetchStats(): Promise<void> {
 }
 
 // ── "Who you paid" bars (backend, scoped to connected wallet) ──────────────
+const breakdownLoads = createWalletLoadGuard();
+
+function clearBreakdown(): void {
+  const body = el("bars-body");
+  const summary = el("spend-summary");
+  if (summary) summary.style.display = "none";
+  if (body) body.replaceChildren();
+}
+
 async function loadBreakdown(address: string | null): Promise<void> {
+  const ticket = breakdownLoads.begin(address);
   const body    = el("bars-body");
   const summary = el("spend-summary");
   if (!body) return;
@@ -79,6 +90,7 @@ async function loadBreakdown(address: string | null): Promise<void> {
   const hideSummary = () => { if (summary) summary.style.display = "none"; };
 
   if (!address) {
+    if (!breakdownLoads.isCurrent(ticket)) return;
     hideSummary();
     body.innerHTML = `<div class="bars-empty">Connect your wallet to see who you've paid.</div>`;
     return;
@@ -88,6 +100,7 @@ async function loadBreakdown(address: string | null): Promise<void> {
     const res = await fetch(`${API_BASE}/v1/breakdown?payer=${encodeURIComponent(address)}&limit=50`);
     if (!res.ok) throw new Error(`breakdown ${res.status}`);
     const d = await res.json();
+    if (!breakdownLoads.isCurrent(ticket)) return;
     const recipients: Array<{ recipient: string; count: number; total: string; token: string }> =
       d.recipients || [];
 
@@ -157,6 +170,7 @@ async function loadBreakdown(address: string | null): Promise<void> {
         </div>`;
     }).join("");
   } catch {
+    if (!breakdownLoads.isCurrent(ticket)) return;
     hideSummary();
     body.innerHTML = `<div class="bars-empty">Could not load payment breakdown right now.</div>`;
   }
@@ -227,7 +241,12 @@ async function refreshAll(): Promise<void> {
   const btn = el("refresh-btn");
   if (btn) btn.classList.add("loading");
   try {
-    currentAddr = await getConnectedAddress();
+    const restoredAddress = await getConnectedAddress();
+    if (currentAddr !== restoredAddress) {
+      currentAddr = restoredAddress;
+      breakdownLoads.transition(currentAddr);
+      clearBreakdown();
+    }
     await Promise.all([fetchStats(), fetchFeed(), loadBreakdown(currentAddr)]);
     txt("last-updated", new Date().toLocaleTimeString());
     const eb = el("fetch-error");
@@ -246,6 +265,8 @@ async function refreshAll(): Promise<void> {
 // React to wallet changes without a full reload
 arcfxWallet.onChange((state) => {
   currentAddr = state.address;
+  breakdownLoads.transition(currentAddr);
+  clearBreakdown();
   loadBreakdown(currentAddr);
 });
 

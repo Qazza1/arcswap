@@ -289,6 +289,7 @@
   <script type="module">
     import { arcfxMountHeader } from '/src/shared/header.ts';
     import { arcfxWallet } from '/src/shared/wallet.ts';
+    import { createWalletLoadGuard } from '/src/shared/walletLoadGuard.ts';
     arcfxMountHeader({ pageKey: 'app', activeLink: null, activeTool: null });
     try { localStorage.setItem('arcfx_returning', '1'); } catch (e) {}
 
@@ -302,6 +303,7 @@
     var TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
     var SCAN = 'https://testnet.arcscan.app';
     var currentAddr = null;
+    var dashboardLoads = createWalletLoadGuard();
 
     // ── Helpers ──
     function short(a){ return a.slice(0,6) + '...' + a.slice(-4); }
@@ -356,7 +358,8 @@
     }
 
     // ── Balance hydrate ──
-    async function hydrate(addr){
+    async function hydrate(addr, ticket){
+      if (!dashboardLoads.isCurrent(ticket)) return;
       currentAddr = addr;
       try { if (localStorage.getItem('arcfx_returning') === '1') document.getElementById('greeting').textContent = 'Welcome back'; } catch (e) {}
       var ctx = document.getElementById('ctxWallet');
@@ -368,6 +371,7 @@
 
       var usdc = await readBalance(TOKENS.USDC, addr);
       var eurc = await readBalance(TOKENS.EURC, addr);
+      if (!dashboardLoads.isCurrent(ticket)) return;
       var el = document.getElementById('statBalance');
       var sub = document.getElementById('statBalanceSub');
       if (usdc === null && eurc === null) {
@@ -422,10 +426,11 @@
       body.innerHTML = html;
     }
 
-    async function loadActivity(addr){
-      if (!arcfxWallet.provider) return;
+    async function loadActivity(addr, ticket){
+      if (!arcfxWallet.provider || !dashboardLoads.isCurrent(ticket)) return;
       try {
         var latest = parseInt(await arcfxWallet.request({ method:'eth_blockNumber' }), 16);
+        if (!dashboardLoads.isCurrent(ticket)) return;
         if (!latest) return;
         var fromBlock = Math.max(0, latest - 20000);
         var padded = pad32(addr);
@@ -435,6 +440,7 @@
           safeGetLogs(TOKENS.EURC, [TRANSFER_TOPIC, padded, null], fromBlock, latest),
           safeGetLogs(TOKENS.EURC, [TRANSFER_TOPIC, null, padded], fromBlock, latest)
         ]);
+        if (!dashboardLoads.isCurrent(ticket)) return;
         var tagged = []
           .concat(res[0].map(function(l){ return { log:l, sym:'USDC', dir:'out' }; }))
           .concat(res[1].map(function(l){ return { log:l, sym:'USDC', dir:'in'  }; }))
@@ -455,6 +461,7 @@
             .then(function(b){ if (b && b.timestamp) blockTs[bn] = parseInt(b.timestamp, 16); })
             .catch(function(){});
         }));
+        if (!dashboardLoads.isCurrent(ticket)) return;
 
         var rows = hashes.map(function(h){
           var g = groups[h];
@@ -476,24 +483,37 @@
           return { hash:h, label:'Received ' + leg.sym, icon:ICON_IN, color:'var(--teal)',
                    amt: '+' + fmt(amtFromData(leg.log.data)) + ' ' + leg.sym, amtColor:'var(--teal)', when:when };
         });
-        renderActivity(rows);
+        if (dashboardLoads.isCurrent(ticket)) renderActivity(rows);
       } catch (e) { /* keep empty state on failure */ }
     }
 
-    function refreshAll(addr){ if (addr){ hydrate(addr); loadActivity(addr); checkNetwork(); } }
+    function refreshAll(addr){
+      if (!addr) return;
+      currentAddr = addr;
+      var ticket = dashboardLoads.begin(addr);
+      hydrate(addr, ticket);
+      loadActivity(addr, ticket);
+      checkNetwork();
+    }
 
     // Disconnecting has to put the dashboard back to its signed-out state,
     // otherwise the previous account's balances stay on screen.
+    function clearWalletPanels(){
+      var activity = document.getElementById('activityBody');
+      if (activity) activity.replaceChildren();
+      ['statBalance','statBalanceSub','statSent','statSentSub'].forEach(function(id){
+        var n = document.getElementById(id);
+        if (n) n.textContent = '—';
+      });
+    }
+
     function clearBalances(){
       currentAddr = null;
       var ctx = document.getElementById('ctxWallet');
       if (ctx) ctx.textContent = 'Connect a wallet to see your balances.';
       var hist = document.getElementById('histLink'); if (hist) hist.style.display = 'none';
       var refresh = document.getElementById('refreshBtn'); if (refresh) refresh.style.display = 'none';
-      ['statBalance','statBalanceSub','statSent','statSentSub'].forEach(function(id){
-        var n = document.getElementById(id);
-        if (n) n.textContent = '—';
-      });
+      clearWalletPanels();
     }
 
     // ── Protocol stats (live backend, full history; not wallet-specific) ──
@@ -523,6 +543,10 @@
       loadProtocolStats();            // protocol stats don't need a wallet
 
       arcfxWallet.onChange(function (state) {
+        dashboardLoads.transition(state.connected && state.address ? state.address : null);
+        // Clear the previous account immediately while the new wallet's RPC
+        // reads are loading. Old continuations carry an invalidated ticket.
+        clearWalletPanels();
         checkNetwork();
         if (state.connected && state.address) refreshAll(state.address);
         else clearBalances();

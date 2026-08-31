@@ -388,3 +388,199 @@ test("universal owner auth survives navigation, supports real ArcFX disconnect, 
     globalThis.fetch = originalFetch;
   }
 });
+
+test("late EIP-6963 announcements cannot replace a pinned provider or affect its wallet state", async () => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const originalLocalStorage = globalThis.localStorage;
+  const originalDocument = globalThis.document;
+  const storage = new MemoryStorage();
+  const local = new MemoryStorage();
+  const prompts = [];
+  const fallback = mockProvider(owner.address, prompts);
+  const late = mockProvider(other.address, prompts);
+  const win = new FakeWindow(fallback);
+  win.ARCFX_API_BASE = "https://arcfx.test";
+
+  globalThis.window = win;
+  globalThis.sessionStorage = storage;
+  globalThis.localStorage = local;
+  globalThis.document = undefined;
+  const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, appType: "custom" });
+  try {
+    const walletModule = await server.ssrLoadModule("/src/shared/wallet.ts?late-provider=1");
+    await walletModule.arcfxWallet.restore();
+    assert.equal(walletModule.arcfxWallet.provider, fallback, "the fallback provider is initially selected");
+
+    win.dispatchEvent({
+      type: "eip6963:announceProvider",
+      detail: { info: { uuid: "late", name: "Late wallet", rdns: "io.late" }, provider: late },
+    });
+    await walletModule.arcfxWallet.restore();
+    assert.equal(walletModule.arcfxWallet.provider, fallback, "late provider cannot replace the exact pinned fallback object");
+
+    await walletModule.arcfxWallet.signMessage("ArcFX provider pin regression");
+    assert.equal(prompts.length, 1);
+    assert.equal(prompts[0].address, owner.address.toLowerCase(), "personal_sign remains on the selected fallback");
+
+    await late.emit("accountsChanged", [other.address]);
+    await late.emit("chainChanged", "0x1");
+    assert.equal(walletModule.arcfxWallet.provider, fallback, "late non-selected provider events are ignored");
+    assert.equal(walletModule.arcfxWallet.address, owner.address, "late non-selected provider events cannot change wallet state");
+  } finally {
+    await server.close();
+    globalThis.window = originalWindow;
+    globalThis.sessionStorage = originalStorage;
+    globalThis.localStorage = originalLocalStorage;
+    globalThis.document = originalDocument;
+  }
+});
+
+test("a late restore cannot revive a wallet after explicit ArcFX Disconnect", async () => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const originalLocalStorage = globalThis.localStorage;
+  const originalDocument = globalThis.document;
+  const prompts = [];
+  const provider = mockProvider(owner.address, prompts);
+  let releaseAccounts;
+  const accountsStarted = new Promise((resolve) => { releaseAccounts = resolve; });
+  const delayedProvider = {
+    ...provider,
+    request: async (args) => {
+      if (args.method === "eth_accounts") {
+        releaseAccounts();
+        return new Promise((resolve) => { delayedProvider.resolveAccounts = resolve; });
+      }
+      return provider.request(args);
+    },
+  };
+  const storage = new MemoryStorage();
+  const local = new MemoryStorage();
+  const win = new FakeWindow(delayedProvider);
+  win.ARCFX_API_BASE = "https://arcfx.test";
+
+  globalThis.window = win;
+  globalThis.sessionStorage = storage;
+  globalThis.localStorage = local;
+  globalThis.document = undefined;
+  const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, appType: "custom" });
+  try {
+    const walletModule = await server.ssrLoadModule("/src/shared/wallet.ts?restore-disconnect-race=1");
+    const restoring = walletModule.arcfxWallet.restore();
+    await accountsStarted;
+    walletModule.arcfxWallet.disconnect();
+    delayedProvider.resolveAccounts([owner.address]);
+    await restoring;
+    assert.equal(walletModule.arcfxWallet.connected, false, "an older restore cannot repaint the disconnected wallet");
+    assert.equal(walletModule.arcfxWallet.address, null);
+    assert.equal(walletModule.arcfxWallet.provider, null, "Disconnect remains the selected-provider boundary");
+  } finally {
+    await server.close();
+    globalThis.window = originalWindow;
+    globalThis.sessionStorage = originalStorage;
+    globalThis.localStorage = originalLocalStorage;
+    globalThis.document = originalDocument;
+  }
+});
+
+test("ambiguous provider identity requires an explicit wallet choice", async (t) => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const originalLocalStorage = globalThis.localStorage;
+  const originalDocument = globalThis.document;
+
+  async function assertAmbiguous({ announcements, preference, label }) {
+    const storage = new MemoryStorage();
+    const local = new MemoryStorage();
+    storage.setItem("arcfx:owner-session:v1", JSON.stringify({
+      sessionToken: "v1.iv.test.tag",
+      wallet: owner.address.toLowerCase(),
+      expiresAt: "2099-08-30T18:00:00.000Z",
+    }));
+    if (preference) local.setItem("arcfx:wallet-provider-preference:v1", JSON.stringify(preference));
+    globalThis.window = announcedWindow(null, announcements);
+    globalThis.window.ARCFX_API_BASE = "https://arcfx.test";
+    globalThis.sessionStorage = storage;
+    globalThis.localStorage = local;
+    globalThis.document = undefined;
+    const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, appType: "custom" });
+    try {
+      const walletModule = await server.ssrLoadModule(`/src/shared/wallet.ts?ambiguous=${label}`);
+      await walletModule.arcfxWallet.restore();
+      assert.equal(walletModule.arcfxWallet.provider, null, `${label}: no announcement-order provider is silently selected`);
+      await assert.rejects(
+        () => walletModule.arcfxWallet.connect(),
+        /Choose a wallet in a browser/,
+        `${label}: an explicit wallet picker is required before connection`,
+      );
+    } finally {
+      await server.close();
+    }
+  }
+
+  try {
+    await t.test("duplicate rdns does not break a same-wallet tie", async () => {
+      const prompts = [];
+      await assertAmbiguous({
+        label: "duplicate-rdns",
+        preference: { rdns: "io.same", name: "Same wallet" },
+        announcements: [
+          { info: { uuid: "same-a", name: "Same wallet", rdns: "io.same" }, provider: mockProvider(owner.address, prompts) },
+          { info: { uuid: "same-b", name: "Same wallet", rdns: "io.same" }, provider: mockProvider(owner.address, prompts) },
+        ],
+      });
+    });
+
+    await t.test("two providers claiming the stored account do not use announcement order", async () => {
+      const prompts = [];
+      await assertAmbiguous({
+        label: "spoofed-accounts",
+        announcements: [
+          { info: { uuid: "wallet-a", name: "Wallet A", rdns: "io.wallet-a" }, provider: mockProvider(owner.address, prompts) },
+          { info: { uuid: "wallet-b", name: "Wallet B", rdns: "io.wallet-b" }, provider: mockProvider(owner.address, prompts) },
+        ],
+      });
+    });
+  } finally {
+    globalThis.window = originalWindow;
+    globalThis.sessionStorage = originalStorage;
+    globalThis.localStorage = originalLocalStorage;
+    globalThis.document = originalDocument;
+  }
+});
+
+test("wallet freshness guards discard delayed dashboard and analytics results after a transition", async () => {
+  const originalWindow = globalThis.window;
+  const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, appType: "custom" });
+  try {
+    const { createWalletLoadGuard } = await server.ssrLoadModule("/src/shared/walletLoadGuard.ts");
+    const walletA = owner.address;
+    const walletB = other.address;
+
+    const dashboard = createWalletLoadGuard();
+    dashboard.transition(walletA);
+    const dashboardA = dashboard.begin(walletA);
+    dashboard.transition(walletB);
+    assert.equal(dashboard.isCurrent(dashboardA), false, "dashboard A response is discarded after A → B");
+    const dashboardB = dashboard.begin(walletB);
+    assert.equal(dashboard.isCurrent(dashboardB), true, "dashboard B response may render");
+
+    const analytics = createWalletLoadGuard();
+    analytics.transition(walletA);
+    const analyticsA = analytics.begin(walletA);
+    analytics.transition(null);
+    assert.equal(analytics.isCurrent(analyticsA), false, "analytics A response is discarded after disconnect");
+    analytics.transition(walletB);
+    const analyticsB = analytics.begin(walletB);
+    assert.equal(analytics.isCurrent(analyticsB), true, "analytics B response may render after a new load");
+
+    const dashboardSource = fs.readFileSync(new URL("../app.html", import.meta.url), "utf8");
+    const analyticsSource = fs.readFileSync(new URL("../src/analytics.ts", import.meta.url), "utf8");
+    assert.match(dashboardSource, /dashboardLoads\.isCurrent\(ticket\)/);
+    assert.match(analyticsSource, /breakdownLoads\.isCurrent\(ticket\)/);
+  } finally {
+    await server.close();
+    globalThis.window = originalWindow;
+  }
+});

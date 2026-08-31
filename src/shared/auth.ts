@@ -53,7 +53,7 @@ function discardStoredSession(): void {
   try { storage()?.removeItem(OWNER_SESSION_STORAGE_KEY); } catch { /* private mode */ }
 }
 
-/** Read and locally validate the non-secret, opaque bearer without exposing it. */
+/** Read and locally validate the opaque short-lived authentication bearer without exposing it. */
 function storedOwnerSession(): OwnerSession | null {
   const wallet = arcfxWallet.address?.toLowerCase();
   if (!wallet || arcfxWallet.isExplicitlySignedOut) return null;
