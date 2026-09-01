@@ -49,6 +49,21 @@ function connectedStatus(): AuthStatus {
     : "DISCONNECTED";
 }
 
+/**
+ * A bearer is usable only after the selected provider has supplied a complete,
+ * verified Arc snapshot. Connected alone is deliberately not enough: unknown
+ * chain state and a known wrong network both fail closed.
+ */
+function hasTrustedOwnerWallet(): boolean {
+  return Boolean(
+    arcfxWallet.connected
+    && arcfxWallet.address
+    && arcfxWallet.chainId !== null
+    && arcfxWallet.onArc
+    && !arcfxWallet.isExplicitlySignedOut,
+  );
+}
+
 function discardStoredSession(): void {
   try { storage()?.removeItem(OWNER_SESSION_STORAGE_KEY); } catch { /* private mode */ }
 }
@@ -56,7 +71,7 @@ function discardStoredSession(): void {
 /** Read and locally validate the opaque short-lived authentication bearer without exposing it. */
 function storedOwnerSession(): OwnerSession | null {
   const wallet = arcfxWallet.address?.toLowerCase();
-  if (!wallet || arcfxWallet.isExplicitlySignedOut) return null;
+  if (!wallet || !hasTrustedOwnerWallet()) return null;
   try {
     const raw = storage()?.getItem(OWNER_SESSION_STORAGE_KEY);
     const value = raw ? JSON.parse(raw) : null;
@@ -110,7 +125,7 @@ async function ensureOwnerSession(create: () => Promise<OwnerSession>): Promise<
   await ready();
   const existing = currentOwnerSession();
   if (existing) return existing;
-  if (!arcfxWallet.connected || arcfxWallet.isExplicitlySignedOut) {
+  if (!hasTrustedOwnerWallet()) {
     throw new Error("Connect your wallet first.");
   }
   if (!bootstrapPending) {
@@ -119,7 +134,7 @@ async function ensureOwnerSession(create: () => Promise<OwnerSession>): Promise<
     const pending = create().then((session) => {
       if (expectedGeneration !== generation || !expectedWallet
           || arcfxWallet.address?.toLowerCase() !== expectedWallet
-          || arcfxWallet.isExplicitlySignedOut) {
+          || !hasTrustedOwnerWallet()) {
         throw new Error("ArcFX authentication was cancelled because the wallet changed.");
       }
       try { storage()?.setItem(OWNER_SESSION_STORAGE_KEY, JSON.stringify(session)); } catch { /* tab still works */ }
@@ -145,7 +160,7 @@ function beginOwnerRead(): { signal: AbortSignal; generation: number; finish: ()
 }
 
 function isCurrentGeneration(expectedGeneration: number): boolean {
-  return expectedGeneration === generation && !arcfxWallet.isExplicitlySignedOut;
+  return expectedGeneration === generation && hasTrustedOwnerWallet();
 }
 
 /** Explicit ArcFX sign-out. This never asks the wallet to revoke extension permission. */
@@ -166,7 +181,7 @@ arcfxWallet.onChange((walletState) => {
   const nextWallet = walletState.address?.toLowerCase() || null;
   const accountChanged = nextWallet !== observedWallet;
   observedWallet = nextWallet;
-  if (!nextWallet || accountChanged || (walletState.chainId && !walletState.onArc)) {
+  if (!nextWallet || accountChanged || !hasTrustedOwnerWallet()) {
     invalidate();
     return;
   }

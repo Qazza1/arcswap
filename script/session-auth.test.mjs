@@ -61,6 +61,98 @@ function mockProvider(address, prompts) {
   };
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+function statefulProvider(address, chainId, prompts) {
+  const handlers = new Map();
+  const control = {
+    accounts: [address],
+    chainId,
+    failAccounts: false,
+    failChain: false,
+    nextChainWait: null,
+  };
+  const provider = {
+    request: async ({ method, params }) => {
+      if (method === "eth_accounts" || method === "eth_requestAccounts") {
+        if (control.failAccounts) throw new Error("eth_accounts unavailable");
+        return [...control.accounts];
+      }
+      if (method === "eth_chainId") {
+        const wait = control.nextChainWait;
+        if (wait) {
+          control.nextChainWait = null;
+          wait.started.resolve();
+          await wait.release.promise;
+        }
+        if (control.failChain) throw new Error("eth_chainId unavailable");
+        return control.chainId;
+      }
+      if (method === "wallet_switchEthereumChain") {
+        control.chainId = params[0].chainId;
+        return null;
+      }
+      if (method === "wallet_addEthereumChain") return null;
+      if (method === "personal_sign") {
+        prompts.push({ address: params[1].toLowerCase(), message: params[0] });
+        const signer = params[1].toLowerCase() === owner.address.toLowerCase() ? owner : other;
+        return signer.signMessage(params[0]);
+      }
+      throw new Error(`unexpected wallet method ${method}`);
+    },
+    on: (event, handler) => {
+      const list = handlers.get(event) || [];
+      list.push(handler);
+      handlers.set(event, list);
+    },
+    removeListener: (event, handler) => {
+      handlers.set(event, (handlers.get(event) || []).filter((candidate) => candidate !== handler));
+    },
+    emit: async (event, value) => {
+      for (const handler of handlers.get(event) || []) await handler(value);
+    },
+  };
+  return { provider, control };
+}
+
+function pauseNextChain(control) {
+  const started = deferred();
+  const release = deferred();
+  control.nextChainWait = { started, release };
+  return { started: started.promise, release: release.resolve };
+}
+
+async function loadStatefulOwnerSession(provider, storage, local, serial) {
+  globalThis.window = new FakeWindow(provider);
+  globalThis.window.ARCFX_API_BASE = "https://arcfx.test";
+  globalThis.sessionStorage = storage;
+  globalThis.localStorage = local;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : null;
+    if (url.pathname === "/v1/auth/session") {
+      return response({
+        sessionToken: `v1.stateful_${serial}.ciphertext.tag`,
+        wallet: body.wallet,
+        expiresAt: "2099-08-30T18:00:00.000Z",
+      }, 201);
+    }
+    assert.match(header(init, "authorization"), /^Bearer v1\./);
+    return response({ invoices: [], categories: {}, customers: [] });
+  };
+  const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, appType: "custom" });
+  const api = await server.ssrLoadModule(`/src/shared/arcfxApi.ts?stateful=${serial}`);
+  const auth = await server.ssrLoadModule("/src/shared/auth.ts");
+  const walletModule = await server.ssrLoadModule("/src/shared/wallet.ts");
+  await api.arcfxApi.connectOwner();
+  assert.equal(auth.arcfxAuth.status, "AUTHENTICATED");
+  return { server, api, auth, walletModule };
+}
+
 const owner = new Wallet("0x" + "31".repeat(32));
 const other = new Wallet("0x" + "32".repeat(32));
 const storage = new MemoryStorage();
@@ -589,5 +681,235 @@ test("wallet freshness guards discard delayed dashboard and analytics results af
   } finally {
     await server.close();
     globalThis.window = originalWindow;
+  }
+});
+
+test("selected-provider events coalesce into the newest complete wallet snapshot", async (t) => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const originalLocalStorage = globalThis.localStorage;
+  const originalFetch = globalThis.fetch;
+  let serial = 0;
+
+  async function exercise(label, firstEvent, secondEvent) {
+    const storage = new MemoryStorage();
+    const local = new MemoryStorage();
+    const prompts = [];
+    const { provider, control } = statefulProvider(owner.address, "0x4CEF52", prompts);
+    const context = await loadStatefulOwnerSession(provider, storage, local, ++serial);
+    try {
+      control.accounts = [other.address];
+      control.chainId = "0x1";
+      const wait = pauseNextChain(control);
+      const first = provider.emit(firstEvent, firstEvent === "accountsChanged" ? [other.address] : "0x1");
+      await wait.started;
+      const second = provider.emit(secondEvent, secondEvent === "accountsChanged" ? [other.address] : "0x1");
+      wait.release();
+      await Promise.all([first, second]);
+
+      assert.deepEqual(context.walletModule.arcfxWallet.state, {
+        connected: true,
+        address: other.address,
+        chainId: "0x1",
+        onArc: false,
+      }, `${label}: the newest provider snapshot commits account B with its current non-Arc chain`);
+      assert.equal(context.auth.arcfxAuth.status, "CONNECTED", `${label}: an unresolved or changed provider state cannot retain authentication`);
+      assert.equal(storage.getItem("arcfx:owner-session:v1"), null, `${label}: wallet A's bearer is invalidated before the refresh completes`);
+      assert.equal(prompts.filter((prompt) => /^ArcFX session create\n/.test(prompt.message)).length, 1, `${label}: provider events never create another login prompt`);
+      assert.equal(prompts.filter((prompt) => /^ArcFX Agent Mandate\n/.test(prompt.message)).length, 0, `${label}: provider events never create a mandate prompt`);
+    } finally {
+      await context.server.close();
+    }
+  }
+
+  try {
+    await t.test("accountsChanged then chainChanged discards the older snapshot", () => exercise("accounts → chain", "accountsChanged", "chainChanged"));
+    await t.test("chainChanged then accountsChanged discards the older snapshot", () => exercise("chain → accounts", "chainChanged", "accountsChanged"));
+    await t.test("a burst of events commits only the final provider account and chain", async () => {
+      const storage = new MemoryStorage();
+      const local = new MemoryStorage();
+      const prompts = [];
+      const { provider, control } = statefulProvider(owner.address, "0x4CEF52", prompts);
+      const context = await loadStatefulOwnerSession(provider, storage, local, ++serial);
+      try {
+        control.accounts = [other.address];
+        control.chainId = "0x1";
+        const wait = pauseNextChain(control);
+        const first = provider.emit("accountsChanged", [other.address]);
+        await wait.started;
+        control.accounts = [owner.address];
+        control.chainId = "0x4CEF52";
+        const final = provider.emit("chainChanged", "0x4CEF52");
+        wait.release();
+        await Promise.all([first, final]);
+        assert.deepEqual(context.walletModule.arcfxWallet.state, {
+          connected: true,
+          address: owner.address,
+          chainId: "0x4CEF52",
+          onArc: true,
+        });
+        assert.notEqual(context.auth.arcfxAuth.status, "AUTHENTICATED", "the original bearer remains invalidated even when a later snapshot returns to A");
+      } finally {
+        await context.server.close();
+      }
+    });
+  } finally {
+    globalThis.window = originalWindow;
+    globalThis.sessionStorage = originalStorage;
+    globalThis.localStorage = originalLocalStorage;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("selected-provider reconciliation fails closed when account or chain verification fails", async (t) => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const originalLocalStorage = globalThis.localStorage;
+  const originalFetch = globalThis.fetch;
+  let serial = 20;
+
+  async function exercise(label, configure, expected) {
+    const storage = new MemoryStorage();
+    const local = new MemoryStorage();
+    const prompts = [];
+    const { provider, control } = statefulProvider(owner.address, "0x4CEF52", prompts);
+    const context = await loadStatefulOwnerSession(provider, storage, local, ++serial);
+    try {
+      configure(control);
+      await provider.emit("chainChanged", "0x1");
+      assert.deepEqual(context.walletModule.arcfxWallet.state, expected, `${label}: no prior trusted snapshot survives verification failure`);
+      assert.notEqual(context.auth.arcfxAuth.status, "AUTHENTICATED", `${label}: owner authentication fails closed`);
+      assert.equal(storage.getItem("arcfx:owner-session:v1"), null, `${label}: old bearer is removed`);
+      assert.equal(prompts.filter((prompt) => /^ArcFX session create\n/.test(prompt.message)).length, 1, `${label}: reconciliation is silent`);
+    } finally {
+      await context.server.close();
+    }
+  }
+
+  try {
+    await t.test("eth_chainId failure preserves a confirmed address but no trusted chain", () => exercise(
+      "chain failure",
+      (control) => { control.accounts = [other.address]; control.chainId = "0x1"; control.failChain = true; },
+      { connected: true, address: other.address, chainId: null, onArc: false },
+    ));
+    await t.test("eth_accounts failure removes the previous principal", () => exercise(
+      "accounts failure",
+      (control) => { control.failAccounts = true; control.chainId = "0x1"; },
+      { connected: false, address: null, chainId: null, onArc: false },
+    ));
+    await t.test("ensureArc fails closed when its final chain verification rejects", async () => {
+      const storage = new MemoryStorage();
+      const local = new MemoryStorage();
+      const prompts = [];
+      const { provider, control } = statefulProvider(owner.address, "0x4CEF52", prompts);
+      const context = await loadStatefulOwnerSession(provider, storage, local, ++serial);
+      try {
+        control.failChain = true;
+        assert.equal(await context.walletModule.arcfxWallet.ensureArc(), false);
+        assert.deepEqual(context.walletModule.arcfxWallet.state, {
+          connected: true,
+          address: owner.address,
+          chainId: null,
+          onArc: false,
+        });
+        assert.notEqual(context.auth.arcfxAuth.status, "AUTHENTICATED");
+        assert.equal(storage.getItem("arcfx:owner-session:v1"), null);
+      } finally {
+        await context.server.close();
+      }
+    });
+  } finally {
+    globalThis.window = originalWindow;
+    globalThis.sessionStorage = originalStorage;
+    globalThis.localStorage = originalLocalStorage;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("disconnect during a pending selected-provider refresh cannot revive wallet state", async () => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const originalLocalStorage = globalThis.localStorage;
+  const originalFetch = globalThis.fetch;
+  const storage = new MemoryStorage();
+  const local = new MemoryStorage();
+  const prompts = [];
+  const { provider, control } = statefulProvider(owner.address, "0x4CEF52", prompts);
+  const context = await loadStatefulOwnerSession(provider, storage, local, 40);
+  try {
+    control.accounts = [other.address];
+    control.chainId = "0x1";
+    const wait = pauseNextChain(control);
+    const refreshing = provider.emit("accountsChanged", [other.address]);
+    await wait.started;
+    context.auth.arcfxAuth.disconnect();
+    wait.release();
+    await refreshing;
+
+    assert.deepEqual(context.walletModule.arcfxWallet.state, {
+      connected: false,
+      address: null,
+      chainId: null,
+      onArc: false,
+    });
+    assert.equal(context.walletModule.arcfxWallet.provider, null, "Disconnect remains the exact-provider boundary");
+    assert.equal(storage.getItem("arcfx:owner-signed-out:v1"), "1", "stale refresh cannot clear the explicit signed-out marker");
+    assert.equal(storage.getItem("arcfx:owner-session:v1"), null, "stale refresh cannot restore owner authentication");
+    assert.equal(context.auth.arcfxAuth.status, "DISCONNECTED");
+  } finally {
+    await context.server.close();
+    globalThis.window = originalWindow;
+    globalThis.sessionStorage = originalStorage;
+    globalThis.localStorage = originalLocalStorage;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a stale silent restore cannot overwrite an event-triggered provider refresh", async () => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const originalLocalStorage = globalThis.localStorage;
+  const originalFetch = globalThis.fetch;
+  const storage = new MemoryStorage();
+  const local = new MemoryStorage();
+  const prompts = [];
+  const { provider, control } = statefulProvider(owner.address, "0x4CEF52", prompts);
+  const context = await loadStatefulOwnerSession(provider, storage, local, 50);
+  try {
+    const restoreWait = pauseNextChain(control);
+    const restoring = context.walletModule.arcfxWallet.restore();
+    await restoreWait.started;
+
+    control.accounts = [other.address];
+    control.chainId = "0x1";
+    const refreshWait = pauseNextChain(control);
+    const refreshing = provider.emit("accountsChanged", [other.address]);
+    await refreshWait.started;
+    restoreWait.release();
+    await restoring;
+
+    assert.deepEqual(context.walletModule.arcfxWallet.state, {
+      connected: false,
+      address: null,
+      chainId: null,
+      onArc: false,
+    }, "a restore captured before the event cannot repaint a trusted snapshot while refresh is pending");
+    assert.notEqual(context.auth.arcfxAuth.status, "AUTHENTICATED");
+    assert.equal(storage.getItem("arcfx:owner-session:v1"), null);
+
+    refreshWait.release();
+    await refreshing;
+    assert.deepEqual(context.walletModule.arcfxWallet.state, {
+      connected: true,
+      address: other.address,
+      chainId: "0x1",
+      onArc: false,
+    });
+  } finally {
+    await context.server.close();
+    globalThis.window = originalWindow;
+    globalThis.sessionStorage = originalStorage;
+    globalThis.localStorage = originalLocalStorage;
+    globalThis.fetch = originalFetch;
   }
 });

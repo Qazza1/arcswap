@@ -64,13 +64,16 @@ const listeners = new Set<Listener>();
 const announcedProviders: ProviderEntry[] = [];
 let discoveryInstalled = false;
 let selectedProvider: ProviderEntry | null = null;
-// Every asynchronous state update captures this revision. A later Disconnect,
-// provider choice, account change, or chain change invalidates older work
-// before it can repaint state for a provider the owner no longer selected.
-let walletRevision = 0;
+// Provider selection and selected-provider snapshots have distinct lifetimes.
+// Selection changes invalidate all work for the prior provider. Relevant events
+// advance the snapshot revision so that only the newest complete provider view
+// can reach application state.
+let providerRevision = 0;
+let snapshotRevision = 0;
 let wiredProvider: Eip1193Provider | null = null;
 let restoring: Promise<WalletState> | null = null;
 let connecting: Promise<WalletState> | null = null;
+let selectedRefresh: { provider: Eip1193Provider; promise: Promise<void> } | null = null;
 let selectedAccountsChanged: ((accounts: string[]) => Promise<void>) | null = null;
 let selectedChainChanged: ((chainId: string) => Promise<void>) | null = null;
 
@@ -226,49 +229,92 @@ function detachSelectedEvents(): void {
 }
 
 function isCurrentProvider(provider: Eip1193Provider, revision: number): boolean {
-  return walletRevision === revision && selectedProvider?.provider === provider;
+  return providerRevision === revision && selectedProvider?.provider === provider;
 }
 
-async function hydrate(provider: Eip1193Provider, address: string | null, isCurrent: () => boolean): Promise<boolean> {
-  if (!isCurrent()) return false;
-  if (!address) {
-    if (!isCurrent()) return false;
-    state = { connected: false, address: null, chainId: state.chainId, onArc: state.onArc };
-    return true;
-  }
-  let chainId: string | null = state.chainId;
-  try { chainId = await provider.request({ method: "eth_chainId" }); } catch { /* keep last known */ }
-  if (!isCurrent()) return false;
-  state = {
+function untrustedState(): WalletState {
+  return { connected: false, address: null, chainId: null, onArc: false };
+}
+
+/**
+ * Read the only authoritative selected-provider view used by ArcFX state.
+ * Account and chain are deliberately fetched together: event payloads are
+ * change signals, never a final wallet identity or network assertion.
+ */
+async function readProviderSnapshot(provider: Eip1193Provider): Promise<WalletState> {
+  const [accountsResult, chainResult] = await Promise.allSettled([
+    provider.request({ method: "eth_accounts" }),
+    provider.request({ method: "eth_chainId" }),
+  ]);
+  if (accountsResult.status !== "fulfilled" || !Array.isArray(accountsResult.value)) return untrustedState();
+  const address = accountsResult.value.find((account: unknown): account is string => typeof account === "string") || null;
+  if (!address) return untrustedState();
+  const chainId = chainResult.status === "fulfilled" && typeof chainResult.value === "string" && chainResult.value
+    ? chainResult.value
+    : null;
+  return {
     connected: true,
     address,
     chainId,
-    onArc: String(chainId).toLowerCase() === ARC_CHAIN_ID_HEX.toLowerCase(),
+    onArc: chainId !== null && chainId.toLowerCase() === ARC_CHAIN_ID_HEX.toLowerCase(),
   };
+}
+
+async function restoreProviderSnapshot(
+  provider: Eip1193Provider,
+  revision: number,
+  expectedSnapshotRevision = snapshotRevision,
+): Promise<boolean> {
+  const next = await readProviderSnapshot(provider);
+  if (!isCurrentProvider(provider, revision) || expectedSnapshotRevision !== snapshotRevision) return false;
+  state = next;
   return true;
+}
+
+/**
+ * Coalesce selected-provider events into serialized, fail-closed snapshots.
+ * Every event first removes trust in the old principal/network. If a newer
+ * event arrives during RPC, its higher snapshot revision makes the old read
+ * uncommittable and causes one fresh read of both accounts and chain.
+ */
+function refreshSelectedProvider(provider: Eip1193Provider): Promise<void> {
+  if (selectedProvider?.provider !== provider) return Promise.resolve();
+  snapshotRevision++;
+  state = untrustedState();
+  emit();
+  if (selectedRefresh?.provider === provider) return selectedRefresh.promise;
+
+  const refresh = (async () => {
+    while (selectedProvider?.provider === provider) {
+      const selectionRevision = providerRevision;
+      const requestedSnapshot = snapshotRevision;
+      const next = await readProviderSnapshot(provider);
+      if (!isCurrentProvider(provider, selectionRevision)) return;
+      if (requestedSnapshot !== snapshotRevision) continue;
+      state = next;
+      emit();
+      return;
+    }
+  })();
+  const record = { provider, promise: refresh };
+  selectedRefresh = record;
+  refresh.finally(() => {
+    if (selectedRefresh === record) selectedRefresh = null;
+  }).catch(() => { /* snapshots fail closed instead of surfacing provider errors */ });
+  return refresh;
 }
 
 function wireSelectedEvents(entry: ProviderEntry): void {
   if (wiredProvider === entry.provider || !entry.provider.on) return;
   detachSelectedEvents();
   const provider = entry.provider;
-  selectedAccountsChanged = async (accounts: string[]) => {
+  selectedAccountsChanged = async (_accounts: string[]) => {
     if (selectedProvider?.provider !== provider) return;
-    const revision = ++walletRevision;
-    if (await hydrate(provider, accounts && accounts.length ? accounts[0] : null, () => isCurrentProvider(provider, revision))) emit();
+    await refreshSelectedProvider(provider);
   };
-  selectedChainChanged = async (chainId: string) => {
+  selectedChainChanged = async (_chainId: string) => {
     if (selectedProvider?.provider !== provider) return;
-    const revision = ++walletRevision;
-    const address = state.connected ? state.address : null;
-    if (address) {
-      if (await hydrate(provider, address, () => isCurrentProvider(provider, revision))) emit();
-      return;
-    }
-    if (!isCurrentProvider(provider, revision)) return;
-    state.chainId = chainId;
-    state.onArc = String(chainId).toLowerCase() === ARC_CHAIN_ID_HEX.toLowerCase();
-    emit();
+    await refreshSelectedProvider(provider);
   };
   provider.on("accountsChanged", selectedAccountsChanged);
   provider.on("chainChanged", selectedChainChanged);
@@ -279,7 +325,8 @@ function selectProvider(entry: ProviderEntry, persist = false): void {
   if (selectedProvider?.provider !== entry.provider) {
     detachSelectedEvents();
     selectedProvider = entry;
-    walletRevision++;
+    providerRevision++;
+    snapshotRevision++;
   }
   wireSelectedEvents(entry);
   if (persist) persistProviderPreference(entry);
@@ -352,7 +399,7 @@ async function chooseProvider(entries: ProviderEntry[]): Promise<ProviderEntry> 
 async function restore(): Promise<WalletState> {
   if (restoring) return restoring;
   restoring = (async () => {
-    let revision = walletRevision;
+    let revision = providerRevision;
     // Wallet extensions retain account permission after a dapp-level logout.
     // Respect the ArcFX-local marker so a new document cannot silently undo an
     // explicit Disconnect action.
@@ -366,22 +413,27 @@ async function restore(): Promise<WalletState> {
     // never replace it without an explicit owner action.
     if (selectedProvider) {
       const entry = selectedProvider;
-      const accounts = await accountsFor(entry);
-      if (await hydrate(entry.provider, accounts[0] || null, () => isCurrentProvider(entry.provider, revision))) emit();
+      // An event refresh owns the selected-provider snapshot while it is
+      // pending. Joining it prevents a silent restore from committing an older
+      // accounts/chain view after the event has already failed closed.
+      if (selectedRefresh?.provider === entry.provider) {
+        await selectedRefresh.promise;
+        return snapshot();
+      }
+      if (await restoreProviderSnapshot(entry.provider, revision)) emit();
       return snapshot();
     }
     const entries = await discoverProviders();
     const entry = await selectForRestore(entries);
-    if (revision !== walletRevision) return snapshot();
+    if (revision !== providerRevision) return snapshot();
     if (!entry) {
-      state = { connected: false, address: null, chainId: state.chainId, onArc: state.onArc };
+      state = untrustedState();
       emit();
       return snapshot();
     }
     selectProvider(entry);
-    revision = walletRevision;
-    const accounts = await accountsFor(entry);
-    if (await hydrate(entry.provider, accounts[0] || null, () => isCurrentProvider(entry.provider, revision))) emit();
+    revision = providerRevision;
+    if (await restoreProviderSnapshot(entry.provider, revision)) emit();
     return snapshot();
   })();
   try { return await restoring; } finally { restoring = null; }
@@ -390,51 +442,49 @@ async function restore(): Promise<WalletState> {
 async function ensureArc(): Promise<boolean> {
   const provider = selectedProvider?.provider;
   if (!provider) return false;
-  const revision = walletRevision;
+  const revision = providerRevision;
   try {
     await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_CHAIN_ID_HEX }] });
   } catch (error: any) {
     const code = error?.code ?? error?.error?.code ?? error?.info?.error?.code;
     if (code === 4902 || String(error?.message || "").includes("4902")) {
       try { await provider.request({ method: "wallet_addEthereumChain", params: [ARC_TESTNET as any] }); }
-      catch { return false; }
-    } else return false;
+      catch { /* reconcile the provider's actual state below */ }
+    }
   }
   if (!isCurrentProvider(provider, revision)) return false;
-  try {
-    const chainId = await provider.request({ method: "eth_chainId" });
-    if (!isCurrentProvider(provider, revision)) return false;
-    state.chainId = chainId;
-    state.onArc = String(chainId).toLowerCase() === ARC_CHAIN_ID_HEX.toLowerCase();
-  } catch { /* keep last known */ }
-  emit();
-  return state.onArc;
+  // A switch/add result is not trusted until the selected provider silently
+  // reports a complete accounts + chain snapshot. A failed chain probe leaves
+  // the state explicitly untrusted rather than retaining a prior Arc network.
+  await refreshSelectedProvider(provider);
+  return isCurrentProvider(provider, revision) && state.onArc;
 }
 
 /** Explicit connect. When wallets compete, show the small provider selector. */
 async function connect(): Promise<WalletState> {
   if (connecting) return connecting;
   connecting = (async () => {
-    let revision = ++walletRevision;
+    let revision = ++providerRevision;
+    snapshotRevision++;
     let entry = selectedProvider;
     if (!entry) {
       const entries = await discoverProviders();
-      if (revision !== walletRevision) return snapshot();
+      if (revision !== providerRevision) return snapshot();
       if (!entries.length) throw new Error("No wallet detected. Install MetaMask, Backpack, Rabby, or another EVM wallet.");
       entry = await chooseProvider(entries);
-      if (revision !== walletRevision) return snapshot();
+      if (revision !== providerRevision) return snapshot();
       selectProvider(entry, true);
-      revision = walletRevision;
+      revision = providerRevision;
     }
     wireSelectedEvents(entry);
-    const accounts = await entry.provider.request({ method: "eth_requestAccounts" });
+    await entry.provider.request({ method: "eth_requestAccounts" });
     if (!isCurrentProvider(entry.provider, revision)) return snapshot();
+    // This marker represents an explicit ArcFX reconnect, never a silent
+    // provider refresh. The authoritative state still remains untrusted until
+    // ensureArc finishes its silent selected-provider reconciliation.
+    clearSignedOutMarker();
     await ensureArc();
     if (!isCurrentProvider(entry.provider, revision)) return snapshot();
-    if (await hydrate(entry.provider, Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null, () => isCurrentProvider(entry.provider, revision))) {
-      clearSignedOutMarker();
-      emit();
-    }
     return snapshot();
   })();
   try { return await connecting; } finally { connecting = null; }
@@ -442,7 +492,8 @@ async function connect(): Promise<WalletState> {
 
 function disconnect(): void {
   setSignedOutMarker();
-  walletRevision++;
+  providerRevision++;
+  snapshotRevision++;
   detachSelectedEvents();
   // A later explicit Connect starts a new provider choice. Until Disconnect,
   // restore() above pins the exact selected provider object for this document.
@@ -474,6 +525,7 @@ export const arcfxWallet = {
   get state(): WalletState { return snapshot(); },
   get address(): string | null { return state.address; },
   get connected(): boolean { return state.connected; },
+  get chainId(): string | null { return state.chainId; },
   get onArc(): boolean { return state.onArc; },
   get provider(): Eip1193Provider | null { return selectedProvider?.provider || null; },
   get providerInfo(): Readonly<Eip6963Info> | null { return selectedProvider?.info || null; },
