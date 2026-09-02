@@ -160,6 +160,7 @@
     import { arcfxWallet } from '/src/shared/wallet.ts';
     import { arcfxApi, ApiError } from '/src/shared/arcfxApi.ts';
     import { downloadReceiptPdf } from '/src/shared/receipt.ts';
+    import { openOcdVerifierHandoff, downloadSealedAgentEvidenceBundle } from '/src/shared/ocdVerifierHandoff.ts';
 
     const el = (id) => document.getElementById(id);
 
@@ -173,6 +174,10 @@
     let invoices = [];
     let owedByToken = {};
     let filter = "open";
+    // The sealed proof stays in this page's memory only. It is neither stored
+    // nor included in a URL; both proof actions consume this exact object.
+    let latestAgentEvidence = null;
+    let pendingOcdHandoff = null;
     // A load token, so a response for one wallet cannot paint another's list.
     let loadToken = 0;
 
@@ -333,6 +338,8 @@
     window.generateAgentEvidence = async function (id) {
       const inv = invoices.find((item) => item.id === id);
       if (!inv) return;
+      pendingOcdHandoff?.cancel();
+      pendingOcdHandoff = null;
       setBanner(`Preparing Agent Mandate for <strong>${esc(inv.number)}</strong>…`);
       try {
         // The opaque preparation token intentionally remains in this stack
@@ -344,18 +351,42 @@
         // analysis-only orchestration. It never opens a transaction request.
         const result = submitted.run;
         const d = result.decision;
+        const proof = await arcfxApi.sealedAgentEvidenceBundle(result.runId);
+        if (!proof?.sealedBundle || typeof proof.sealedBundle !== "object" || Array.isArray(proof.sealedBundle)) {
+          throw new Error("The server returned an invalid sealed Agent Evidence bundle.");
+        }
+        latestAgentEvidence = { bundle: proof.sealedBundle, bundleId: String(result.bundle.bundleId) };
         setBanner(
           `<strong>Agent Evidence created.</strong> `
           + `Decision: <strong>${esc(d.outcome)}</strong> · `
           + `${d.authorizedToExecute ? "authorized" : "not authorized"} · `
           + `execution: <strong>${esc(result.execution)}</strong><br>`
           + `Bundle: <span class="num">${esc(result.bundle.bundleId)}</span> · `
-          + `verification: <strong>${esc(result.bundle.verificationState)}</strong>`,
+          + `verification: <strong>${esc(result.bundle.verificationState)}</strong><br>`
+          + `<span class="row-actions" style="margin-top:10px;">`
+          + `<button class="btn btn-sm" data-fx-on="click" data-fx-act="verifyAgentEvidenceOnOcd">Verify on OnChainDiligence</button>`
+          + `<button class="btn btn-sm" data-fx-on="click" data-fx-act="downloadAgentEvidenceProof">Download proof</button>`
+          + `</span>`,
           result.bundle.verificationState === "VALID" ? "ok" : "bad"
         );
       } catch (err) {
         setBanner(`Agent Evidence could not be generated: ${esc(err?.message || err)}`, "bad");
       }
+    };
+
+    window.verifyAgentEvidenceOnOcd = function () {
+      if (!latestAgentEvidence) return;
+      try {
+        pendingOcdHandoff?.cancel();
+        pendingOcdHandoff = openOcdVerifierHandoff(latestAgentEvidence.bundle);
+      } catch (err) {
+        setBanner(`Could not open OnChainDiligence: ${esc(err?.message || err)}`, "bad");
+      }
+    };
+
+    window.downloadAgentEvidenceProof = function () {
+      if (!latestAgentEvidence) return;
+      downloadSealedAgentEvidenceBundle(latestAgentEvidence.bundle, latestAgentEvidence.bundleId);
     };
 
     /**

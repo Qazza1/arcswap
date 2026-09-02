@@ -245,6 +245,10 @@ export const arcfxApi = {
     mandatePost("/v1/agent-mandates", { preparationToken, mandateSignature }),
   createAgentRun: (invoiceId: string, mandateId: string) =>
     post("/v1/agent-runs", "agent run create", { invoiceId, mandateId }),
+  // This remains owner-scoped on the backend. The sealed proof is retrieved
+  // only after the run exists and is never placed in a URL or public endpoint.
+  sealedAgentEvidenceBundle: (runId: string) =>
+    get(`/v1/agent-evidence/${encodeURIComponent(runId)}/bundle/sealed`, "agent evidence read"),
   signAgentMandate: signMandate,
 
   /**

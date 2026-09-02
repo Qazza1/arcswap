@@ -211,6 +211,10 @@ test("tab-scoped owner session survives navigation and leaves Generate Agent Evi
       assert.deepEqual(Object.keys(body.payload).sort(), ["mandateSignature", "preparationToken"]);
       return response({ mandate: { mandateId: "mandate_test", status: "ACTIVE" }, run: { runId: "run_test", execution: "NOT_SUBMITTED", decision: { outcome: "REQUIRE_APPROVAL", authorizedToExecute: false }, bundle: { bundleId: "sha256:test", verificationState: "VALID" } } }, 201);
     }
+    if (url.pathname === "/v1/agent-evidence/run_test/bundle/sealed") {
+      assert.match(header(init, "authorization"), /^Bearer session-/);
+      return response({ bundle: { bundleId: "sha256:test" }, sealedBundle: { bundle_id: "sha256:test", records: [] } });
+    }
     assert.match(header(init, "authorization"), /^Bearer session-/);
     return response({ count: 0, categories: {}, wallet: activeAddress.toLowerCase() });
   };
@@ -235,6 +239,9 @@ test("tab-scoped owner session survives navigation and leaves Generate Agent Evi
     assert.equal(completed.run.execution, "NOT_SUBMITTED");
     assert.equal(prompts.length, 1, "existing owner session leaves one wallet prompt");
     assert.match(prompts[0], /^ArcFX Agent Mandate\nversion: arcfx\.agent-mandate-signature\.v1\n/);
+    const sealed = await first.arcfxApi.sealedAgentEvidenceBundle(completed.run.runId);
+    assert.equal(sealed.sealedBundle.bundle_id, "sha256:test");
+    assert.equal(prompts.length, 1, "owner-scoped proof retrieval reuses the owner session without another wallet signature");
 
     first.arcfxApi.clearAuthCache();
     prompts.length = 0;
@@ -911,5 +918,64 @@ test("a stale silent restore cannot overwrite an event-triggered provider refres
     globalThis.sessionStorage = originalStorage;
     globalThis.localStorage = originalLocalStorage;
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("OCD proof handoff is pinned to the opened verifier and downloads the same sealed bundle", async (t) => {
+  const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, appType: "custom" });
+  try {
+    const handoff = await server.ssrLoadModule("/src/shared/ocdVerifierHandoff.ts");
+    const listeners = new Set();
+    const posted = [];
+    const verifier = { postMessage: (message, targetOrigin) => posted.push({ message, targetOrigin }) };
+    const wrongWindow = { postMessage: () => { throw new Error("wrong window must not receive proof"); } };
+    const opened = [];
+    const host = {
+      open: (url, target) => { opened.push({ url, target }); return verifier; },
+      addEventListener: (_type, listener) => listeners.add(listener),
+      removeEventListener: (_type, listener) => listeners.delete(listener),
+    };
+    const bundle = { bundle_id: "sha256:test-proof", records: [{ type: "agent-evidence" }] };
+    const pending = handoff.openOcdVerifierHandoff(bundle, host);
+    assert.deepEqual(opened, [{ url: "https://onchaindiligence.com/verify?source=arcfx", target: "_blank" }]);
+    const onMessage = [...listeners][0];
+
+    onMessage({ origin: "https://attacker.invalid", source: verifier, data: { type: "onchaindiligence:verifier-ready", version: 1 } });
+    onMessage({ origin: "https://onchaindiligence.com", source: wrongWindow, data: { type: "onchaindiligence:verifier-ready", version: 1 } });
+    onMessage({ origin: "https://onchaindiligence.com", source: verifier, data: { type: "onchaindiligence:verifier-ready", version: 2 } });
+    assert.equal(posted.length, 0, "origin, window identity, and protocol version all gate the handoff");
+
+    onMessage({ origin: "https://onchaindiligence.com", source: verifier, data: { type: "onchaindiligence:verifier-ready", version: 1 } });
+    assert.deepEqual(posted, [{
+      targetOrigin: "https://onchaindiligence.com",
+      message: { type: "onchaindiligence:verify-bundle", version: 1, source: "arcfx", bundle },
+    }]);
+    assert.deepEqual(Object.keys(posted[0].message).sort(), ["bundle", "source", "type", "version"], "handoff contains no owner credential or token field");
+    assert.equal(listeners.size, 0, "the one-time handoff listener is removed after delivery");
+    pending.cancel();
+
+    let blobParts;
+    let downloaded;
+    let revoked;
+    class TestBlob {
+      constructor(parts) { blobParts = parts; }
+    }
+    handoff.downloadSealedAgentEvidenceBundle(bundle, "sha256:test-proof", {
+      Blob: TestBlob,
+      URL: {
+        createObjectURL: (blob) => { assert.ok(blob instanceof TestBlob); return "blob:test-proof"; },
+        revokeObjectURL: (url) => { revoked = url; },
+      },
+      document: {
+        createElement: () => ({
+          click() { downloaded = { href: this.href, download: this.download }; },
+        }),
+      },
+    });
+    assert.equal(blobParts[0], JSON.stringify(bundle, null, 2), "download serializes the same sealed bundle sent to OCD");
+    assert.deepEqual(downloaded, { href: "blob:test-proof", download: "arcfx-agent-evidence-sha256_test-proof.json" });
+    assert.equal(revoked, "blob:test-proof");
+  } finally {
+    await server.close();
   }
 });
