@@ -1,0 +1,112 @@
+/*
+ * ArcFX financial-agent workspace.
+ * Shared app chrome deliberately stays light and quiet: colour describes a
+ * state, while hierarchy comes from type, spacing and a small number of lines.
+ */
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--fx-bg) !important;
+  color: var(--fx-ink) !important;
+}
+
+.arcfx-nav {
+  height: 68px !important;
+  padding: 0 max(20px, calc((100vw - 1240px) / 2)) !important;
+  background: rgba(255,255,255,.94) !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+  box-shadow: var(--fx-shadow-sm);
+  backdrop-filter: blur(16px) !important;
+}
+
+.arcfx-nav-center { gap: 4px !important; }
+.arcfx-nav .arcfx-navlink,
+.arcfx-nav button:not(#connect-btn):not(.arcfx-hamburger) {
+  color: var(--fx-muted) !important;
+  border-radius: 7px !important;
+}
+.arcfx-nav .arcfx-navlink:hover,
+.arcfx-nav button:not(#connect-btn):not(.arcfx-hamburger):hover {
+  background: var(--fx-sunken) !important;
+  color: var(--fx-ink) !important;
+}
+.arcfx-nav [style*="background:#1e293b"],
+.arcfx-nav [style*="background: #1e293b"] {
+  background: var(--fx-sunken) !important;
+  color: var(--fx-ink) !important;
+}
+
+.arcfx-testnet-pill,
+#connect-btn,
+.arcfx-hamburger,
+[id^="arcfx-contacts-btn"] {
+  background: var(--fx-elevated) !important;
+  border-color: var(--fx-line) !important;
+  color: var(--fx-ink) !important;
+}
+#connect-btn {
+  min-height: 36px;
+  font-weight: 600 !important;
+  box-shadow: var(--fx-shadow-sm);
+}
+#connect-btn.connected { background: var(--fx-sunken) !important; }
+#arcfx-account-menu,
+div[id^="arcfx-tools-dd"],
+div[id^="arcfx-more-dd"],
+div[id^="arcfx-mobile-menu"] {
+  background: var(--fx-elevated) !important;
+  border-color: var(--fx-line) !important;
+  box-shadow: var(--fx-shadow-md) !important;
+}
+#arcfx-account-menu { padding: 10px !important; }
+#arcfx-account-provider { color: var(--fx-muted) !important; }
+#arcfx-account-network { color: var(--fx-info) !important; }
+#arcfx-disconnect-btn { color: var(--fx-bad) !important; }
+
+.stats-bar {
+  height: 30px !important;
+  background: var(--fx-sunken) !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+}
+.stats-bar-label, .stats-bar-val { color: var(--fx-muted) !important; }
+.stats-bar-dot { background: var(--fx-ok) !important; box-shadow: none !important; }
+.stats-bar-sep { background: var(--fx-line) !important; }
+
+/* Shared product-page rhythm. Existing pages opt in without a framework move. */
+.page, .wrap { max-width: 1200px !important; }
+.page { padding-top: 48px !important; }
+.wrap { padding-top: 48px !important; }
+
+/* The existing overview becomes an operations surface rather than a generic
+   crypto landing screen. These classes already exist in app.html. */
+.wrap .status { margin-bottom: 36px !important; }
+.wrap .status h1 { font-family: var(--fx-display) !important; font-size: clamp(30px, 4vw, 42px) !important; letter-spacing: -.035em !important; }
+.wrap .status p { max-width: 60ch; line-height: 1.6; }
+.wrap .ctx-chip, .wrap .stat, .wrap .panel, .wrap .dev-tile {
+  background: var(--fx-elevated) !important;
+  border-color: var(--fx-line) !important;
+  box-shadow: var(--fx-shadow-sm);
+}
+.wrap .stats { border-radius: var(--fx-r-xl) !important; }
+.wrap .stat { padding: 22px !important; }
+.wrap .action {
+  border-radius: var(--fx-r-lg) !important;
+  background: var(--fx-elevated) !important;
+  border-color: var(--fx-line) !important;
+}
+.wrap .action:hover { background: var(--fx-elevated) !important; border-color: var(--fx-ink) !important; box-shadow: var(--fx-shadow-md); transform: translateY(-1px) !important; }
+.wrap .action-ico { background: var(--fx-sunken) !important; color: var(--fx-ink) !important; }
+.wrap .action-ico.teal { background: var(--fx-proof-bg) !important; color: var(--fx-proof) !important; }
+
+@media (max-width: 768px) {
+  .arcfx-nav { height: 60px !important; padding: 0 16px !important; }
+  .page, .wrap { padding-left: 16px !important; padding-right: 16px !important; }
+  div[id^="arcfx-mobile-menu"] { top: 60px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

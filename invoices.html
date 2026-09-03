@@ -26,13 +26,13 @@
     a { color: var(--fx-accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    .page { max-width: 1100px; margin: 0 auto; padding: 44px 28px 80px; }
+    .page { max-width: 1200px; margin: 0 auto; padding: 52px 28px 88px; }
 
     /* Header */
     .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
     .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; color: var(--fx-muted); text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 10px; }
-    h1 { font-size: clamp(26px, 4vw, 36px); font-weight: 700; letter-spacing: -1px; }
-    .sub { font-size: 13.5px; color: var(--fx-muted); margin-top: 6px; max-width: 60ch; }
+    h1 { font-family:var(--fx-display); font-size: clamp(30px, 4vw, 42px); font-weight: 700; letter-spacing: -1.4px; line-height:1.08; }
+    .sub { font-size: 14px; color: var(--fx-muted); margin-top: 9px; max-width: 68ch; line-height:1.65; }
 
     .btn { display: inline-flex; align-items: center; gap: 7px; font-family: var(--fx-body); font-size: 13px; font-weight: 600; padding: 9px 16px; border-radius: var(--fx-r-sm); cursor: pointer; border: 1px solid var(--fx-line); background: var(--fx-bg); color: var(--fx-ink); transition: border-color .15s, background .15s; }
     .btn:hover:not(:disabled) { border-color: var(--fx-ink); }
@@ -42,8 +42,11 @@
     .btn-sm { font-size: 11.5px; padding: 5px 10px; font-weight: 600; }
 
     /* Receivables summary */
-    .owed { display: flex; gap: 1px; background: var(--fx-line); border: 1px solid var(--fx-line); border-radius: var(--fx-r); overflow: hidden; margin-bottom: 22px; flex-wrap: wrap; }
-    .owed-cell { background: var(--fx-surface); padding: 16px 20px; flex: 1 1 180px; }
+    .workflow-note { display:flex; gap:12px; align-items:flex-start; margin:0 0 24px; padding:14px 16px; border:1px solid var(--fx-line); border-radius:var(--fx-r-lg); background:var(--fx-elevated); box-shadow:var(--fx-shadow-sm); color:var(--fx-muted); font-size:13px; line-height:1.55; }
+    .workflow-note strong { color:var(--fx-ink); }
+    .workflow-mark { flex:none; display:grid; place-items:center; width:26px; height:26px; border-radius:50%; background:var(--fx-proof-bg); color:var(--fx-proof); font-family:var(--fx-mono); font-size:12px; font-weight:700; }
+    .owed { display: flex; gap: 1px; background: var(--fx-line); border: 1px solid var(--fx-line); border-radius: var(--fx-r-xl); overflow: hidden; margin-bottom: 26px; flex-wrap: wrap; box-shadow:var(--fx-shadow-sm); }
+    .owed-cell { background: var(--fx-elevated); padding: 18px 22px; flex: 1 1 180px; }
     .owed-val { font-family: "JetBrains Mono", monospace; font-size: 24px; font-weight: 600; letter-spacing: -0.6px; font-variant-numeric: tabular-nums; }
     .owed-val.warn { color: var(--fx-warn); }
     .owed-lbl { font-size: 11.5px; color: var(--fx-muted); margin-top: 2px; }
@@ -59,7 +62,7 @@
     .tab.active .tab-count { color: var(--fx-muted); }
 
     /* Table */
-    .table-wrap { border: 1px solid var(--fx-line); border-radius: var(--fx-r); overflow-x: auto; background: var(--fx-surface); }
+    .table-wrap { border: 1px solid var(--fx-line); border-radius: var(--fx-r-xl); overflow-x: auto; background: var(--fx-elevated); box-shadow:var(--fx-shadow-sm); }
     table { width: 100%; border-collapse: collapse; min-width: 780px; }
     thead th { text-align: left; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fx-muted); padding: 12px 16px; border-bottom: 1px solid var(--fx-line); white-space: nowrap; background: var(--fx-sunken); }
     tbody td { padding: 14px 16px; border-bottom: 1px solid var(--fx-line-soft); font-size: 13.5px; vertical-align: middle; }
@@ -88,15 +91,34 @@
     .state { padding: 56px 28px; text-align: center; color: var(--fx-muted); font-size: 14px; line-height: 1.7; }
     .state strong { color: var(--fx-ink); display: block; font-size: 16px; margin-bottom: 6px; font-weight: 600; }
     .state .btn { margin-top: 16px; }
-    .banner { border: 1px solid var(--fx-line); border-left: 3px solid var(--fx-ink); background: var(--fx-sunken); border-radius: var(--fx-r-sm); padding: 12px 16px; font-size: 13px; color: var(--fx-muted); margin-bottom: 16px; line-height: 1.6; }
+    .banner { border: 1px solid var(--fx-line); border-left: 3px solid var(--fx-ink); background: var(--fx-elevated); border-radius: var(--fx-r-lg); padding: 14px 16px; font-size: 13px; color: var(--fx-muted); margin-bottom: 18px; line-height: 1.6; box-shadow:var(--fx-shadow-sm); }
     .banner.bad { border-left-color: var(--fx-bad); color: var(--fx-bad); background: var(--fx-bad-bg); }
     .banner.ok  { border-left-color: var(--fx-ok);  color: var(--fx-ok);  background: var(--fx-ok-bg); }
 
     .foot-note { font-size: 12px; color: var(--fx-muted); margin-top: 14px; line-height: 1.7; }
 
+    .evidence-result { display:grid; gap:14px; color:var(--fx-ink); }
+    .evidence-result-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+    .evidence-result-title { font-size:15px; font-weight:700; }
+    .evidence-result-copy { margin-top:3px; color:var(--fx-muted); font-size:12.5px; }
+    .evidence-states { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+    .evidence-state { padding:11px 12px; border:1px solid var(--fx-line); border-radius:var(--fx-r-sm); background:var(--fx-surface); min-width:0; }
+    .evidence-state-label { font-family:var(--fx-mono); color:var(--fx-muted); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+    .evidence-state-value { display:block; margin-top:4px; font-size:12px; font-weight:700; overflow-wrap:anywhere; }
+    .evidence-state-value.decision { color:var(--fx-warn); }
+    .evidence-state-value.execution { color:var(--fx-bad); }
+    .evidence-state-value.verification { color:var(--fx-proof); }
+    .evidence-trail { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-family:var(--fx-mono); font-size:10.5px; color:var(--fx-muted); }
+    .evidence-trail b { color:var(--fx-ink); font-weight:600; }
+    .evidence-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .evidence-actions .btn-primary { background:var(--fx-proof); border-color:var(--fx-proof); }
+    .evidence-note { font-size:11.5px; color:var(--fx-muted); max-width:78ch; }
+
     @media (max-width: 640px) {
       .page { padding: 28px 16px 60px; }
       .owed-cell { flex-basis: 100%; }
+      .evidence-states { grid-template-columns:1fr; }
+      .evidence-result-head { display:block; }
     }
   </style>
 </head>
@@ -113,11 +135,11 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <div class="eyebrow">Receivables</div>
+        <div class="eyebrow">Financial operations</div>
         <h1>Invoices</h1>
         <p class="sub">
-          Every invoice you have issued, reconciled against the chain. Status is derived from
-          what has actually been received — never from a flag someone remembered to set.
+          Track receivables, evaluate a payment mandate, and retain a portable evidence trail
+          for consequential agent decisions.
         </p>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -127,6 +149,11 @@
     </div>
 
     <div id="banner"></div>
+
+    <aside class="workflow-note" aria-label="How agent evidence works">
+      <span class="workflow-mark" aria-hidden="true">↳</span>
+      <span><strong>Evidence-aware operations.</strong> For an eligible invoice, ArcFX can evaluate a narrowly scoped mandate against evidence and policy. The resulting verification trail is independent from payment approval.</span>
+    </aside>
 
     <div class="owed" id="owed" style="display:none;"></div>
 
@@ -200,6 +227,32 @@
     }
     function setBanner(html, kind) {
       el("banner").innerHTML = html ? `<div class="banner ${kind || ""}">${html}</div>` : "";
+    }
+
+    function evidenceResult(result) {
+      const decision = result.decision || {};
+      const verification = result.bundle?.verificationState || "UNAVAILABLE";
+      const authorized = decision.authorizedToExecute ? "YES" : "NO";
+      return `<div class="evidence-result">
+        <div class="evidence-result-head">
+          <div>
+            <div class="evidence-result-title">Agent Evidence generated</div>
+            <div class="evidence-result-copy">A sealed proof is available for this completed evaluation.</div>
+          </div>
+          <span class="pill ${verification === "VALID" ? "sent" : "partial"}">proof ${esc(verification)}</span>
+        </div>
+        <div class="evidence-states" aria-label="Agent evaluation states">
+          <div class="evidence-state"><span class="evidence-state-label">Decision</span><span class="evidence-state-value decision">${esc(decision.outcome || "UNAVAILABLE")}</span><span class="inv-meta">Authorized: ${authorized}</span></div>
+          <div class="evidence-state"><span class="evidence-state-label">Execution</span><span class="evidence-state-value execution">${esc(result.execution || "NOT_SUBMITTED")}</span><span class="inv-meta">No payment was submitted</span></div>
+          <div class="evidence-state"><span class="evidence-state-label">Verification</span><span class="evidence-state-value verification">${esc(verification)}</span><span class="inv-meta">Bundle ${esc(result.bundle?.bundleId || "—")}</span></div>
+        </div>
+        <div class="evidence-trail" aria-label="Evidence trail"><b>Mandate</b><span>→</span><b>Evidence</b><span>→</span><b>Policy</b><span>→</span><b>Decision</b><span>→</span><b>Execution</b><span style="margin-left:5px;">|</span><span>Independent verification</span></div>
+        <div class="evidence-actions">
+          <button class="btn btn-primary" data-fx-on="click" data-fx-act="verifyAgentEvidenceOnOcd">Verify on OnChainDiligence</button>
+          <button class="btn" data-fx-on="click" data-fx-act="downloadAgentEvidenceProof">Download proof</button>
+        </div>
+        <p class="evidence-note">OnChainDiligence verifies the evidence trail independently. A valid proof does not mean this payment was approved or submitted.</p>
+      </div>`;
     }
 
     function fmtDate(d) {
@@ -340,12 +393,14 @@
       if (!inv) return;
       pendingOcdHandoff?.cancel();
       pendingOcdHandoff = null;
-      setBanner(`Preparing Agent Mandate for <strong>${esc(inv.number)}</strong>…`);
+      setBanner(`Preparing a narrowly scoped Agent Mandate for <strong>${esc(inv.number)}</strong>. This evaluates the invoice; it does not authorize or submit a payment.`);
       try {
         // The opaque preparation token intentionally remains in this stack
         // frame only. It is never written to browser storage or the DOM.
         const prepared = await arcfxApi.prepareAgentMandate(id);
+        setBanner(`Review the wallet prompt for <strong>${esc(inv.number)}</strong>. You are signing an <strong>ArcFX Agent Mandate</strong> for this evaluation only — not a payment.`);
         const mandateSignature = await arcfxApi.signAgentMandate(prepared.signingMessage);
+        setBanner(`Mandate received. Evaluating persisted invoice, policy, and evidence for <strong>${esc(inv.number)}</strong>…`);
         const submitted = await arcfxApi.submitAgentMandate(prepared.preparationToken, mandateSignature);
         // The exact Agent Mandate signature authorizes this server-side,
         // analysis-only orchestration. It never opens a transaction request.
@@ -356,19 +411,7 @@
           throw new Error("The server returned an invalid sealed Agent Evidence bundle.");
         }
         latestAgentEvidence = { bundle: proof.sealedBundle, bundleId: String(result.bundle.bundleId) };
-        setBanner(
-          `<strong>Agent Evidence created.</strong> `
-          + `Decision: <strong>${esc(d.outcome)}</strong> · `
-          + `${d.authorizedToExecute ? "authorized" : "not authorized"} · `
-          + `execution: <strong>${esc(result.execution)}</strong><br>`
-          + `Bundle: <span class="num">${esc(result.bundle.bundleId)}</span> · `
-          + `verification: <strong>${esc(result.bundle.verificationState)}</strong><br>`
-          + `<span class="row-actions" style="margin-top:10px;">`
-          + `<button class="btn btn-sm" data-fx-on="click" data-fx-act="verifyAgentEvidenceOnOcd">Verify on OnChainDiligence</button>`
-          + `<button class="btn btn-sm" data-fx-on="click" data-fx-act="downloadAgentEvidenceProof">Download proof</button>`
-          + `</span>`,
-          result.bundle.verificationState === "VALID" ? "ok" : "bad"
-        );
+        setBanner(evidenceResult(result), result.bundle.verificationState === "VALID" ? "ok" : "bad");
       } catch (err) {
         setBanner(`Agent Evidence could not be generated: ${esc(err?.message || err)}`, "bad");
       }

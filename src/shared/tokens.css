@@ -29,6 +29,7 @@
   /* ── Surface ── */
   --fx-bg:      #FFFFFF;
   --fx-surface: #FAFAFA;
+  --fx-elevated:#FFFFFF;
   --fx-sunken:  #F4F4F5;
   --fx-line:    #E5E5E5;
   --fx-line-soft: #F0F0F0;
@@ -48,6 +49,8 @@
   --fx-accent:     #0A0A0A;
   --fx-on-accent:  #FFFFFF;
   --fx-focus:      #2563EB;
+  --fx-proof:      #1D4ED8;
+  --fx-proof-bg:   #EFF6FF;
 
   /* ── State. The only place colour is allowed to carry meaning. ── */
   --fx-ok:      #15803D;  --fx-ok-bg:   #DCFCE7;
@@ -59,7 +62,16 @@
   --fx-r:    10px;
   --fx-r-sm: 6px;
   --fx-r-lg: 14px;
+  --fx-r-xl: 18px;
   --fx-gap:  16px;
+  --fx-shadow-sm: 0 1px 2px rgba(10,10,10,.04), 0 1px 3px rgba(10,10,10,.03);
+  --fx-shadow-md: 0 12px 28px rgba(10,10,10,.08), 0 2px 6px rgba(10,10,10,.04);
+  --fx-space-1: 4px;
+  --fx-space-2: 8px;
+  --fx-space-3: 12px;
+  --fx-space-4: 16px;
+  --fx-space-5: 24px;
+  --fx-space-6: 32px;
 }
 
 /* ── Document register: client-facing surfaces ──────────────────────────────
@@ -73,6 +85,7 @@
 
   --fx-bg:      #FBFAF8;
   --fx-surface: #FFFFFF;
+  --fx-elevated:#FFFFFF;
   --fx-sunken:  #F3F1EC;
   --fx-line:    #E4E0D8;
   --fx-line-soft: #EFEDE7;
@@ -129,6 +142,7 @@
 .fx-pill-warn { background: var(--fx-warn-bg); color: var(--fx-warn); }
 .fx-pill-bad  { background: var(--fx-bad-bg);  color: var(--fx-bad); }
 .fx-pill-info { background: var(--fx-info-bg); color: var(--fx-info); }
+.fx-pill-proof { background: var(--fx-proof-bg); color: var(--fx-proof); }
 
 /* Wide content scrolls inside its own box; the page never scrolls sideways. */
 .fx-scroll { overflow-x: auto; }

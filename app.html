@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ArcFX — App</title>
-  <meta name="description" content="Your ArcFX command center. Pay, invoice, swap, and reconcile stablecoins on Arc — all in one place." />
+  <meta name="description" content="Financial operations on Arc with accountable agent decisions and independently verifiable evidence trails." />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="/logo.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -158,8 +158,8 @@
     <!-- ── Status / welcome header ── -->
     <div class="status">
       <div>
-        <h1 id="greeting">Welcome to ArcFX</h1>
-        <p>Your command center for stablecoin finance operations on Arc.</p>
+        <h1 id="greeting">Financial operations, with proof.</h1>
+        <p>Run invoices and payments on Arc, then keep consequential agent decisions clear, bounded, and independently verifiable.</p>
       </div>
       <div class="status-meta">
         <div class="ctx-chip"><span class="net-dot"></span>Network: <span class="mono">Arc Testnet</span></div>
@@ -172,62 +172,62 @@
     </div>
 
     <!-- ── Quick stats ── -->
-    <div class="sec-label">At a glance</div>
+    <div class="sec-label">Operational overview</div>
     <div class="stats">
       <div class="stat">
-        <div class="stat-lbl">Wallet balance</div>
+        <div class="stat-lbl">Available balance</div>
         <div class="stat-val empty" id="statBalance">—</div>
         <div class="stat-sub" id="statBalanceSub">Connect to view</div>
       </div>
       <div class="stat">
-        <div class="stat-lbl">Volume processed</div>
+        <div class="stat-lbl">Settled volume</div>
         <div class="stat-val empty" id="statVolume">—</div>
         <a href="/analytics" class="stat-link">View in Analytics →</a>
       </div>
       <div class="stat">
-        <div class="stat-lbl">Settlements</div>
+        <div class="stat-lbl">Settlements recorded</div>
         <div class="stat-val empty" id="statSettlements">—</div>
         <a href="/history" class="stat-link">View in History →</a>
       </div>
       <div class="stat">
-        <div class="stat-lbl">Fees paid</div>
+        <div class="stat-lbl">Network fees</div>
         <div class="stat-val empty" id="statFees">—</div>
         <div class="stat-sub">0.15% payments · 0.10% batches</div>
       </div>
     </div>
 
     <!-- ── Primary action cards ── -->
-    <div class="sec-label">Start here</div>
+    <div class="sec-label">Financial workflows</div>
     <div class="actions">
       <a href="/trade" class="action">
         <div class="action-ico teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></div>
         <div class="action-body">
-          <h3>Swap &amp; Trade</h3>
-          <p>Swap USDC ↔ EURC and move funds across chains. Settles in under a second.</p>
+          <h3>Exchange &amp; bridge</h3>
+          <p>Exchange USDC and EURC or move funds across supported test networks.</p>
         </div>
         <span class="action-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></span>
       </a>
       <a href="/multisend" class="action">
         <div class="action-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></div>
         <div class="action-body">
-          <h3>Multisend</h3>
-          <p>Pay up to 500 recipients in a single transaction — payroll, vendor runs, payouts.</p>
+          <h3>Batch payouts</h3>
+          <p>Prepare a single transaction for payroll, vendor runs, or other repeated payouts.</p>
         </div>
         <span class="action-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></span>
       </a>
       <a href="/pay" class="action">
         <div class="action-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/></svg></div>
         <div class="action-body">
-          <h3>Pay Links</h3>
-          <p>Create a shareable link to request a stablecoin payment — no invoice required.</p>
+          <h3>Payment links</h3>
+          <p>Create a direct stablecoin payment request when a full invoice is not required.</p>
         </div>
         <span class="action-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></span>
       </a>
       <a href="/invoice" class="action">
         <div class="action-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
         <div class="action-body">
-          <h3>Invoices</h3>
-          <p>Generate professional invoices clients can pay on-chain in one click.</p>
+          <h3>Invoice operations</h3>
+          <p>Create, reconcile, and evaluate invoice-backed payment decisions with an evidence trail.</p>
         </div>
         <span class="action-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></span>
       </a>
@@ -237,13 +237,13 @@
     <div class="cols">
       <div class="panel">
         <div class="panel-head">
-          <h3>Recent activity</h3>
+          <h3>Operational activity</h3>
           <a href="/history" id="histLink" style="display:none;">View full history →</a>
         </div>
         <div id="activityBody">
           <div class="empty-state">
             <div class="empty-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg></div>
-            <p>No recent activity yet. Your payments, swaps, and payouts will appear here.</p>
+            <p>No activity is available yet. Settlements, swaps, and payouts appear here once recorded on Arc.</p>
             <div class="empty-ctas">
               <a href="/pay" class="mini-btn primary">Request a payment</a>
               <a href="/trade" class="mini-btn">Start a swap</a>
@@ -255,10 +255,10 @@
       <div class="side">
         <!-- Developer / API tile -->
         <div class="dev-tile">
-          <div class="tag">For developers</div>
-          <h3>Build on ArcFX</h3>
-          <p>Programmatic payments, <code>webhooks</code>, and Circle Wallets integration. Automate invoicing and payouts from your own stack.</p>
-          <a href="/developers" class="dev-link">API documentation
+          <div class="tag">Verifiable decisions</div>
+          <h3>Evidence is not approval</h3>
+          <p>An Agent Evidence bundle records the mandate, evidence, policy, decision, and execution state. Independent verification does not submit a payment or turn a decision into approval.</p>
+          <a href="/invoices" class="dev-link">Open invoice operations
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </a>
         </div>

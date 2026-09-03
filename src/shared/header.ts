@@ -38,6 +38,7 @@ import { arcfxApi } from './arcfxApi';
 // here because every page mounts this header, so the token layer arrives
 // everywhere from one place. Vite bundles it into the page's CSS.
 import './tokens.css';
+import './workspace.css';
 import { arcfxMark } from './brand';
 
 export type PageKey =
@@ -406,14 +407,11 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
     buildDropdownItem(t.href, t.name, t.sub, t.svg, t.key === activeTool)
   ).join('');
 
-  // Top-level app links — one clean group (Trade is built separately above the
-  // Tools dropdown). Pricing/Ecosystem/Security are marketing pages and are
-  // intentionally NOT in the app nav.
-  const tradeLink = buildLink('/trade', 'Trade', activeLink === 'trade');
-  const productLinks = TOP_LEVEL_LINKS
-    .filter(l => l.key === 'analytics' || l.key === 'history' || l.key === 'docs' || l.key === 'developers')
-    .map(l => buildLink(l.href, l.label, l.key === activeLink))
-    .join('');
+  // The workspace nav follows the operational journey. Secondary tools remain
+  // available, but no longer compete with invoices and their decision trail.
+  const overviewLink = buildLink('/app', 'Overview', pageKey === 'app');
+  const invoicesLink = buildLink('/invoices', 'Invoices', activeTool === 'invoice' || activeTool === 'invoices');
+  const activityLink = buildLink('/history', 'Activity', activeLink === 'history');
 
   // "More" dropdown — info pages (Pricing/Ecosystem/Security), reachable from
   // anywhere in the app but tucked away to keep the nav clean.
@@ -438,10 +436,12 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
     `<div style="padding:14px 16px 6px;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#475569;font-family:'JetBrains Mono',monospace;">${t}</div>`;
 
   const mobileMenuItems = [
-    `<a href="/trade" style="${mobileLinkStyle(activeLink === 'trade')}">Trade</a>`,
-    mobileSectionLabel('Tools'),
+    `<a href="/app" style="${mobileLinkStyle(pageKey === 'app')}">Overview</a>`,
+    `<a href="/invoices" style="${mobileLinkStyle(activeTool === 'invoice' || activeTool === 'invoices')}">Invoices</a>`,
+    `<a href="/history" style="${mobileLinkStyle(activeLink === 'history')}">Activity</a>`,
+    mobileSectionLabel('Payments'),
     ...TOOLS.map(t => `<a href="${t.href}" style="${mobileLinkStyle(activeTool === t.key)}">${t.name}</a>`),
-    mobileSectionLabel('More'),
+    mobileSectionLabel('Resources'),
     ...TOP_LEVEL_LINKS
       .filter(l => l.key === 'analytics' || l.key === 'history' || l.key === 'docs' || l.key === 'developers')
       .map(l => `<a href="${l.href}" style="${mobileLinkStyle(l.key === activeLink)}">${l.label}</a>`),
@@ -455,16 +455,17 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
     <span class="arcfx-wordmark" style="font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:16px;font-weight:700;color:var(--fx-ink);letter-spacing:-0.02em;">ArcFX</span>
   </a>
   <div class="arcfx-nav-center" style="display:flex;align-items:center;gap:2px;">
-    ${tradeLink}
+    ${overviewLink}
+    ${invoicesLink}
     <div style="position:relative;" id="arcfx-tools-wrap-${pageKey}">
-      <button id="arcfx-tools-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;border:0;outline:none;cursor:pointer;font-family:inherit;transition:all .15s;color:${toolsBtnColor};background:${toolsBtnBg};-webkit-appearance:none;">Tools <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <button id="arcfx-tools-btn-${pageKey}" aria-haspopup="menu" aria-expanded="false" style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;border:0;outline:none;cursor:pointer;font-family:inherit;transition:all .15s;color:${toolsBtnColor};background:${toolsBtnBg};-webkit-appearance:none;">Payments <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
       <div id="arcfx-tools-dd-${pageKey}" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:220px;background:#0f172a;border:1px solid var(--fx-line);border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
         ${dropdownItems}
       </div>
     </div>
-    ${productLinks}
+    ${activityLink}
     <div style="position:relative;" id="arcfx-more-wrap-${pageKey}">
-      <button id="arcfx-more-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;border:0;outline:none;cursor:pointer;font-family:inherit;transition:all .15s;color:${moreBtnColor};background:${moreBtnBg};-webkit-appearance:none;">More <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <button id="arcfx-more-btn-${pageKey}" aria-haspopup="menu" aria-expanded="false" style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;border:0;outline:none;cursor:pointer;font-family:inherit;transition:all .15s;color:${moreBtnColor};background:${moreBtnBg};-webkit-appearance:none;">Resources <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
       <div id="arcfx-more-dd-${pageKey}" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:160px;background:#0f172a;border:1px solid var(--fx-line);border-radius:10px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.6);z-index:100;">
         ${moreItems}
       </div>
@@ -488,7 +489,7 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
         <button id="arcfx-disconnect-btn" role="menuitem" style="width:100%;margin-top:6px;padding:9px;text-align:left;border:0;border-radius:6px;background:transparent;color:#fca5a5;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;">Disconnect</button>
       </div>
     </div>
-    <button class="arcfx-hamburger" id="arcfx-hamburger-${pageKey}" aria-label="Menu" style="align-items:center;justify-content:center;width:38px;height:38px;border-radius:8px;border:1px solid var(--fx-line);background:#0f172a;color:#cbd5e1;cursor:pointer;flex-shrink:0;padding:0;">
+    <button class="arcfx-hamburger" id="arcfx-hamburger-${pageKey}" aria-label="Menu" aria-expanded="false" style="align-items:center;justify-content:center;width:38px;height:38px;border-radius:8px;border:1px solid var(--fx-line);background:#0f172a;color:#cbd5e1;cursor:pointer;flex-shrink:0;padding:0;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
   </div>
@@ -533,11 +534,14 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
   if (hamburger && mobileMenu) {
     hamburger.addEventListener('click', (e) => {
       e.stopPropagation();
-      mobileMenu.style.display = mobileMenu.style.display === 'block' ? 'none' : 'block';
+      const open = mobileMenu.style.display !== 'block';
+      mobileMenu.style.display = open ? 'block' : 'none';
+      hamburger.setAttribute('aria-expanded', String(open));
     });
     document.addEventListener('click', (e) => {
       if (!mobileMenu.contains(e.target as Node) && !hamburger.contains(e.target as Node)) {
         mobileMenu.style.display = 'none';
+        hamburger.setAttribute('aria-expanded', 'false');
       }
     });
   }
@@ -549,10 +553,15 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
   if (toolsBtn && toolsDd && toolsWrap) {
     toolsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      toolsDd.style.display = toolsDd.style.display === 'block' ? 'none' : 'block';
+      const open = toolsDd.style.display !== 'block';
+      toolsDd.style.display = open ? 'block' : 'none';
+      toolsBtn.setAttribute('aria-expanded', String(open));
     });
     document.addEventListener('click', (e) => {
-      if (!toolsWrap.contains(e.target as Node)) toolsDd.style.display = 'none';
+      if (!toolsWrap.contains(e.target as Node)) {
+        toolsDd.style.display = 'none';
+        toolsBtn.setAttribute('aria-expanded', 'false');
+      }
     });
   }
 
@@ -563,12 +572,37 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
   if (moreBtn && moreDd && moreWrap) {
     moreBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      moreDd.style.display = moreDd.style.display === 'block' ? 'none' : 'block';
+      const open = moreDd.style.display !== 'block';
+      moreDd.style.display = open ? 'block' : 'none';
+      moreBtn.setAttribute('aria-expanded', String(open));
     });
     document.addEventListener('click', (e) => {
-      if (!moreWrap.contains(e.target as Node)) moreDd.style.display = 'none';
+      if (!moreWrap.contains(e.target as Node)) {
+        moreDd.style.display = 'none';
+        moreBtn.setAttribute('aria-expanded', 'false');
+      }
     });
   }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const mobile = document.getElementById(`arcfx-mobile-menu-${pageKey}`) as HTMLElement | null;
+    const mobileButton = document.getElementById(`arcfx-hamburger-${pageKey}`);
+    const toolsMenu = document.getElementById(`arcfx-tools-dd-${pageKey}`) as HTMLElement | null;
+    const toolsButton = document.getElementById(`arcfx-tools-btn-${pageKey}`);
+    const moreMenu = document.getElementById(`arcfx-more-dd-${pageKey}`) as HTMLElement | null;
+    const moreButton = document.getElementById(`arcfx-more-btn-${pageKey}`);
+    const accountMenu = document.getElementById('arcfx-account-menu') as HTMLElement | null;
+    const accountButton = document.getElementById('connect-btn');
+    if (mobile) mobile.style.display = 'none';
+    mobileButton?.setAttribute('aria-expanded', 'false');
+    if (toolsMenu) toolsMenu.style.display = 'none';
+    toolsButton?.setAttribute('aria-expanded', 'false');
+    if (moreMenu) moreMenu.style.display = 'none';
+    moreButton?.setAttribute('aria-expanded', 'false');
+    if (accountMenu) accountMenu.style.display = 'none';
+    accountButton?.setAttribute('aria-expanded', 'false');
+  });
 
   // Contacts modal
   const contactsBtn   = document.getElementById(`arcfx-contacts-btn-${pageKey}`);

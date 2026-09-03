@@ -5,6 +5,8 @@ import { webcrypto } from "node:crypto";
 import { createServer } from "vite";
 import { Wallet } from "ethers";
 
+const invoicesSource = fs.readFileSync(new URL("../invoices.html", import.meta.url), "utf8");
+
 class MemoryStorage {
   #values = new Map();
   getItem(key) { return this.#values.has(key) ? this.#values.get(key) : null; }
@@ -978,4 +980,15 @@ test("OCD proof handoff is pinned to the opened verifier and downloads the same 
   } finally {
     await server.close();
   }
+});
+
+test("invoice Agent Evidence result keeps decision, execution, and verification distinct", () => {
+  assert.match(invoicesSource, /evidence-state-label">Decision/);
+  assert.match(invoicesSource, /evidence-state-label">Execution/);
+  assert.match(invoicesSource, /evidence-state-label">Verification/);
+  assert.match(invoicesSource, /No payment was submitted/);
+  assert.match(invoicesSource, /A valid proof does not mean this payment was approved or submitted/);
+  assert.match(invoicesSource, /ArcFX Agent Mandate/);
+  assert.match(invoicesSource, /Verify on OnChainDiligence/);
+  assert.match(invoicesSource, /Download proof/);
 });
