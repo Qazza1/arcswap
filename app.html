@@ -138,13 +138,14 @@
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   </style>
 </head>
-<body>
+<body class="workspace-overview">
+  <a class="workspace-skip" href="#workspace-main">Skip to workspace</a>
 
   <!-- ── Shared header (stats bar + product nav) — same as every app page ── -->
   <div id="arcfx-stats-bar"></div>
   <div id="arcfx-nav"></div>
 
-  <div class="wrap">
+  <main class="wrap" id="workspace-main" tabindex="-1">
 
     <!-- ── Wrong-network banner (hidden unless wallet is off Arc Testnet) ── -->
     <div id="netBanner" style="display:none;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:rgba(234,179,8,.07);border:1px solid rgba(234,179,8,.28);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:24px;">
@@ -158,7 +159,7 @@
     <!-- ── Status / welcome header ── -->
     <div class="status">
       <div>
-        <h1 id="greeting">Financial operations, with proof.</h1>
+        <h1 id="greeting">Your ArcFX workspace</h1>
         <p>Run invoices and payments on Arc, then keep consequential agent decisions clear, bounded, and independently verifiable.</p>
       </div>
       <div class="status-meta">
@@ -171,14 +172,30 @@
       </div>
     </div>
 
-    <!-- ── Quick stats ── -->
-    <div class="sec-label">Operational overview</div>
+    <section class="workspace-entry" id="workspace-entry" aria-labelledby="entry-title">
+      <div class="sec-label">Wallet-first workspace</div>
+      <h2 id="entry-title">Connect your wallet to open your ArcFX workspace.</h2>
+      <p id="entry-description">Choose your wallet, then verify ownership with an ArcFX session signature. This does not authorize a payment.</p>
+      <button type="button" class="workspace-primary" id="workspace-connect">Connect wallet</button>
+      <p id="entry-feedback" role="status" aria-live="polite"></p>
+      <ol class="workspace-steps"><li>Connect your wallet</li><li>Verify ownership</li><li>Open your workspace</li></ol>
+      <p class="workspace-note">Your owner session is reused across pages. Disconnect only signs you out of ArcFX in this browser tab.</p>
+    </section>
+
+    <section id="workspace-private" hidden aria-label="Verified wallet workspace">
+      <div class="workspace-balance"><h2>Your wallet balances</h2><p id="statBalance">—</p><p id="statBalanceSub">—</p></div>
+    <!-- ── Primary action cards ── -->
+    <h2 class="sec-label">Financial workflows</h2>
+    <div class="actions">
+      <a href="/invoices" class="action"><div class="action-body"><h3>Invoices</h3><p>Track your receivables and their evidence trail.</p></div></a>
+      <a href="/invoice" class="action"><div class="action-body"><h3>New invoice</h3><p>Create an invoice and share a payment request.</p></div></a>
+    </div>
+    </section>
+
+    <section class="workspace-protocol" aria-labelledby="protocol-title">
+    <h2 id="protocol-title">Protocol activity</h2>
+    <p>All wallets · Arc Testnet · Not your personal activity</p>
     <div class="stats">
-      <div class="stat">
-        <div class="stat-lbl">Available balance</div>
-        <div class="stat-val empty" id="statBalance">—</div>
-        <div class="stat-sub" id="statBalanceSub">Connect to view</div>
-      </div>
       <div class="stat">
         <div class="stat-lbl">Settled volume</div>
         <div class="stat-val empty" id="statVolume">—</div>
@@ -187,17 +204,18 @@
       <div class="stat">
         <div class="stat-lbl">Settlements recorded</div>
         <div class="stat-val empty" id="statSettlements">—</div>
-        <a href="/history" class="stat-link">View in History →</a>
+        <a href="/analytics" class="stat-link">View protocol analytics →</a>
       </div>
       <div class="stat">
-        <div class="stat-lbl">Network fees</div>
+        <div class="stat-lbl">Protocol fees</div>
         <div class="stat-val empty" id="statFees">—</div>
         <div class="stat-sub">0.15% payments · 0.10% batches</div>
       </div>
     </div>
+    </section>
 
     <!-- ── Primary action cards ── -->
-    <div class="sec-label">Financial workflows</div>
+    <h2 class="sec-label">More tools</h2>
     <div class="actions">
       <a href="/trade" class="action">
         <div class="action-ico teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></div>
@@ -235,9 +253,9 @@
 
     <!-- ── Activity + side ── -->
     <div class="cols">
-      <div class="panel">
+      <div class="panel" id="workspace-activity" hidden>
         <div class="panel-head">
-          <h3>Operational activity</h3>
+          <h2>Your recent activity</h2>
           <a href="/history" id="histLink" style="display:none;">View full history →</a>
         </div>
         <div id="activityBody">
@@ -256,7 +274,7 @@
         <!-- Developer / API tile -->
         <div class="dev-tile">
           <div class="tag">Verifiable decisions</div>
-          <h3>Evidence is not approval</h3>
+          <h2>Evidence is not approval</h2>
           <p>An Agent Evidence bundle records the mandate, evidence, policy, decision, and execution state. Independent verification does not submit a payment or turn a decision into approval.</p>
           <a href="/invoices" class="dev-link">Open invoice operations
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -284,11 +302,13 @@
       </div>
     </div>
 
-  </div>
+  </main>
 
   <script type="module">
     import { arcfxMountHeader } from '/src/shared/header.ts';
     import { arcfxWallet } from '/src/shared/wallet.ts';
+    import { arcfxAuth } from '/src/shared/auth.ts';
+    import { arcfxApi } from '/src/shared/arcfxApi.ts';
     import { createWalletLoadGuard } from '/src/shared/walletLoadGuard.ts';
     arcfxMountHeader({ pageKey: 'app', activeLink: null, activeTool: null });
     try { localStorage.setItem('arcfx_returning', '1'); } catch (e) {}
@@ -328,15 +348,10 @@
     }
 
     // ── Wrong-network detection ──
-    async function checkNetwork(){
+    function checkNetwork(){
       var banner = document.getElementById('netBanner');
-      if (!banner || !arcfxWallet.provider) return true;
-      try {
-        var cid = await arcfxWallet.request({ method:'eth_chainId' });
-        var ok = String(cid || '').toLowerCase() === ARC_CHAIN_ID;
-        banner.style.display = ok ? 'none' : 'flex';
-        return ok;
-      } catch (e) { return true; }
+      if (banner) banner.style.display = arcfxWallet.connected && !arcfxWallet.onArc ? 'flex' : 'none';
+      return arcfxWallet.onArc;
     }
     async function switchNetwork(){
       if (!arcfxWallet.provider) return;
@@ -361,13 +376,10 @@
     async function hydrate(addr, ticket){
       if (!dashboardLoads.isCurrent(ticket)) return;
       currentAddr = addr;
-      try { if (localStorage.getItem('arcfx_returning') === '1') document.getElementById('greeting').textContent = 'Welcome back'; } catch (e) {}
       var ctx = document.getElementById('ctxWallet');
       if (ctx) ctx.innerHTML = 'Wallet: <span class="mono">' + short(addr) + '</span>';
       var hist = document.getElementById('histLink'); if (hist) hist.style.display = 'inline';
       var refresh = document.getElementById('refreshBtn'); if (refresh) refresh.style.display = 'inline-flex';
-      var cb = document.getElementById('connect-btn');
-      if (cb) { cb.textContent = short(addr); cb.title = addr; }
 
       var usdc = await readBalance(TOKENS.USDC, addr);
       var eurc = await readBalance(TOKENS.EURC, addr);
@@ -377,10 +389,9 @@
       if (usdc === null && eurc === null) {
         el.textContent = '—'; sub.textContent = 'Could not load balance';
       } else {
-        var total = (usdc || 0) + (eurc || 0);
         el.classList.remove('empty');
-        el.textContent = '$' + fmt(total);
-        sub.textContent = fmt(usdc || 0) + ' USDC · ' + fmt(eurc || 0) + ' EURC';
+        el.textContent = (usdc === null ? 'Unavailable' : fmt(usdc)) + ' USDC';
+        sub.textContent = (eurc === null ? 'Unavailable' : fmt(eurc)) + ' EURC';
       }
     }
 
@@ -488,7 +499,7 @@
     }
 
     function refreshAll(addr){
-      if (!addr) return;
+      if (!addr || !arcfxAuth.currentOwnerSession() || !arcfxWallet.onArc) return;
       currentAddr = addr;
       var ticket = dashboardLoads.begin(addr);
       hydrate(addr, ticket);
@@ -500,7 +511,7 @@
     // otherwise the previous account's balances stay on screen.
     function clearWalletPanels(){
       var activity = document.getElementById('activityBody');
-      if (activity) activity.replaceChildren();
+      if (activity) activity.textContent = 'No recent activity available. View Activity for more history.';
       ['statBalance','statBalanceSub','statSent','statSentSub'].forEach(function(id){
         var n = document.getElementById(id);
         if (n) n.textContent = '—';
@@ -510,7 +521,7 @@
     function clearBalances(){
       currentAddr = null;
       var ctx = document.getElementById('ctxWallet');
-      if (ctx) ctx.textContent = 'Connect a wallet to see your balances.';
+      if (ctx) ctx.textContent = 'Wallet not verified';
       var hist = document.getElementById('histLink'); if (hist) hist.style.display = 'none';
       var refresh = document.getElementById('refreshBtn'); if (refresh) refresh.style.display = 'none';
       clearWalletPanels();
@@ -542,15 +553,44 @@
     (function () {
       loadProtocolStats();            // protocol stats don't need a wallet
 
-      arcfxWallet.onChange(function (state) {
-        dashboardLoads.transition(state.connected && state.address ? state.address : null);
-        // Clear the previous account immediately while the new wallet's RPC
-        // reads are loading. Old continuations carry an invalidated ticket.
-        clearWalletPanels();
+      var entryButton = document.getElementById('workspace-connect');
+      var entryFeedback = document.getElementById('entry-feedback');
+      var entryBusy = false;
+      function renderWorkspace(){
+        var verified = Boolean(arcfxAuth.currentOwnerSession()) && arcfxWallet.onArc;
+        var address = verified ? arcfxWallet.address : null;
+        dashboardLoads.transition(address);
+        document.getElementById('workspace-entry').hidden = verified;
+        document.getElementById('workspace-private').hidden = !verified;
+        document.getElementById('workspace-activity').hidden = !verified;
+        document.getElementById('entry-title').textContent = arcfxWallet.connected
+          ? 'Verify ownership to open your workspace.' : 'Connect your wallet to open your ArcFX workspace.';
+        entryButton.textContent = entryBusy ? 'Continue in your wallet…' : arcfxWallet.connected ? 'Verify wallet ownership' : 'Connect wallet';
+        entryButton.disabled = entryBusy || (arcfxWallet.connected && !arcfxWallet.onArc);
         checkNetwork();
-        if (state.connected && state.address) refreshAll(state.address);
-        else clearBalances();
+        if (address && address !== currentAddr) refreshAll(address);
+        if (!address) clearBalances();
+      }
+      entryButton.addEventListener('click', async function(){
+        if (entryBusy) return;
+        entryBusy = true;
+        entryFeedback.textContent = 'Connect your selected wallet and approve the ArcFX session message. No payment is requested.';
+        renderWorkspace();
+        try {
+          await arcfxApi.connectOwner();
+          entryFeedback.textContent = '';
+        } catch (error) {
+          entryFeedback.textContent = 'Wallet verification was not completed. Nothing was submitted. You can try again.';
+        } finally {
+          entryBusy = false;
+          renderWorkspace();
+        }
       });
+      arcfxWallet.onChange(renderWorkspace);
+      arcfxAuth.onChange(renderWorkspace);
+      arcfxAuth.ready().then(renderWorkspace);
+      // Re-check the existing session's expiry without asking for a signature.
+      window.setInterval(renderWorkspace, 30000);
 
       var sw = document.getElementById('switchNetBtn');
       if (sw) sw.addEventListener('click', switchNetwork);

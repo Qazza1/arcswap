@@ -1,333 +1,43 @@
 <!DOCTYPE html>
-<!-- Instrument register:light, near-monochrome, colour reserved for state.
-     Tokens: src/shared/tokens.css -->
 <html lang="en" data-register="app">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ArcFX Pricing — Simple, transparent stablecoin pricing</title>
-  <meta name="description" content="Free for individuals. A 0.15% protocol fee on payments processed, 0.10% on Multisend batches, and $99/month for API access. No subscriptions for the core ArcFX tools." />
-  <link rel="canonical" href="https://arcfx.app/pricing" />
-
-  <!-- OpenGraph -->
-  <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="ArcFX" />
-  <meta property="og:url" content="https://arcfx.app/pricing" />
-  <meta property="og:title" content="ArcFX Pricing — Simple, transparent stablecoin pricing" />
-  <meta property="og:description" content="Free for individuals. A 0.15% protocol fee on payments processed, 0.10% on Multisend batches, and $99/month for API access. No subscriptions for the core ArcFX tools." />
-  <meta property="og:image" content="https://arcfx.app/og-image.png" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:site" content="@arcfxapp" />
-  <meta name="twitter:title" content="ArcFX Pricing — Simple, transparent stablecoin pricing" />
-  <meta name="twitter:description" content="Free for individuals. A 0.15% protocol fee on payments processed, 0.10% on Multisend batches, and $99/month for API access. No subscriptions for the core ArcFX tools." />
-  <meta name="twitter:image" content="https://arcfx.app/og-image.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
+  <title>ArcFX Pricing — Transparent transaction fees</title>
+  <meta name="description" content="Current ArcFX Testnet payment and multisend fees, with third-party costs clearly separated." />
+  <link rel="canonical" href="https://www.arcfx.app/pricing" />
   <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:var(--fx-body);background:var(--fx-bg);color:var(--fx-ink);line-height:1.6;-webkit-font-smoothing:antialiased;}
-    a{text-decoration:none;}
-    nav{position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:0 24px;background:var(--fx-bg);border-bottom:1px solid var(--fx-line);}
-    .page{max-width:1000px;margin:0 auto;padding:64px 28px 100px;}
-    .eyebrow{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;color:var(--fx-accent);text-transform:uppercase;letter-spacing:0.14em;margin-bottom:14px;}
-    h1{font-size:clamp(32px,4vw,48px);font-weight:700;color:var(--fx-ink);letter-spacing:-1px;line-height:1.15;margin-bottom:14px;}
-    .sub{font-size:16px;color:var(--fx-muted);line-height:1.7;max-width:560px;margin-bottom:56px;}
-    /* Pricing cards */
-    .plans{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--fx-line);border:1px solid var(--fx-line);border-radius:12px;overflow:hidden;margin-bottom:64px;}
-    @media(max-width:768px){.plans{grid-template-columns:1fr;}}
-    .plan{background:var(--fx-surface);padding:32px 28px;display:flex;flex-direction:column;}
-    .plan.featured{background:var(--fx-sunken);position:relative;}
-    .plan-label{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;color:var(--fx-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:16px;}
-    .plan-price{font-size:42px;font-weight:700;color:var(--fx-ink);letter-spacing:-1.5px;margin-bottom:4px;font-family:"JetBrains Mono",monospace;}
-    .plan-price span{font-size:16px;color:var(--fx-muted);font-weight:400;letter-spacing:0;}
-    .plan-desc{font-size:13.5px;color:var(--fx-muted);line-height:1.7;margin-bottom:28px;flex:1;}
-    .plan-features{display:flex;flex-direction:column;gap:10px;margin-bottom:28px;}
-    .feature{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--fx-muted);}
-    .feature svg{flex-shrink:0;margin-top:2px;color:var(--fx-ok);}
-    .plan-cta{display:block;text-align:center;padding:12px;border-radius:7px;font-size:14px;font-weight:600;transition:all .15s;cursor:pointer;font-family:inherit;}
-    .cta-primary{background:var(--fx-accent);color:var(--fx-on-accent);border:none;}
-    .cta-primary:hover{background:var(--fx-accent);}
-    .cta-ghost{background:transparent;color:var(--fx-muted);border:1px solid var(--fx-line);}
-    .cta-ghost:hover{border-color:var(--fx-accent);color:var(--fx-accent);}
-    .featured-badge{position:absolute;top:0;left:50%;transform:translateX(-50%);background:var(--fx-accent);color:var(--fx-on-accent);font-size:10px;font-weight:700;padding:3px 12px;border-radius:0 0 6px 6px;letter-spacing:0.06em;text-transform:uppercase;}
-    /* Fee calculator */
-    .calc{background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:12px;padding:32px;margin-bottom:64px;}
-    .calc-title{font-size:17px;font-weight:600;color:var(--fx-ink);margin-bottom:6px;}
-    .calc-sub{font-size:13px;color:var(--fx-muted);margin-bottom:24px;}
-    .calc-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center;}
-    @media(max-width:600px){.calc-row{grid-template-columns:1fr;}}
-    .calc-input-wrap{background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:8px;}
-    .calc-input{background:transparent;border:none;outline:none;font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:500;color:var(--fx-ink);width:100%;}
-    .calc-label{font-size:11px;color:var(--fx-muted);font-family:"JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
-    .calc-result{background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:8px;padding:16px;}
-    .calc-result-val{font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:500;color:var(--fx-ok);}
-    .calc-result-label{font-size:11px;color:var(--fx-muted);margin-top:4px;}
-    .calc-arrow{text-align:center;color:var(--fx-muted);font-size:20px;}
-    /* FAQ */
-    .faq-title{font-size:22px;font-weight:700;color:var(--fx-ink);letter-spacing:-0.5px;margin-bottom:24px;}
-    .faq-item{border-bottom:1px solid var(--fx-line);padding:20px 0;}
-    .faq-q{font-size:14px;font-weight:600;color:var(--fx-ink);margin-bottom:8px;}
-    .faq-a{font-size:13.5px;color:var(--fx-muted);line-height:1.7;}
-    /* Section divider */
-    .section-title{font-size:20px;font-weight:700;color:var(--fx-ink);letter-spacing:-0.3px;margin-bottom:24px;}
-    /* Compare table */
-    .compare{width:100%;border-collapse:collapse;margin-bottom:64px;font-size:13.5px;}
-    .compare th{text-align:left;padding:12px 16px;font-size:10px;font-family:"JetBrains Mono",monospace;font-weight:600;color:var(--fx-muted);text-transform:uppercase;letter-spacing:0.1em;background:var(--fx-sunken);border-bottom:1px solid var(--fx-line);}
-    .compare td{padding:14px 16px;border-bottom:1px solid var(--fx-surface);color:var(--fx-muted);vertical-align:top;}
-    .compare tr:hover td{background:var(--fx-sunken);}
-    .compare td:first-child{color:var(--fx-ink);font-weight:500;}
-    .compare td.green{color:var(--fx-ok);font-weight:600;}
-    .compare td.muted{color:var(--fx-muted);}
-      @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-  
-    /* Stats bar */
-    .stats-bar { background:var(--fx-bg); border-bottom:1px solid var(--fx-line); height:36px; display:flex; align-items:center; }
-    .stats-bar-inner { display:flex; align-items:center; justify-content:center; gap:0; width:100%; padding:0 24px; }
-    .stats-bar-item { display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
-    .stats-bar-dot { width:5px; height:5px; border-radius:50%; background:var(--fx-ok-bg); box-shadow:0 0 5px var(--fx-ok-bg); animation:pulse 2s ease-in-out infinite; }
-    .stats-bar-label { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--fx-muted); }
-    .stats-bar-val { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500; color:var(--fx-ink); }
-    .stats-bar-sep { width:1px; height:14px; background:var(--fx-line); margin:0 20px; flex-shrink:0; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    *,*::before,*::after{box-sizing:border-box}body{margin:0;background:var(--fx-bg);color:var(--fx-ink);font-family:var(--fx-body);line-height:1.5}a{text-decoration:none}.skip{position:fixed;z-index:300;top:8px;left:8px;padding:9px 12px;border-radius:6px;background:var(--fx-ink);color:var(--fx-on-accent);transform:translateY(-160%)}.skip:focus{transform:translateY(0)}.page{width:min(1000px,calc(100% - 48px));margin:0 auto;padding:72px 0 100px}.eyebrow{margin:0 0 12px;color:var(--fx-muted);font:600 10px var(--fx-mono);letter-spacing:.14em;text-transform:uppercase}h1{max-width:680px;margin:0;font:700 clamp(38px,5vw,58px)/1.05 var(--fx-display);letter-spacing:-.05em;text-wrap:balance}.lede{max-width:680px;margin:20px 0 40px;color:var(--fx-muted);font-size:17px;line-height:1.7}.notice{display:flex;gap:12px;align-items:flex-start;margin-bottom:44px;padding:15px 16px;border:1px solid var(--fx-warn-bg);border-radius:9px;background:var(--fx-warn-bg);color:#714700;font-size:13px;line-height:1.6}.notice b{white-space:nowrap}.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:64px}.plan{min-height:235px;padding:22px;border:1px solid var(--fx-line);border-radius:11px;background:var(--fx-surface)}.plan h2{margin:0;font-size:16px}.fee{margin:25px 0 8px;font:600 32px/1 var(--fx-mono);letter-spacing:-.045em}.unit{color:var(--fx-muted);font-size:12px}.plan p{margin:16px 0 0;color:var(--fx-muted);font-size:13px;line-height:1.65}.section{margin-top:64px}.section h2{margin:0;font:650 24px/1.2 var(--fx-display);letter-spacing:-.025em}.section>p{max-width:680px;margin:12px 0 24px;color:var(--fx-muted);font-size:14px;line-height:1.7}.calculator{padding:24px;border:1px solid var(--fx-line);border-radius:11px;background:var(--fx-surface)}.calculator-grid{display:grid;grid-template-columns:1.1fr auto 1fr;gap:16px;align-items:end}.field-label,.result-label{display:block;margin-bottom:7px;color:var(--fx-muted);font:600 10px var(--fx-mono);letter-spacing:.09em;text-transform:uppercase}.input-wrap,.result{min-height:58px;padding:13px;border:1px solid var(--fx-line);border-radius:7px;background:var(--fx-elevated)}.input-wrap{display:flex;gap:8px;align-items:center}.input-wrap span{color:var(--fx-muted);font:500 15px var(--fx-mono)}input{width:100%;border:0;outline:0;background:transparent;color:var(--fx-ink);font:500 19px var(--fx-mono)}.calc-arrow{padding:0 3px 18px;color:var(--fx-muted)}.result strong{display:block;font:600 20px var(--fx-mono)}.result small{display:block;margin-top:5px;color:var(--fx-muted);font-size:11px;line-height:1.4}.comparison-scroll{overflow-x:auto;border:1px solid var(--fx-line);border-radius:10px}.comparison-scroll:focus-visible{outline:2px solid var(--fx-focus);outline-offset:3px}.comparison{width:100%;min-width:650px;border-collapse:collapse;font-size:13px}.comparison th,.comparison td{text-align:left;padding:15px 16px;border-bottom:1px solid var(--fx-line)}.comparison th{background:var(--fx-sunken);color:var(--fx-muted);font:600 10px var(--fx-mono);letter-spacing:.08em;text-transform:uppercase}.comparison td{color:var(--fx-muted);line-height:1.5}.comparison td:first-child{color:var(--fx-ink);font-weight:600}.comparison tr:last-child td{border-bottom:0}.faq{display:grid;gap:0;border-top:1px solid var(--fx-line)}.faq article{padding:19px 0;border-bottom:1px solid var(--fx-line)}.faq h3{margin:0 0 7px;font-size:14px}.faq p{max-width:760px;margin:0;color:var(--fx-muted);font-size:13px;line-height:1.7}.cta{display:inline-flex;margin-top:32px;padding:10px 16px;border-radius:7px;background:var(--fx-ink);color:var(--fx-on-accent);font-size:14px;font-weight:650}.cta:hover{opacity:.88}@media(max-width:700px){.plans{grid-template-columns:1fr}.plan{min-height:0}.calculator-grid{grid-template-columns:1fr}.calc-arrow{display:none}}@media(max-width:520px){.page{width:min(100% - 32px,1000px);padding-top:54px}.notice{display:block}.notice b{display:block;margin-bottom:4px}h1{font-size:38px}}
   </style>
 </head>
 <body>
-  <!-- Header mount points — populated by /src/shared/header.ts -->
-  <div id="arcfx-stats-bar"></div>
-  <div id="arcfx-nav"></div>
-
-  <!-- Shared header module — single source of truth across all pages.
-       Edit /src/shared/header.ts to change the nav/stats-bar everywhere. -->
+  <a class="skip" href="#main-content">Skip to content</a>
+  <div id="arcfx-stats-bar"></div><div id="arcfx-nav"></div>
+  <main id="main-content" class="page">
+    <p class="eyebrow">Current Testnet pricing</p>
+    <h1>Simple fee rules, shown before an action.</h1>
+    <p class="lede">ArcFX does not present subscription plans or account tiers for the current core tools. The applicable ArcFX fee is tied to the selected payment or multisend path; network and third-party charges are separate.</p>
+    <aside class="notice"><b>Arc Testnet release</b><span>Amounts here describe the current test environment. Mainnet production release work is being finalized separately.</span></aside>
+    <section class="plans" aria-label="ArcFX fees">
+      <article class="plan"><h2>Payments</h2><div class="fee">0.15%</div><span class="unit">of the payment amount</span><p>The payment fee is shown when a payment path applies. The recipient amount and the fee are presented separately.</p></article>
+      <article class="plan"><h2>Multisend</h2><div class="fee">0.10%</div><span class="unit">Pro batch fee</span><p>Multisend supports small recipient groups and larger Pro batches. Review the current batch details before any wallet action.</p></article>
+      <article class="plan"><h2>Third-party costs</h2><div class="fee">Separate</div><span class="unit">not set by ArcFX</span><p>Network, wallet-provider, token, or other third-party costs can apply independently. They are not included in the ArcFX percentage.</p></article>
+    </section>
+    <section class="section" aria-labelledby="calculator-title">
+      <h2 id="calculator-title">Payment fee calculator</h2><p>Illustrative calculation for the ArcFX 0.15% payment fee. This is not a quote and does not initiate a payment.</p>
+      <div class="calculator"><div class="calculator-grid"><div><label class="field-label" for="calc-amount">Payment amount recipient should receive</label><div class="input-wrap"><span>USDC</span><input id="calc-amount" type="number" value="1000" min="0" step="0.01" inputmode="decimal" /></div></div><span class="calc-arrow" aria-hidden="true">→</span><div><span class="result-label">Estimated ArcFX fee</span><output class="result" for="calc-amount"><strong id="calc-fee">1.50 USDC</strong><small id="calc-total">Payer total: 1001.50 USDC</small></output></div></div></div>
+    </section>
+    <section class="section" aria-labelledby="comparison-title"><h2 id="comparison-title">What each cost represents</h2><p>The comparison remains scrollable inside its own container on small screens so the page itself does not overflow horizontally.</p><div class="comparison-scroll" role="region" aria-label="Fee comparison" tabindex="0"><table class="comparison"><thead><tr><th>Path</th><th>ArcFX fee</th><th>When it applies</th><th>Separate costs</th></tr></thead><tbody><tr><td>Payment</td><td>0.15%</td><td>When using an applicable payment path</td><td>Network and third-party wallet or token costs</td></tr><tr><td>Multisend</td><td>0.10% Pro batch fee</td><td>When using a qualifying Pro batch</td><td>Network and third-party wallet or token costs</td></tr><tr><td>Workspace and evidence</td><td>Not represented as a subscription</td><td>Use the current in-product flow and disclosures</td><td>Any separately disclosed third-party cost</td></tr></tbody></table></div></section>
+    <section class="section" aria-labelledby="faq-title"><h2 id="faq-title">Questions</h2><div class="faq"><article><h3>Which assets are in the current release?</h3><p>The current workspace is operated on Arc Testnet. In-product availability and the relevant payment path determine which supported token is used.</p></article><article><h3>Does Agent Evidence add a payment fee or execute a payment?</h3><p>Agent Evidence analyzes and records a decision trail. It does not approve, submit, or execute a payment.</p></article><article><h3>Is Mainnet live through this public page?</h3><p>No. The public site describes the current Arc Testnet release. Mainnet production release work is being finalized separately.</p></article></div><a class="cta" href="/app">Open app →</a></section>
+  </main>
   <script type="module">
     import { arcfxMountHeader } from '/src/shared/header.ts';
-    arcfxMountHeader({
-      pageKey:'pricing',
-      activeLink: 'pricing',
-      activeTool: null,
-      mode: 'product'
-    });
-  
-    /* ── Event wiring (static markup) ──────────────────────────────
-       Replaces inline on* attributes so script-src needs no 'unsafe-inline'.
-       Each callback keeps the inline handler's semantics: a plain function, so
-       `this` is the element, and a parameter named `event`. */
-    function __fxOn(id, ev, fn) {
-      document.querySelectorAll('[data-fxh~="' + id + '"]').forEach(function (el) {
-        el.addEventListener(ev, fn);
-      });
-    }
-    __fxOn("h1", "input", function (event) { calcFee(); });
+    arcfxMountHeader({ pageKey: 'pricing', activeLink: 'pricing', mode: 'marketing' });
+    const input = document.getElementById('calc-amount');
+    const fee = document.getElementById('calc-fee');
+    const total = document.getElementById('calc-total');
+    const update = () => { const amount = Math.max(0, Number(input?.value) || 0); const calculated = amount * 0.0015; fee.textContent = calculated.toFixed(2) + ' USDC'; total.textContent = 'Payer total: ' + (amount + calculated).toFixed(2) + ' USDC'; };
+    input?.addEventListener('input', update);
   </script>
-
-  <div class="page">
-
-    <!-- Header -->
-    <div class="eyebrow">Pricing</div>
-    <h1>Simple, transparent pricing.<br>No surprises.</h1>
-    <p class="sub">A 0.15% protocol fee on payments processed, and 0.10% on Multisend batches. No monthly fees for the UI tools. Pay only for what you use — all settled in USDC on-chain.</p>
-
-    <!-- Clarifier:pricing is usage-based, not a plan to choose -->
-    <div style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-left:3px solid var(--fx-ink);border-radius:8px;padding:14px 18px;margin-bottom:32px;font-size:13px;color:var(--fx-muted);line-height:1.7;">
-      ArcFX is one product — there's no signup or plan to choose. The tiers below describe how fees apply at different usage levels. The 0.15% payment fee is added on top of the payment on-chain the moment a payment is sent, so the recipient always receives the full amount. Multisend batches are charged 0.10% by a separate contract.
-    </div>
-
-    <!-- Plans -->
-    <div class="plans">
-
-      <!-- Free -->
-      <div class="plan">
-        <div class="plan-label">Free forever</div>
-        <div class="plan-price">$0<span>/month</span></div>
-        <p class="plan-desc">For individuals and small teams getting started with stablecoin payments on Arc.</p>
-        <div class="plan-features">
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Swap USDC ↔ EURC</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Bridge via Circle CCTP</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Pay Links &amp; Invoices</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Multisend up to 5 wallets (free)</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Transaction history + CSV export</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Address book</div>
-          <div class="feature" style="color:var(--fx-muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E6E6E" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>API access</div>
-          <div class="feature" style="color:var(--fx-muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E6E6E" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Webhooks</div>
-        </div>
-        <a href="/" class="plan-cta cta-ghost">Open ArcFX →</a>
-      </div>
-
-      <!-- Pro -->
-      <div class="plan featured">
-        <div class="featured-badge">Most popular</div>
-        <div class="plan-label" style="margin-top:16px;">Pro</div>
-        <div class="plan-price" style="color:var(--fx-accent);">0.15%<span> per payment</span></div>
-        <p class="plan-desc">For businesses that process regular USDC/EURC payments, payroll, or invoices. Pay only when you transact.</p>
-        <div class="plan-features">
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Free</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Multisend up to 500 wallets (0.10% on batches)</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>0.15% fee on payments only</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Fee collected on-chain automatically</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>No monthly subscription</div>
-          <div class="feature" style="color:var(--fx-muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E6E6E" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Safe / Multi-sig <span style="font-size:11px;">(on the roadmap)</span></div>
-          <div class="feature" style="color:var(--fx-muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E6E6E" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>API access</div>
-          <div class="feature" style="color:var(--fx-muted);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E6E6E" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Webhooks</div>
-        </div>
-        <a href="/" class="plan-cta cta-primary" style="background:var(--fx-accent);color:var(--fx-on-accent);border:none;">Open ArcFX →</a>
-      </div>
-
-      <!-- API / Enterprise -->
-      <div class="plan">
-        <div class="plan-label">API &amp; Enterprise</div>
-        <div class="plan-price">$99<span>/month</span></div>
-        <p class="plan-desc">For teams that need programmatic access, webhooks, and a dedicated API.</p>
-        <div class="plan-features">
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Pro</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full REST API access</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Webhook delivery</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Programmatic invoice generation</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>100 API requests/minute</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Circle Wallets integration</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Priority support</div>
-          <div class="feature"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Early access to new features</div>
-        </div>
-        <a href="mailto:arcfxapp@gmail.com" class="plan-cta cta-ghost">Request API access →</a>
-      </div>
-
-    </div>
-
-    <!-- Fee calculator -->
-    <div class="calc">
-      <div class="calc-title">Fee calculator</div>
-      <div class="calc-sub">See exactly what you pay on a Pay Link or invoice. The 0.15% fee only applies to payments — swaps, bridges, and history are always free.</div>
-      <div class="calc-row">
-        <div>
-          <div class="calc-label">You send</div>
-          <div class="calc-input-wrap">
-            <input data-fxh="h1" class="calc-input" id="calc-amount" type="number" value="1000" min="0" />
-            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--fx-muted);">USDC</span>
-          </div>
-        </div>
-        <div class="calc-arrow">→</div>
-        <div>
-          <div class="calc-label">Fee (0.15%, paid by sender)</div>
-          <div class="calc-result">
-            <div class="calc-result-val" id="calc-fee">1.50 USDC</div>
-            <div class="calc-result-label">You pay <span id="calc-net" style="color:var(--fx-ink);font-weight:600;">1001.50 USDC</span> · recipient receives the full amount</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Compare -->
-    <div class="section-title">How ArcFX compares</div>
-    <table class="compare">
-      <thead>
-        <tr>
-          <th>Provider</th>
-          <th>Fee on $10,000 USDC</th>
-          <th>Settlement time</th>
-          <th>Reversible</th>
-          <th>24/7</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>ArcFX</td>
-          <td class="green">$15.00 (0.15%)</td>
-          <td class="green">&lt; 1 second</td>
-          <td style="color:var(--fx-bad);">No (final)</td>
-          <td class="green">Yes</td>
-        </tr>
-        <tr>
-          <td>Bank wire</td>
-          <td style="color:var(--fx-warn);">$25–$50 flat</td>
-          <td>1–5 business days</td>
-          <td>Possible</td>
-          <td style="color:var(--fx-muted);">No</td>
-        </tr>
-        <tr>
-          <td>Wise</td>
-          <td style="color:var(--fx-warn);">$41 (~0.41%)</td>
-          <td>1–2 business days</td>
-          <td>Limited</td>
-          <td style="color:var(--fx-muted);">No</td>
-        </tr>
-        <tr>
-          <td>Revolut Business</td>
-          <td style="color:var(--fx-warn);">$50+ (0.5%)</td>
-          <td>Instant (limits apply)</td>
-          <td>Limited</td>
-          <td>Yes</td>
-        </tr>
-        <tr>
-          <td>PayPal</td>
-          <td style="color:var(--fx-bad);">$350 (3.5%)</td>
-          <td>Instant</td>
-          <td>Yes</td>
-          <td>Yes</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <!-- FAQ -->
-    <div class="faq-title">Frequently asked questions</div>
-
-    <div class="faq-item">
-      <div class="faq-q">When is the fee charged?</div>
-      <div class="faq-a">Only when a payment is executed through the ArcFXPayments smart contract — i.e. when someone pays a Pay Link or Invoice. Swaps, bridges, and history are completely free. Multisend up to 5 recipients is also free.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q">How is the fee collected?</div>
-      <div class="faq-a">Automatically on-chain. The fee is added on top of the payment amount, so the recipient receives the full amount they were sent and the 0.15% is routed to the ArcFX treasury wallet in the same transaction. No invoicing, no manual billing.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q">Is there a minimum payment size?</div>
-      <div class="faq-a">No minimum. The 0.15% fee applies to any amount. On very small payments (under $0.00067), the fee rounds to zero due to USDC's 6-decimal precision.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q">Does ArcFX hold my funds?</div>
-      <div class="faq-a">Never. ArcFX is entirely non-custodial. All transactions go directly wallet-to-wallet through smart contracts. ArcFX has no ability to freeze, pause, or access your funds at any point.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q">What tokens does ArcFX support?</div>
-      <div class="faq-a">USDC and EURC on Arc Testnet. Both are native Circle stablecoins — not wrapped versions. Mainnet support launches when Arc Mainnet goes live (Summer 2026).</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q">When does API access launch?</div>
-      <div class="faq-a">The $99/month API tier is in development. Early access subscribers will be first in line. Email arcfxapp@gmail.com to join the waitlist.</div>
-    </div>
-
-    <!-- CTA -->
-    <div id="waitlist" style="margin-top:64px;background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:12px;padding:40px;text-align:center;">
-      <div style="font-size:22px;font-weight:700;color:var(--fx-ink);margin-bottom:10px;">Ready to start?</div>
-      <div style="font-size:14px;color:var(--fx-muted);margin-bottom:28px;">No account needed. Connect your wallet and start in under a minute.</div>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-        <a href="/" style="padding:13px 28px;background:var(--fx-accent);color:var(--fx-on-accent);border-radius:7px;font-size:14px;font-weight:600;">Launch ArcFX →</a>
-        <a href="mailto:arcfxapp@gmail.com" style="padding:13px 28px;background:transparent;color:var(--fx-muted);border:1px solid var(--fx-line);border-radius:7px;font-size:14px;font-weight:600;">Talk to us →</a>
-      </div>
-    </div>
-
-  </div>
-
-  <script type="module">
-    /* Converted from a classic inline <script> so Vite bundles it to a file
-       and script-src needs no 'unsafe-inline'. Module scope is not global, so
-       the declarations the event wiring calls are re-exported onto window
-       below — exactly the reachability this block had as a classic script. */
-    function calcFee() {
-      // Payer-pays model:the entered amount is what the recipient receives;
-      // the sender pays that plus the 0.15% fee on top.
-      var amt = parseFloat(document.getElementById('calc-amount').value) || 0;
-      var fee = (amt * 0.0015).toFixed(2);
-      var youPay = (amt + parseFloat(fee)).toFixed(2);
-      document.getElementById('calc-fee').textContent = fee + ' USDC';
-      document.getElementById('calc-net').textContent  = youPay + ' USDC';
-    }
-
-    // Re-exported for the event wiring (see module-scope note above).
-    window.calcFee = calcFee;
-  </script>
-
 </body>
 </html>

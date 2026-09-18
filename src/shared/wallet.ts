@@ -460,8 +460,13 @@ async function ensureArc(): Promise<boolean> {
   return isCurrentProvider(provider, revision) && state.onArc;
 }
 
-/** Explicit connect. When wallets compete, show the small provider selector. */
-async function connect(): Promise<WalletState> {
+/**
+ * Explicitly connect the pinned provider without switching its selected chain.
+ * This exists for server-authorized surfaces which intentionally operate on a
+ * network other than the legacy Testnet transaction UI. It never adds a chain,
+ * changes a chain, or submits a transaction.
+ */
+async function connectCurrentNetwork(): Promise<WalletState> {
   if (connecting) return connecting;
   connecting = (async () => {
     let revision = ++providerRevision;
@@ -480,14 +485,26 @@ async function connect(): Promise<WalletState> {
     await entry.provider.request({ method: "eth_requestAccounts" });
     if (!isCurrentProvider(entry.provider, revision)) return snapshot();
     // This marker represents an explicit ArcFX reconnect, never a silent
-    // provider refresh. The authoritative state still remains untrusted until
-    // ensureArc finishes its silent selected-provider reconciliation.
+    // provider refresh. The authoritative state remains untrusted until the
+    // selected provider returns a complete accounts + chain snapshot.
     clearSignedOutMarker();
-    await ensureArc();
+    await refreshSelectedProvider(entry.provider);
     if (!isCurrentProvider(entry.provider, revision)) return snapshot();
     return snapshot();
   })();
   try { return await connecting; } finally { connecting = null; }
+}
+
+/**
+ * Explicit connection for the legacy Testnet transaction UI. New Mainnet
+ * receivables pages deliberately use connectCurrentNetwork instead, so this
+ * Testnet switch cannot accidentally retarget the existing payer flow.
+ */
+async function connect(): Promise<WalletState> {
+  const next = await connectCurrentNetwork();
+  if (!next.connected || !selectedProvider) return next;
+  await ensureArc();
+  return snapshot();
 }
 
 function disconnect(): void {
@@ -530,7 +547,7 @@ export const arcfxWallet = {
   get provider(): Eip1193Provider | null { return selectedProvider?.provider || null; },
   get providerInfo(): Readonly<Eip6963Info> | null { return selectedProvider?.info || null; },
   get isExplicitlySignedOut(): boolean { return explicitlySignedOut(); },
-  restore, connect, disconnect, ensureArc, request, signMessage, onChange, shortAddress, refreshHeader: paintHeader,
+  restore, connect, connectCurrentNetwork, disconnect, ensureArc, request, signMessage, onChange, shortAddress, refreshHeader: paintHeader,
   ARC_TESTNET, ARC_CHAIN_ID_HEX, ARC_CHAIN_ID_DEC,
 };
 

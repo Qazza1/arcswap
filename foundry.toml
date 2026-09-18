@@ -4,6 +4,9 @@ test  = "test"        # Foundry test files
 out   = "out"         # Foundry compilation output (separate from Hardhat's artifacts/)
 libs  = ["lib"]       # forge-std and other Foundry libs
 solc  = "0.8.35"      # Pinned — matches pragma in both contracts
+optimizer = true
+optimizer_runs = 200
+evm_version = "paris"
 
 # Fuzz configuration
 [profile.default.fuzz]

@@ -37,6 +37,22 @@
       "destination": "/pay.html"
     },
     {
+      "source": "/payer",
+      "destination": "/payer.html"
+    },
+    {
+      "source": "/payer/",
+      "destination": "/payer.html"
+    },
+    {
+      "source": "/customers",
+      "destination": "/customers.html"
+    },
+    {
+      "source": "/customers/",
+      "destination": "/customers.html"
+    },
+    {
       "source": "/invoice",
       "destination": "/invoice.html"
     },

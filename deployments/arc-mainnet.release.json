@@ -1,0 +1,78 @@
+{
+  "$comment": "Pre-deployment release record. Public owner/treasury values must be bound before owner approval; deployed values are written only after confirmed runtime verification.",
+  "status": "deployed-runtime-verified",
+  "network": "arc-mainnet",
+  "chainId": 5042,
+  "caip2": "eip155:5042",
+  "rpc": "https://rpc.mainnet.arc.io",
+  "explorer": "https://explorer.arc.io",
+  "usdc": "0x3600000000000000000000000000000000000000",
+  "publicSources": {
+    "network": "https://docs.arc.io/arc/references/connect-to-arc",
+    "contracts": "https://docs.arc.io/arc/references/contract-addresses"
+  },
+  "build": {
+    "compiler": "0.8.35",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "evmVersion": "paris"
+  },
+  "roles": {
+    "owner": {
+      "source": "ARCFX_MAINNET_OWNER_ADDRESS",
+      "value": "0x4F81E3939232815e3C98B124A17BaC75304C82D8",
+      "note": "Must equal the address derived by Hardhat from the existing secure DEPLOYER_PRIVATE_KEY mechanism at broadcast time."
+    },
+    "treasury": {
+      "source": "ARCFX_MAINNET_TREASURY_ADDRESS",
+      "value": "0x4F81E3939232815e3C98B124A17BaC75304C82D8",
+      "note": "Receives ArcFXPayments and ArcFXMultisender protocol fees."
+    }
+  },
+  "contracts": [
+    {
+      "name": "ArcFXPayments",
+      "network": "arc-mainnet",
+      "chainId": 5042,
+      "caip2": "eip155:5042",
+      "rpc": "https://rpc.mainnet.arc.io",
+      "artifact": "artifacts/contracts/ArcFXPayments.sol/ArcFXPayments.json",
+      "creationBytecodeSha256": "d5cc6de5de2f2557b93125d0671746f832cd1b27f653068baf0b499d37216bbc",
+      "expectedRuntimeBytecodeSha256": "da747d278ac2c42b5869e3f6534929e3b1c4278f8e71bf72ccabda2f2320953c",
+      "constructorArguments": [
+        {
+          "name": "_treasury",
+          "source": "ARCFX_MAINNET_TREASURY_ADDRESS",
+          "value": "0x4F81E3939232815e3C98B124A17BaC75304C82D8"
+        }
+      ],
+      "address": "0xF7aeb369bB50b7d9E2DDe7d3aC386B5ed6e71398",
+      "transactionHash": "0x95ecb7ae9ca8663760f1f9ab2775684096bf542aa3a46b70abfb0d5a9d8a7882",
+      "blockNumber": 21325169,
+      "liveRuntimeBytecodeSha256": "da747d278ac2c42b5869e3f6534929e3b1c4278f8e71bf72ccabda2f2320953c"
+    },
+    {
+      "name": "ArcFXMultisender",
+      "network": "arc-mainnet",
+      "chainId": 5042,
+      "caip2": "eip155:5042",
+      "rpc": "https://rpc.mainnet.arc.io",
+      "artifact": "artifacts/contracts/ArcFXMultisender.sol/ArcFXMultisender.json",
+      "creationBytecodeSha256": "e17ee3e1e317bc452c443c059cca9aa422e58a451fd9f5a7fb52b2e0a2f2285a",
+      "expectedRuntimeBytecodeSha256": "7543d59e56694ea71d1f7d7390bd8c66b03833509295cec692032386b10eb74c",
+      "constructorArguments": [
+        {
+          "name": "_treasury",
+          "source": "ARCFX_MAINNET_TREASURY_ADDRESS",
+          "value": "0x4F81E3939232815e3C98B124A17BaC75304C82D8"
+        }
+      ],
+      "address": "0xc37D88f17573f13F7A27D33a502f5f1fB7D545D3",
+      "transactionHash": "0x4dc8fe236d850d1a9cfa7bc5918dff988c473f4f7bfe71180ca6c182c8e119fb",
+      "blockNumber": 21326399,
+      "liveRuntimeBytecodeSha256": "7543d59e56694ea71d1f7d7390bd8c66b03833509295cec692032386b10eb74c"
+    }
+  ]
+}

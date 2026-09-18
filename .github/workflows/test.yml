@@ -63,6 +63,12 @@ jobs:
       - name: Build
         run: npx vite build
 
+      - name: Compile reviewed deployment artifacts
+        run: npm run compile:contracts
+
+      - name: Validate Arc Mainnet pre-deployment release manifest
+        run: npm run test:mainnet-release && npm run check:release-config
+
       # The CSP forbids inline scripts and inline event handlers. Nothing stops
       # someone reintroducing an onclick= later, and the page would silently
       # stop working in production only — so the build output is checked here.

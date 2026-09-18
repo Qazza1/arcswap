@@ -28,6 +28,14 @@ export const API_BASE: string =
   (typeof window !== "undefined" && (window as any).ARCFX_API_BASE) ||
   "https://arcfx-backend-production.up.railway.app";
 
+// The established ArcFX session helper is deliberately Testnet-gated because
+// legacy payer surfaces still use the Testnet wallet/transaction layer. The
+// Mainnet receivables workspace has a separate, exact-chain owner-read session
+// so enabling server-authorized records cannot make those payer paths Mainnet
+// capable.
+const ARCFX_MAINNET_CHAIN_ID_HEX = "0x13b2";
+const RECEIVABLES_OWNER_SESSION_STORAGE_KEY = "arcfx:mainnet-receivables-owner-session:v1";
+
 /** Sorted-key rendering. Mirrors canonical() in the backend's walletauth.ts. */
 function canonical(v: unknown): string {
   if (v === null || typeof v !== "object") return JSON.stringify(v ?? null);
@@ -127,6 +135,111 @@ async function ownerSession(): Promise<OwnerSession> {
   return arcfxAuth.ensureOwnerSession(bootstrapOwnerSession);
 }
 
+type ReceivablesOwnerSession = OwnerSession & { chainId: string };
+let receivablesBootstrapPending: Promise<ReceivablesOwnerSession> | null = null;
+
+function mainnetReceivablesWallet(): { wallet: string; chainId: string } {
+  const wallet = arcfxWallet.address?.toLowerCase();
+  const chainId = arcfxWallet.chainId?.toLowerCase();
+  if (!arcfxWallet.connected || !wallet || chainId !== ARCFX_MAINNET_CHAIN_ID_HEX || arcfxWallet.isExplicitlySignedOut) {
+    throw new Error("Connect the selected wallet on Arc Mainnet (chain 5042) first.");
+  }
+  return { wallet, chainId };
+}
+
+function clearReceivablesAuthCache(): void {
+  receivablesBootstrapPending = null;
+  try { sessionStorage.removeItem(RECEIVABLES_OWNER_SESSION_STORAGE_KEY); } catch { /* private mode */ }
+}
+
+function storedReceivablesOwnerSession(): ReceivablesOwnerSession | null {
+  const expected = mainnetReceivablesWallet();
+  try {
+    const raw = sessionStorage.getItem(RECEIVABLES_OWNER_SESSION_STORAGE_KEY);
+    const value = raw ? JSON.parse(raw) : null;
+    if (!value || typeof value.sessionToken !== "string" || !/^[A-Za-z0-9._-]+$/.test(value.sessionToken)
+        || typeof value.wallet !== "string" || value.wallet.toLowerCase() !== expected.wallet
+        || value.chainId !== ARCFX_MAINNET_CHAIN_ID_HEX || typeof value.expiresAt !== "string"
+        || !Number.isFinite(Date.parse(value.expiresAt)) || Date.now() >= Date.parse(value.expiresAt)) {
+      clearReceivablesAuthCache();
+      return null;
+    }
+    return { sessionToken: value.sessionToken, wallet: expected.wallet, chainId: expected.chainId, expiresAt: value.expiresAt };
+  } catch {
+    clearReceivablesAuthCache();
+    return null;
+  }
+}
+
+async function receivablesOwnerSession(): Promise<ReceivablesOwnerSession> {
+  const existing = storedReceivablesOwnerSession();
+  if (existing) return existing;
+  if (!receivablesBootstrapPending) {
+    const expected = mainnetReceivablesWallet();
+    const pending = bootstrapOwnerSession().then((session) => {
+      const current = mainnetReceivablesWallet();
+      if (current.wallet !== expected.wallet || current.chainId !== expected.chainId || session.wallet.toLowerCase() !== expected.wallet) {
+        throw new Error("ArcFX authentication was cancelled because the wallet or network changed.");
+      }
+      const result: ReceivablesOwnerSession = { ...session, wallet: expected.wallet, chainId: expected.chainId };
+      try { sessionStorage.setItem(RECEIVABLES_OWNER_SESSION_STORAGE_KEY, JSON.stringify(result)); } catch { /* tab still works */ }
+      return result;
+    });
+    receivablesBootstrapPending = pending;
+    pending.finally(() => { if (receivablesBootstrapPending === pending) receivablesBootstrapPending = null; }).catch(() => { /* caller receives it */ });
+  }
+  return receivablesBootstrapPending;
+}
+
+function assertSameReceivablesWallet(expected: { wallet: string; chainId: string }): void {
+  const current = mainnetReceivablesWallet();
+  if (current.wallet !== expected.wallet || current.chainId !== expected.chainId) {
+    throw new Error("Wallet or network changed while processing the request.");
+  }
+}
+
+async function receivablesGet(path: string, params: Record<string, string> = {}, retry = true): Promise<any> {
+  const session = await receivablesOwnerSession();
+  const expected = { wallet: session.wallet, chainId: session.chainId };
+  const qs = new URLSearchParams(params);
+  try {
+    const result = await parse(await fetch(`${API_BASE}${path}?${qs}`, {
+      headers: { authorization: `Bearer ${session.sessionToken}` },
+    }));
+    assertSameReceivablesWallet(expected);
+    return result;
+  } catch (error) {
+    if (retry && error instanceof ApiError && error.status === 401) {
+      clearReceivablesAuthCache();
+      return receivablesGet(path, params, false);
+    }
+    throw error;
+  }
+}
+
+async function receivablesPost(path: string, action: string, payload: unknown): Promise<any> {
+  const expected = mainnetReceivablesWallet();
+  const result = await signedPost(path, action, payload);
+  assertSameReceivablesWallet(expected);
+  return result;
+}
+
+async function connectReceivablesOwner(): Promise<void> {
+  await arcfxWallet.connectCurrentNetwork();
+  await receivablesOwnerSession();
+}
+
+arcfxWallet.onChange(() => {
+  try {
+    const stored = sessionStorage.getItem(RECEIVABLES_OWNER_SESSION_STORAGE_KEY);
+    const current = arcfxWallet.address?.toLowerCase();
+    const value = stored ? JSON.parse(stored) : null;
+    if (!value || value.wallet?.toLowerCase() !== current || arcfxWallet.chainId?.toLowerCase() !== ARCFX_MAINNET_CHAIN_ID_HEX) {
+      clearReceivablesAuthCache();
+    }
+  } catch { clearReceivablesAuthCache(); }
+});
+
 export class ApiError extends Error {
   status: number;
   body: any;
@@ -221,7 +334,7 @@ async function publicGet(path: string): Promise<any> {
 
 export const arcfxApi = {
   base: API_BASE,
-  get, post, publicGet, digestOf, messageFor, clearAuthCache, connectOwner,
+  get, post, publicGet, digestOf, messageFor, clearAuthCache, connectOwner, connectReceivablesOwner,
 
   // ── Convenience wrappers, so pages do not repeat action strings ──────────
   listCustomers: (opts: { archived?: boolean } = {}) =>
@@ -261,6 +374,22 @@ export const arcfxApi = {
     if (expected) q.set("expected", expected);
     return publicGet(`/v1/invoices/status?${q.toString()}`);
   },
+
+  // Mainnet receivables: exact-chain owner reads reuse a tab-scoped bearer;
+  // every mutation remains an individual EIP-191 personal_sign authorization.
+  listReceivablesCustomers: (opts: { archived?: boolean } = {}) =>
+    receivablesGet("/v1/customers", opts.archived ? { archived: "true" } : {}),
+  saveReceivablesCustomer: (customer: unknown) => receivablesPost("/v1/customers", "customer write", customer),
+  archiveReceivablesCustomer: (id: string, archived = true) =>
+    receivablesPost("/v1/customers/archive", "customer archive", { id, archived }),
+  listReceivablesInvoices: (status?: string) =>
+    receivablesGet("/v1/invoice-records", status ? { status } : {}),
+  createReceivablesInvoice: (invoice: unknown) =>
+    receivablesPost("/v1/invoice-records", "invoice write", invoice),
+  updateReceivablesInvoice: (payload: unknown) =>
+    receivablesPost("/v1/invoice-records/update", "invoice update", payload),
+  reconcileReceivables: (id?: string) =>
+    receivablesPost("/v1/invoice-records/reconcile", "invoice reconcile", id ? { id } : {}),
 };
 
 if (typeof window !== "undefined") (window as any).arcfxApi = arcfxApi;

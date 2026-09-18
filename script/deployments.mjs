@@ -56,6 +56,9 @@ const CONTRACTS = [
   },
 ];
 
+// Historical build identity of the contracts already deployed on Testnet.
+// New source builds are pinned to 0.8.35 in Hardhat/Foundry and validated by
+// release-config.mjs; changing this would falsely rewrite deployed provenance.
 const BUILD = {
   compiler: "v0.8.20+commit.a1b79de6",
   optimizer: { enabled: true, runs: 200 },

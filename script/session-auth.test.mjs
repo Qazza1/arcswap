@@ -6,6 +6,9 @@ import { createServer } from "vite";
 import { Wallet } from "ethers";
 
 const invoicesSource = fs.readFileSync(new URL("../invoices.html", import.meta.url), "utf8");
+const receivablesSource = fs.readFileSync(new URL("../src/workspace/receivables.ts", import.meta.url), "utf8");
+const apiSource = fs.readFileSync(new URL("../src/shared/arcfxApi.ts", import.meta.url), "utf8");
+const walletSource = fs.readFileSync(new URL("../src/shared/wallet.ts", import.meta.url), "utf8");
 
 class MemoryStorage {
   #values = new Map();
@@ -274,8 +277,8 @@ test("tab-scoped owner session survives navigation and leaves Generate Agent Evi
     assert.equal(prompts.length, 1, "expired session is cleared and re-bootstrapped");
 
     const invoicePage = fs.readFileSync(new URL("../invoices.html", import.meta.url), "utf8");
-    assert.match(invoicePage, /const result = submitted\.run;/);
-    assert.doesNotMatch(invoicePage, /createAgentRun\(id, submitted\.mandate\.mandateId\)/);
+    assert.match(invoicePage, /data-receivables="invoices"/);
+    assert.match(receivablesSource, /Agent Evidence is unavailable for Arc Mainnet/);
   } finally {
     await server.close();
     globalThis.window = originalWindow;
@@ -982,13 +985,13 @@ test("OCD proof handoff is pinned to the opened verifier and downloads the same 
   }
 });
 
-test("invoice Agent Evidence result keeps decision, execution, and verification distinct", () => {
-  assert.match(invoicesSource, /evidence-state-label">Decision/);
-  assert.match(invoicesSource, /evidence-state-label">Execution/);
-  assert.match(invoicesSource, /evidence-state-label">Verification/);
-  assert.match(invoicesSource, /No payment was submitted/);
-  assert.match(invoicesSource, /A valid proof does not mean this payment was approved or submitted/);
-  assert.match(invoicesSource, /ArcFX Agent Mandate/);
-  assert.match(invoicesSource, /Verify on OnChainDiligence/);
-  assert.match(invoicesSource, /Download proof/);
+test("Mainnet receivables clearly keeps Agent Evidence unavailable", () => {
+  assert.match(invoicesSource, /data-receivables="invoices"/);
+  assert.match(receivablesSource, /Agent Evidence is unavailable for Arc Mainnet/);
+  assert.doesNotMatch(receivablesSource, /prepareAgentMandate|signAgentMandate|submitAgentMandate|createAgentRun/);
+  assert.match(receivablesSource, /connectReceivablesOwner/);
+  assert.doesNotMatch(receivablesSource, /arcfxApi\.listInvoices\(|arcfxApi\.createInvoice\(|arcfxApi\.updateInvoice\(/);
+  assert.match(apiSource, /ARCFX_MAINNET_CHAIN_ID_HEX = "0x13b2"/);
+  assert.match(apiSource, /listReceivablesInvoices/);
+  assert.match(walletSource, /connectCurrentNetwork/);
 });

@@ -43,6 +43,7 @@ import { arcfxMark } from './brand';
 
 export type PageKey =
   | 'index' | 'app' | 'trade' | 'multisend' | 'pay' | 'invoice' | 'invoices' | 'history'
+  | 'customers'
   | 'analytics' | 'docs' | 'docs-api' | 'developers' | 'pricing' | 'ecosystem' | 'security'
   | 'agent';
 
@@ -73,14 +74,13 @@ const PRODUCT_STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boole
   { label: 'Tools',       value: '7 live' },
 ];
 
-// MARKETING mode: leads with business trust facts, testnet status moved to end (no dot)
+// MARKETING mode keeps the release status visible without presenting a live
+// product dashboard before a visitor has entered the workspace.
 const MARKETING_STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boolean; valueColor?: string }> = [
-  { label: 'Built on Arc', value: 'a16z &amp; BlackRock backed' },
-  { label: 'Settlement',       value: '&lt; 1 second', valueColor: '#00d4aa' },
-  { label: 'Avg fee',          value: '$0.0002',       valueColor: '#00d4aa' },
-  { label: 'Gas token',        value: 'USDC' },
-  { label: 'Tools',            value: '7 live' },
-  { label: 'Arc Testnet',      value: 'Live' },
+  { label: 'Current release', value: 'Arc Testnet' },
+  { label: 'Workspace',       value: 'Wallet-first' },
+  { label: 'Payments',        value: '0.15% fee' },
+  { label: 'Evidence',        value: 'Decision trail' },
 ];
 
 // ── PRODUCT nav links (default — used on app pages) ─────────────────────────
@@ -105,13 +105,16 @@ const MORE_LINKS: Array<{ href: string; label: string; key: ActiveLink }> = [
 
 // ── MARKETING nav links (used on /, /pricing, /ecosystem, /docs, /security) ──
 const MARKETING_NAV_LINKS: Array<{ href: string; label: string; key: ActiveLink }> = [
-  { href: '/#use-cases',  label: 'Use cases', key: 'use-cases' },
-  { href: '/pricing',     label: 'Pricing',   key: 'pricing' },
-  { href: '/docs',        label: 'Docs',      key: 'docs' },
-  { href: '/developers',  label: 'Developers', key: 'developers' },
-  { href: '/ecosystem',   label: 'Ecosystem', key: 'ecosystem' },
-  { href: '/security',    label: 'Security',  key: 'security' },
+  { href: '/#product',  label: 'Product',  key: 'use-cases' },
+  { href: '/pricing',   label: 'Pricing',  key: 'pricing' },
+  { href: '/security',  label: 'Security', key: 'security' },
+  { href: '/docs',      label: 'Docs',     key: 'docs' },
 ];
+
+// The public/app subdomain split is intentionally a future hosting decision.
+// Keeping one route constant now makes the later move mechanical, not a
+// behaviour change to wallet or owner-session handling.
+const APP_ENTRY_HREF = '/app';
 
 // ── Single source of truth: tools dropdown items ───────────────────────────
 const TOOLS: Array<{ href: string; key: ActiveTool; name: string; sub: string; svg: string }> = [
@@ -127,7 +130,7 @@ const TOOLS: Array<{ href: string; key: ActiveTool; name: string; sub: string; s
   },
   {
     href: '/invoice', key: 'invoice',
-    name: 'Invoices', sub: 'PDF invoices + Pay Now',
+    name: 'New invoice', sub: 'PDF invoices + Pay Now',
     svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>',
   },
   {
@@ -160,11 +163,13 @@ const CANONICAL_CSS = `
     .stats-bar-inner::-webkit-scrollbar { display: none; }
     .stats-bar-sep { margin: 0 14px; }
 
-    /* Nav: hide center links on mobile, show the hamburger instead.
-       Marketing → Logo + Launch/Back-to-app.  Product → Logo + hamburger + Connect. */
+    /* Nav: hide center links on mobile, show the appropriate menu instead. */
     .arcfx-nav { padding: 0 16px !important; }
     .arcfx-nav-center { display: none !important; }
     .arcfx-hamburger { display: flex !important; }
+    .arcfx-nav--marketing .arcfx-cta { display: none; }
+    .arcfx-marketing-menu { display: inline-flex !important; }
+    [id^="arcfx-contacts-btn"] { display: none !important; }
 
     /* Logo + hamburger + Connect together overflowed a 375px viewport by ~55px,
        which made every page scroll sideways on a phone. The buttons have fixed
@@ -307,6 +312,28 @@ const CANONICAL_CSS = `
   }
   /* Hamburger is desktop-hidden; the media query above reveals it ≤768px. */
   .arcfx-hamburger { display: none; }
+  .arcfx-marketing-menu {
+    display: none; align-items: center; justify-content: center;
+    min-width: 38px; height: 38px; padding: 0 11px;
+    border: 1px solid var(--fx-line); border-radius: 8px;
+    background: var(--fx-surface); color: var(--fx-ink);
+    font: 600 12px/1 var(--fx-body); cursor: pointer;
+  }
+  .arcfx-marketing-panel {
+    display: none; position: absolute; top: 64px; right: 12px; left: 12px;
+    padding: 8px; border: 1px solid var(--fx-line); border-radius: 10px;
+    background: var(--fx-surface); box-shadow: var(--fx-shadow-md); z-index: 100;
+  }
+  .arcfx-marketing-panel a {
+    display: block; padding: 12px; border-radius: 7px; color: var(--fx-ink) !important;
+    font-size: 14px; font-weight: 600; text-decoration: none;
+  }
+  .arcfx-marketing-panel a:hover { background: var(--fx-sunken); }
+  .arcfx-visually-hidden { position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; margin:-1px !important; overflow:hidden !important; clip:rect(0,0,0,0) !important; white-space:nowrap !important; border:0 !important; }
+  .arcfx-nav a:focus-visible, .arcfx-nav button:focus-visible,
+  #arcfx-contacts-modal button:focus-visible, #arcfx-contacts-modal input:focus-visible {
+    outline: 3px solid var(--fx-info) !important; outline-offset: 2px !important;
+  }
 `;
 
 // The typefaces the token layer names. Loaded once, from here, so a page never
@@ -371,19 +398,15 @@ function buildMarketingNav(activeLink: ActiveLink): string {
   const links = MARKETING_NAV_LINKS
     .map(l => buildLink(l.href, l.label, l.key === activeLink))
     .join('');
-
-  // Returning users (who've connected a wallet on a product page before) see
-  // "Back to app"; first-time visitors see the conversion-focused "Launch ArcFX".
-  // Both link to /app — only the label differs. The flag is written in
-  // product mode when a connected wallet is detected (see wireBehavior).
-  let isReturning = false;
-  try {
-    isReturning = localStorage.getItem('arcfx_returning') === '1';
-  } catch (e) { /* localStorage unavailable (private mode / blocked) */ }
-  const ctaLabel = isReturning ? 'Back to app' : 'Launch ArcFX';
+  const mobileLinks = [
+    ...MARKETING_NAV_LINKS.map(l =>
+      `<a href="${l.href}"${l.key === activeLink ? ' aria-current="page"' : ''}>${l.label}</a>`
+    ),
+    `<a href="${APP_ENTRY_HREF}">Open app &rarr;</a>`,
+  ].join('');
 
   return `
-<nav class="arcfx-nav" style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;backdrop-filter:blur(12px);">
+<nav class="arcfx-nav arcfx-nav--marketing" aria-label="Public navigation" style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;backdrop-filter:blur(12px);">
   <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
     ${arcfxMark(26)}
     <span class="arcfx-wordmark" style="font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:16px;font-weight:700;color:var(--fx-ink);letter-spacing:-0.02em;">ArcFX</span>
@@ -392,13 +415,17 @@ function buildMarketingNav(activeLink: ActiveLink): string {
     ${links}
   </div>
   <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">
-    <a href="/app" class="arcfx-cta">${ctaLabel} <span style="font-size:14px;">&rarr;</span></a>
+    <a href="${APP_ENTRY_HREF}" class="arcfx-cta">Open app <span style="font-size:14px;">&rarr;</span></a>
+    <button type="button" class="arcfx-marketing-menu" id="arcfx-marketing-menu-btn" aria-label="Open navigation" aria-controls="arcfx-marketing-menu" aria-expanded="false">Menu</button>
   </div>
+  <div class="arcfx-marketing-panel" id="arcfx-marketing-menu" aria-label="Public navigation menu">${mobileLinks}</div>
 </nav>
 `;
 }
 
 function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: ActiveTool): string {
+  const receivablesWorkspace = pageKey === "customers" || pageKey === "invoices" || pageKey === "invoice";
+  const networkPillLabel = receivablesWorkspace ? "Mainnet workspace" : "Testnet";
   const isToolsActive = activeLink === 'tools';
   const toolsBtnColor = isToolsActive ? '#f1f5f9' : '#94a3b8';
   const toolsBtnBg    = isToolsActive ? '#1e293b' : 'transparent';
@@ -410,6 +437,7 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
   // The workspace nav follows the operational journey. Secondary tools remain
   // available, but no longer compete with invoices and their decision trail.
   const overviewLink = buildLink('/app', 'Overview', pageKey === 'app');
+  const customersLink = buildLink('/customers', 'Customers', pageKey === 'customers');
   const invoicesLink = buildLink('/invoices', 'Invoices', activeTool === 'invoice' || activeTool === 'invoices');
   const activityLink = buildLink('/history', 'Activity', activeLink === 'history');
 
@@ -437,13 +465,15 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
 
   const mobileMenuItems = [
     `<a href="/app" style="${mobileLinkStyle(pageKey === 'app')}">Overview</a>`,
+    `<a href="/customers" style="${mobileLinkStyle(pageKey === 'customers')}">Customers</a>`,
     `<a href="/invoices" style="${mobileLinkStyle(activeTool === 'invoice' || activeTool === 'invoices')}">Invoices</a>`,
     `<a href="/history" style="${mobileLinkStyle(activeLink === 'history')}">Activity</a>`,
     mobileSectionLabel('Payments'),
     ...TOOLS.map(t => `<a href="${t.href}" style="${mobileLinkStyle(activeTool === t.key)}">${t.name}</a>`),
+    `<button type="button" id="arcfx-mobile-contacts-btn-${pageKey}" style="${mobileLinkStyle(false)};width:100%;border:0;text-align:left;font-family:inherit;cursor:pointer;">Browser address book</button>`,
     mobileSectionLabel('Resources'),
     ...TOP_LEVEL_LINKS
-      .filter(l => l.key === 'analytics' || l.key === 'history' || l.key === 'docs' || l.key === 'developers')
+      .filter(l => l.key === 'analytics' || l.key === 'docs' || l.key === 'developers')
       .map(l => `<a href="${l.href}" style="${mobileLinkStyle(l.key === activeLink)}">${l.label}</a>`),
     ...MORE_LINKS.map(l => `<a href="${l.href}" style="${mobileLinkStyle(l.key === activeLink)}">${l.label}</a>`),
   ].join('');
@@ -456,6 +486,7 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
   </a>
   <div class="arcfx-nav-center" style="display:flex;align-items:center;gap:2px;">
     ${overviewLink}
+    ${customersLink}
     ${invoicesLink}
     <div style="position:relative;" id="arcfx-tools-wrap-${pageKey}">
       <button id="arcfx-tools-btn-${pageKey}" aria-haspopup="menu" aria-expanded="false" style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:13.5px;font-weight:500;border:0;outline:none;cursor:pointer;font-family:inherit;transition:all .15s;color:${toolsBtnColor};background:${toolsBtnBg};-webkit-appearance:none;">Payments <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -474,7 +505,7 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
   <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">
     <div class="arcfx-testnet-pill" style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;border:1px solid var(--fx-line);background:#0f172a;">
       <span style="width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.7);animation:arcfx-pulse 2s ease-in-out infinite;display:inline-block;"></span>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#64748b;">Testnet</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#64748b;">${networkPillLabel}</span>
     </div>
     <button id="arcfx-contacts-btn-${pageKey}" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:6px;border:1px solid var(--fx-line);background:#0f172a;color:#475569;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Contacts</button>
     <div id="arcfx-account-wrap" style="position:relative;">
@@ -486,7 +517,7 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
           <div id="arcfx-account-network" style="margin-top:7px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#10b981;"></div>
         </div>
         <!-- Future account surfaces (profile, balances and activity) belong here. -->
-        <button id="arcfx-disconnect-btn" role="menuitem" style="width:100%;margin-top:6px;padding:9px;text-align:left;border:0;border-radius:6px;background:transparent;color:#fca5a5;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;">Disconnect</button>
+        <button id="arcfx-disconnect-btn" role="menuitem" style="width:100%;margin-top:6px;padding:9px;text-align:left;border:0;border-radius:6px;background:transparent;color:#fca5a5;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;">Disconnect ArcFX (this tab)</button>
       </div>
     </div>
     <button class="arcfx-hamburger" id="arcfx-hamburger-${pageKey}" aria-label="Menu" aria-expanded="false" style="align-items:center;justify-content:center;width:38px;height:38px;border-radius:8px;border:1px solid var(--fx-line);background:#0f172a;color:#cbd5e1;cursor:pointer;flex-shrink:0;padding:0;">
@@ -503,19 +534,19 @@ function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: A
 // ── Contacts modal HTML (shared singleton — only mounted once) ─────────────
 const CONTACTS_MODAL_HTML = `
 <div id="arcfx-contacts-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
-  <div style="background:#0f172a;border:1px solid var(--fx-line);border-radius:12px;width:480px;max-width:calc(100vw - 32px);max-height:80vh;display:flex;flex-direction:column;" id="arcfx-contacts-inner">
+  <div role="dialog" aria-modal="true" aria-labelledby="arcfx-contacts-title" aria-describedby="arcfx-contacts-description" tabindex="-1" style="background:#0f172a;border:1px solid var(--fx-line);border-radius:12px;width:480px;max-width:calc(100vw - 32px);max-height:80vh;display:flex;flex-direction:column;" id="arcfx-contacts-inner">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #1e293b;">
       <div>
-        <div style="font-size:15px;font-weight:600;color:var(--fx-ink);">Address Book</div>
-        <div style="font-size:11px;color:#475569;margin-top:2px;">Synced across all pages</div>
+        <h2 id="arcfx-contacts-title" style="font-size:15px;font-weight:600;color:var(--fx-ink);">Browser address book</h2>
+        <p id="arcfx-contacts-description" style="font-size:11px;color:#475569;margin-top:2px;">Stored locally in this browser.</p>
       </div>
-      <button id="arcfx-contacts-close" style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:20px;padding:4px;">&times;</button>
+      <button id="arcfx-contacts-close" aria-label="Close address book" style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:20px;padding:4px;">&times;</button>
     </div>
     <div style="flex:1;overflow-y:auto;padding:12px 20px;" id="arcfx-contacts-list"></div>
     <div style="padding:14px 20px;border-top:1px solid #1e293b;">
       <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;">
-        <input id="arcfx-contact-name" type="text" placeholder="Contact name" style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:6px;color:var(--fx-ink);font-size:13px;font-family:inherit;padding:8px 11px;outline:none;" />
-        <input id="arcfx-contact-addr" type="text" placeholder="0x..." style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:6px;color:var(--fx-ink);font-size:12px;font-family:'JetBrains Mono',monospace;padding:8px 11px;outline:none;" />
+        <label class="arcfx-visually-hidden" for="arcfx-contact-name">Contact name</label><input id="arcfx-contact-name" type="text" placeholder="Contact name" style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:6px;color:var(--fx-ink);font-size:13px;font-family:inherit;padding:8px 11px;outline:none;" />
+        <label class="arcfx-visually-hidden" for="arcfx-contact-addr">Wallet address</label><input id="arcfx-contact-addr" type="text" placeholder="0x..." style="background:var(--fx-sunken);border:1px solid var(--fx-line);border-radius:6px;color:var(--fx-ink);font-size:12px;font-family:'JetBrains Mono',monospace;padding:8px 11px;outline:none;" />
         <button id="arcfx-contact-save" style="padding:8px 14px;background:var(--fx-accent);color:var(--fx-on-accent);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Save</button>
       </div>
     </div>
@@ -525,8 +556,32 @@ const CONTACTS_MODAL_HTML = `
 
 // ── Behavior wiring ────────────────────────────────────────────────────────
 function wireBehavior(pageKey: PageKey, mode: Mode): void {
-  // Marketing mode has none of these elements — bail early.
-  if (mode === 'marketing') return;
+  if (mode === 'marketing') {
+    const menuButton = document.getElementById('arcfx-marketing-menu-btn');
+    const menu = document.getElementById('arcfx-marketing-menu');
+    if (!menuButton || !menu) return;
+    const closeMenu = (restoreFocus = false) => {
+      menu.style.display = 'none';
+      menuButton.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) menuButton.focus();
+    };
+    menuButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const open = menu.style.display !== 'block';
+      menu.style.display = open ? 'block' : 'none';
+      menuButton.setAttribute('aria-expanded', String(open));
+    });
+    document.addEventListener('click', (event) => {
+      if (!menu.contains(event.target as Node) && !menuButton.contains(event.target as Node)) closeMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && menu.style.display === 'block') {
+        event.preventDefault();
+        closeMenu(true);
+      }
+    });
+    return;
+  }
 
   // Mobile hamburger menu toggle
   const hamburger  = document.getElementById(`arcfx-hamburger-${pageKey}`);
@@ -586,6 +641,11 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
 
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
+    // The address-book dialog owns Escape while it is open. In particular, do
+    // not first collapse the mobile menu that opened it, or focus cannot return
+    // to that opener after the dialog closes.
+    const contactsModal = document.getElementById('arcfx-contacts-modal') as HTMLElement | null;
+    if (contactsModal?.style.display === 'flex') return;
     const mobile = document.getElementById(`arcfx-mobile-menu-${pageKey}`) as HTMLElement | null;
     const mobileButton = document.getElementById(`arcfx-hamburger-${pageKey}`);
     const toolsMenu = document.getElementById(`arcfx-tools-dd-${pageKey}`) as HTMLElement | null;
@@ -606,17 +666,94 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
 
   // Contacts modal
   const contactsBtn   = document.getElementById(`arcfx-contacts-btn-${pageKey}`);
+  const mobileContactsBtn = document.getElementById(`arcfx-mobile-contacts-btn-${pageKey}`);
   const modal         = document.getElementById('arcfx-contacts-modal');
   const closeBtn      = document.getElementById('arcfx-contacts-close');
   const modalInner    = document.getElementById('arcfx-contacts-inner');
+  let contactsReturnFocus: HTMLElement | null = null;
 
-  const openModal = () => { if (modal) { modal.style.display = 'flex'; renderContacts(); } };
-  const closeModal = () => { if (modal) modal.style.display = 'none'; };
+  const setBackgroundInert = (inert: boolean) => {
+    if (!modal) return;
+    for (const child of Array.from(document.body.children)) {
+      if (child === modal) continue;
+      if (inert) {
+        if (!child.hasAttribute('inert')) {
+          child.setAttribute('inert', '');
+          child.setAttribute('data-arcfx-contacts-inert', '');
+        }
+      } else if (child.hasAttribute('data-arcfx-contacts-inert')) {
+        child.removeAttribute('inert');
+        child.removeAttribute('data-arcfx-contacts-inert');
+      }
+    }
+  };
 
-  if (contactsBtn) contactsBtn.addEventListener('click', openModal);
+  const openModal = (opener: HTMLElement | null) => {
+    if (!modal) return;
+    contactsReturnFocus = opener;
+    modal.style.display = 'flex';
+    setBackgroundInert(true);
+    renderContacts();
+    requestAnimationFrame(() => closeBtn?.focus());
+  };
+  const closeModal = () => {
+    if (!modal || modal.style.display === 'none') return;
+    modal.style.display = 'none';
+    setBackgroundInert(false);
+    // The mobile opener is inside a disclosure. Restore that disclosure before
+    // returning focus, even if another Escape listener has closed it first.
+    if (contactsReturnFocus === mobileContactsBtn) {
+      const mobileMenu = document.getElementById(`arcfx-mobile-menu-${pageKey}`) as HTMLElement | null;
+      const hamburger = document.getElementById(`arcfx-hamburger-${pageKey}`);
+      if (mobileMenu) mobileMenu.style.display = 'block';
+      hamburger?.setAttribute('aria-expanded', 'true');
+    }
+    contactsReturnFocus?.focus();
+    contactsReturnFocus = null;
+  };
+
+  // Capture Escape before page-level menu handlers run. This prevents a mobile
+  // menu listener from hiding the opener before focus has returned to it.
+  window.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || modal?.style.display !== 'flex') return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeModal();
+  }, true);
+
+  if (contactsBtn) contactsBtn.addEventListener('click', () => openModal(contactsBtn));
+  if (mobileContactsBtn) mobileContactsBtn.addEventListener('click', () => openModal(mobileContactsBtn));
   if (closeBtn)    closeBtn.addEventListener('click', closeModal);
   if (modal)       modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-  if (modalInner)  modalInner.addEventListener('click', (e) => e.stopPropagation());
+  if (modalInner) {
+    modalInner.addEventListener('click', (e) => e.stopPropagation());
+    modalInner.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeModal();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(modalInner.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'))
+        .filter((element) => element.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+  }
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && modal?.style.display === 'flex') {
+      event.preventDefault();
+      closeModal();
+    }
+  });
 
   const saveBtn = document.getElementById('arcfx-contact-save');
   if (saveBtn) saveBtn.addEventListener('click', saveContact);
@@ -625,6 +762,7 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
   // owner session. A connected click opens the app-level account menu instead
   // of repeating either prompt.
   const connectBtn = document.getElementById('connect-btn');
+  const mainnetReceivablesPage = pageKey === 'customers' || pageKey === 'invoices' || pageKey === 'invoice';
   const accountMenu = document.getElementById('arcfx-account-menu') as HTMLElement | null;
   const accountWrap = document.getElementById('arcfx-account-wrap');
   const disconnectBtn = document.getElementById('arcfx-disconnect-btn');
@@ -640,7 +778,10 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
         connectBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
         return;
       }
-      arcfxApi.connectOwner().catch(() => { /* dismissed or unavailable */ });
+      const connect = mainnetReceivablesPage
+        ? arcfxApi.connectReceivablesOwner
+        : arcfxApi.connectOwner;
+      connect().catch(() => { /* dismissed or unavailable */ });
     });
   }
   if (disconnectBtn) disconnectBtn.addEventListener('click', () => {
