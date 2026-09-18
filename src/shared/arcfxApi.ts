@@ -229,6 +229,12 @@ async function connectReceivablesOwner(): Promise<void> {
   await receivablesOwnerSession();
 }
 
+/** Read-only UI hint; never exposes or copies the opaque owner bearer. */
+function hasReceivablesOwnerSession(): boolean {
+  try { return Boolean(storedReceivablesOwnerSession()); }
+  catch { return false; }
+}
+
 arcfxWallet.onChange(() => {
   try {
     const stored = sessionStorage.getItem(RECEIVABLES_OWNER_SESSION_STORAGE_KEY);
@@ -334,7 +340,7 @@ async function publicGet(path: string): Promise<any> {
 
 export const arcfxApi = {
   base: API_BASE,
-  get, post, publicGet, digestOf, messageFor, clearAuthCache, connectOwner, connectReceivablesOwner,
+  get, post, publicGet, digestOf, messageFor, clearAuthCache, connectOwner, connectReceivablesOwner, hasReceivablesOwnerSession,
 
   // ── Convenience wrappers, so pages do not repeat action strings ──────────
   listCustomers: (opts: { archived?: boolean } = {}) =>

@@ -16,7 +16,7 @@ body {
 .arcfx-nav {
   height: 68px !important;
   padding: 0 max(20px, calc((100vw - 1240px) / 2)) !important;
-  background: rgba(255,255,255,.94) !important;
+  background: rgba(250,249,247,.94) !important;
   border-bottom: 1px solid var(--fx-line) !important;
   box-shadow: var(--fx-shadow-sm);
   backdrop-filter: blur(16px) !important;
@@ -114,7 +114,7 @@ div[id^="arcfx-mobile-menu"] {
   border: 1px solid var(--fx-line); border-radius: var(--fx-r-xl);
   background: var(--fx-elevated); box-shadow: var(--fx-shadow-sm);
 }
-.workspace-entry { max-width: 740px; padding: 32px; margin: 0 0 40px; }
+.workspace-entry { max-width: 680px; padding: 26px; margin: 0 0 30px; }
 .workspace-entry h2, .workspace-protocol h2, .workspace-balance h2,
 .workspace-overview .panel-head h2, .workspace-overview .dev-tile h2 {
   color: var(--fx-ink); font-family: var(--fx-display); font-size: 20px;
@@ -131,7 +131,7 @@ div[id^="arcfx-mobile-menu"] {
 .workspace-primary:hover { opacity: .88; }
 .workspace-primary:disabled { cursor: not-allowed; opacity: .55; }
 .workspace-primary:focus-visible, .workspace-overview a:focus-visible, .workspace-overview button:focus-visible {
-  outline: 3px solid var(--fx-info); outline-offset: 2px;
+  outline: 3px solid var(--fx-focus); outline-offset: 2px;
 }
 #entry-feedback { min-height: 1.5em; margin-top: 12px; color: var(--fx-muted); font-size: 13px; }
 .workspace-steps { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 22px 0 0; padding: 0; list-style-position: inside; color: var(--fx-ink); font-size: 13px; }

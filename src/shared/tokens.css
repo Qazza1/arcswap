@@ -27,28 +27,29 @@
   --fx-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
 
   /* ── Surface ── */
-  --fx-bg:      #FFFFFF;
-  --fx-surface: #FAFAFA;
+  --fx-bg:      #F4F1EC;
+  --fx-surface: #FAF9F7;
   --fx-elevated:#FFFFFF;
-  --fx-sunken:  #F4F4F5;
-  --fx-line:    #E5E5E5;
-  --fx-line-soft: #F0F0F0;
+  --fx-sunken:  #EEEAE3;
+  --fx-line:    #E4DED5;
+  --fx-line-soft: #ECE7DF;
 
   /* ── Ink ── */
-  --fx-ink:     #0A0A0A;   /* 19.8:1 on --fx-bg */
+  --fx-ink:     #211F1B;
   /* Chosen against the SUNKEN surface, not the page ground: #737373 cleared 4.5
      on white but fell to 4.31 inside a card, so muted text failed exactly where
      it is used most. 4.6:1 on sunken, 5.1:1 on the page. */
-  --fx-muted:   #6E6E6E;
+  --fx-muted:   #716B63;
   /* --fx-faint is ~2.5:1. Borders, disabled states, decorative marks only:
      never text a reader needs. Reach for --fx-muted instead. */
-  --fx-faint:   #A3A3A3;
+  --fx-faint:   #9C958B;
 
-  /* ── Action. Deliberately ink, not a hue: the primary button is the most
-        emphatic thing on screen and must not read as a status. ── */
-  --fx-accent:     #0A0A0A;
+  /* ── Action. Verdigris is reserved for deliberate forward motion; payment
+        and settlement state retain their own semantic colours below. ── */
+  --fx-accent:     #1D6258;
   --fx-on-accent:  #FFFFFF;
-  --fx-focus:      #2563EB;
+  --fx-accent-soft:#E5F0EC;
+  --fx-focus:      #1D6258;
   --fx-proof:      #1D4ED8;
   --fx-proof-bg:   #EFF6FF;
 
@@ -59,13 +60,13 @@
   --fx-info:    #1D4ED8;  --fx-info-bg: #DBEAFE;
 
   /* ── Shape & rhythm ── */
-  --fx-r:    10px;
-  --fx-r-sm: 6px;
-  --fx-r-lg: 14px;
-  --fx-r-xl: 18px;
+  --fx-r:    12px;
+  --fx-r-sm: 8px;
+  --fx-r-lg: 16px;
+  --fx-r-xl: 16px;
   --fx-gap:  16px;
-  --fx-shadow-sm: 0 1px 2px rgba(10,10,10,.04), 0 1px 3px rgba(10,10,10,.03);
-  --fx-shadow-md: 0 12px 28px rgba(10,10,10,.08), 0 2px 6px rgba(10,10,10,.04);
+  --fx-shadow-sm: 0 1px 2px rgba(33,31,27,.04), 0 2px 5px rgba(33,31,27,.025);
+  --fx-shadow-md: 0 12px 28px rgba(33,31,27,.08), 0 2px 6px rgba(33,31,27,.04);
   --fx-space-1: 4px;
   --fx-space-2: 8px;
   --fx-space-3: 12px;

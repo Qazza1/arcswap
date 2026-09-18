@@ -147,13 +147,13 @@
 
   <main class="wrap" id="workspace-main" tabindex="-1">
 
-    <!-- ── Wrong-network banner (hidden unless wallet is off Arc Testnet) ── -->
-    <div id="netBanner" style="display:none;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:rgba(234,179,8,.07);border:1px solid rgba(234,179,8,.28);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:24px;">
+    <!-- ── Wrong-network panel: selecting Arc Mainnet is always user-triggered. ── -->
+    <div id="netBanner" style="display:none;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--fx-warn-bg);border:1px solid var(--fx-warn);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:24px;">
       <div style="display:flex;align-items:center;gap:10px;color:var(--fx-warn);font-size:13.5px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span>You're not connected to <strong>Arc Testnet</strong>. Switch networks to use ArcFX.</span>
+        <span><strong>Connected wallet is on the wrong network.</strong> ArcFX requires Arc Mainnet · Chain 5042.</span>
       </div>
-      <button id="switchNetBtn" style="padding:8px 16px;border-radius:6px;background:var(--fx-warn);color:var(--fx-on-accent);border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">Switch to Arc Testnet</button>
+      <button id="switchNetBtn" class="workspace-primary" style="margin:0;min-height:38px;white-space:nowrap;">Switch to Arc Mainnet</button>
     </div>
 
     <!-- ── Status / welcome header ── -->
@@ -163,7 +163,7 @@
         <p>Run invoices and payments on Arc, then keep consequential agent decisions clear, bounded, and independently verifiable.</p>
       </div>
       <div class="status-meta">
-        <div class="ctx-chip"><span class="net-dot"></span>Network: <span class="mono">Arc Testnet</span></div>
+        <div class="ctx-chip"><span class="net-dot"></span>Network: <span class="mono">Arc Mainnet · eip155:5042</span></div>
         <div class="ctx-chip" id="ctxWallet">Wallet: <span class="mono">Not connected</span></div>
         <button id="refreshBtn" title="Refresh balance &amp; activity" style="display:none;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;background:var(--bg-raised);border:1px solid var(--border-med);color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -194,7 +194,7 @@
 
     <section class="workspace-protocol" aria-labelledby="protocol-title">
     <h2 id="protocol-title">Protocol activity</h2>
-    <p>All wallets · Arc Testnet · Not your personal activity</p>
+    <p>All wallets · Arc Mainnet · Not your personal activity</p>
     <div class="stats">
       <div class="stat">
         <div class="stat-lbl">Settled volume</div>
@@ -215,13 +215,13 @@
     </section>
 
     <!-- ── Primary action cards ── -->
-    <h2 class="sec-label">More tools</h2>
+    <h2 class="sec-label">Developer test surfaces · Arc Testnet only</h2>
     <div class="actions">
       <a href="/trade" class="action">
         <div class="action-ico teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></div>
         <div class="action-body">
           <h3>Exchange &amp; bridge</h3>
-          <p>Exchange USDC and EURC or move funds across supported test networks.</p>
+          <p>Separate Testnet development surface. It is not part of the Arc Mainnet receivables workspace.</p>
         </div>
         <span class="action-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></span>
       </a>
@@ -229,15 +229,15 @@
         <div class="action-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></div>
         <div class="action-body">
           <h3>Batch payouts</h3>
-          <p>Prepare a single transaction for payroll, vendor runs, or other repeated payouts.</p>
+          <p>Separate Testnet development surface for preparing a batch transaction.</p>
         </div>
         <span class="action-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></span>
       </a>
       <a href="/pay" class="action">
         <div class="action-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/></svg></div>
         <div class="action-body">
-          <h3>Payment links</h3>
-          <p>Create a direct stablecoin payment request when a full invoice is not required.</p>
+          <h3>Legacy payment links</h3>
+          <p>Separate Testnet development surface; Arc Mainnet payments use the authoritative invoice payer flow.</p>
         </div>
         <span class="action-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></span>
       </a>
@@ -307,7 +307,6 @@
   <script type="module">
     import { arcfxMountHeader } from '/src/shared/header.ts';
     import { arcfxWallet } from '/src/shared/wallet.ts';
-    import { arcfxAuth } from '/src/shared/auth.ts';
     import { arcfxApi } from '/src/shared/arcfxApi.ts';
     import { createWalletLoadGuard } from '/src/shared/walletLoadGuard.ts';
     arcfxMountHeader({ pageKey: 'app', activeLink: null, activeTool: null });
@@ -315,13 +314,11 @@
 
     // ── Constants ──
     var TOKENS = {
-      USDC: '0x3600000000000000000000000000000000000000',
-      EURC: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a'
+      USDC: '0x3600000000000000000000000000000000000000'
     };
     var DECIMALS = 6;
-    var ARC_CHAIN_ID  = '0x4cef52'; // 5042002
+    var ARC_CHAIN_ID  = '0x13b2'; // 5042
     var TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
-    var SCAN = 'https://testnet.arcscan.app';
     var currentAddr = null;
     var dashboardLoads = createWalletLoadGuard();
 
@@ -350,25 +347,15 @@
     // ── Wrong-network detection ──
     function checkNetwork(){
       var banner = document.getElementById('netBanner');
-      if (banner) banner.style.display = arcfxWallet.connected && !arcfxWallet.onArc ? 'flex' : 'none';
-      return arcfxWallet.onArc;
+      var onMainnet = arcfxWallet.chainId && arcfxWallet.chainId.toLowerCase() === ARC_CHAIN_ID;
+      if (banner) banner.style.display = arcfxWallet.connected && !onMainnet ? 'flex' : 'none';
+      return Boolean(onMainnet);
     }
     async function switchNetwork(){
-      if (!arcfxWallet.provider) return;
-      try {
-        await arcfxWallet.request({ method:'wallet_switchEthereumChain', params:[{ chainId: ARC_CHAIN_ID }] });
-      } catch (err) {
-        if (err && err.code === 4902) { // chain not added to wallet
-          try {
-            await arcfxWallet.request({ method:'wallet_addEthereumChain', params:[{
-              chainId: ARC_CHAIN_ID,
-              chainName: 'Arc Testnet',
-              nativeCurrency: { name: 'USD Coin', symbol: 'USDC', decimals: 18 },
-              rpcUrls: ['https://rpc.testnet.arc.network'],
-              blockExplorerUrls: ['https://testnet.arcscan.app']
-            }]});
-          } catch (e) { /* user dismissed */ }
-        }
+      var switched = await arcfxWallet.switchToArcMainnet();
+      if (!switched) {
+        var feedback = document.getElementById('entry-feedback');
+        if (feedback) feedback.textContent = 'Arc Mainnet was not selected. Your workspace remains blocked.';
       }
     }
 
@@ -382,16 +369,15 @@
       var refresh = document.getElementById('refreshBtn'); if (refresh) refresh.style.display = 'inline-flex';
 
       var usdc = await readBalance(TOKENS.USDC, addr);
-      var eurc = await readBalance(TOKENS.EURC, addr);
       if (!dashboardLoads.isCurrent(ticket)) return;
       var el = document.getElementById('statBalance');
       var sub = document.getElementById('statBalanceSub');
-      if (usdc === null && eurc === null) {
+      if (usdc === null) {
         el.textContent = '—'; sub.textContent = 'Could not load balance';
       } else {
         el.classList.remove('empty');
-        el.textContent = (usdc === null ? 'Unavailable' : fmt(usdc)) + ' USDC';
-        sub.textContent = (eurc === null ? 'Unavailable' : fmt(eurc)) + ' EURC';
+        el.textContent = fmt(usdc) + ' USDC';
+        sub.textContent = 'Canonical Arc Mainnet USDC';
       }
     }
 
@@ -421,7 +407,7 @@
       if (!body || !rows.length) return; // no rows → keep the honest empty state
       var html = '<div>';
       rows.forEach(function(r){
-        html += '<a href="' + SCAN + '/tx/' + r.hash + '" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-bottom:1px solid var(--border);text-decoration:none;">'
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-bottom:1px solid var(--border);">'
           + '<span style="display:flex;align-items:center;gap:11px;min-width:0;">'
           + '<span style="width:30px;height:30px;border-radius:8px;background:var(--bg-raised);display:flex;align-items:center;justify-content:center;color:' + r.color + ';flex-shrink:0;">' + r.icon + '</span>'
           + '<span style="display:flex;flex-direction:column;gap:2px;min-width:0;">'
@@ -431,7 +417,7 @@
           + '<span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">'
           + '<span style="font-size:13px;color:' + r.amtColor + ';font-family:\'JetBrains Mono\',monospace;">' + r.amt + '</span>'
           + '<span style="font-size:11px;color:var(--subtle);">' + r.when + '</span>'
-          + '</span></a>';
+          + '</span></div>';
       });
       html += '</div>';
       body.innerHTML = html;
@@ -447,16 +433,12 @@
         var padded = pad32(addr);
         var res = await Promise.all([
           safeGetLogs(TOKENS.USDC, [TRANSFER_TOPIC, padded, null], fromBlock, latest),
-          safeGetLogs(TOKENS.USDC, [TRANSFER_TOPIC, null, padded], fromBlock, latest),
-          safeGetLogs(TOKENS.EURC, [TRANSFER_TOPIC, padded, null], fromBlock, latest),
-          safeGetLogs(TOKENS.EURC, [TRANSFER_TOPIC, null, padded], fromBlock, latest)
+          safeGetLogs(TOKENS.USDC, [TRANSFER_TOPIC, null, padded], fromBlock, latest)
         ]);
         if (!dashboardLoads.isCurrent(ticket)) return;
         var tagged = []
           .concat(res[0].map(function(l){ return { log:l, sym:'USDC', dir:'out' }; }))
-          .concat(res[1].map(function(l){ return { log:l, sym:'USDC', dir:'in'  }; }))
-          .concat(res[2].map(function(l){ return { log:l, sym:'EURC', dir:'out' }; }))
-          .concat(res[3].map(function(l){ return { log:l, sym:'EURC', dir:'in'  }; }));
+          .concat(res[1].map(function(l){ return { log:l, sym:'USDC', dir:'in'  }; }));
         if (!tagged.length) return; // keep empty state
 
         var groups = {};
@@ -476,16 +458,8 @@
 
         var rows = hashes.map(function(h){
           var g = groups[h];
-          var hasU = g.some(function(x){ return x.sym === 'USDC'; });
-          var hasE = g.some(function(x){ return x.sym === 'EURC'; });
           var bn = g[0].log.blockNumber;
           var when = blockTs[bn] ? timeAgo(blockTs[bn]) : 'recent';
-          if (hasU && hasE){
-            var outLeg = g.filter(function(x){ return x.dir === 'out'; })[0] || g[0];
-            var inLeg  = g.filter(function(x){ return x.dir === 'in';  })[0] || g[0];
-            return { hash:h, label:'Swap ' + outLeg.sym + ' → ' + inLeg.sym, icon:ICON_SWAP, color:'var(--teal)',
-                     amt: fmt(amtFromData(outLeg.log.data)) + ' ' + outLeg.sym, amtColor:'var(--text)', when:when };
-          }
           var leg = g[0];
           if (leg.dir === 'out'){
             return { hash:h, label:'Sent ' + leg.sym, icon:ICON_OUT, color:'var(--fx-bad)',
@@ -499,7 +473,7 @@
     }
 
     function refreshAll(addr){
-      if (!addr || !arcfxAuth.currentOwnerSession() || !arcfxWallet.onArc) return;
+      if (!addr || !arcfxApi.hasReceivablesOwnerSession() || !checkNetwork()) return;
       currentAddr = addr;
       var ticket = dashboardLoads.begin(addr);
       hydrate(addr, ticket);
@@ -557,27 +531,40 @@
       var entryFeedback = document.getElementById('entry-feedback');
       var entryBusy = false;
       function renderWorkspace(){
-        var verified = Boolean(arcfxAuth.currentOwnerSession()) && arcfxWallet.onArc;
+        var onMainnet = checkNetwork();
+        var verified = arcfxApi.hasReceivablesOwnerSession() && onMainnet;
         var address = verified ? arcfxWallet.address : null;
         dashboardLoads.transition(address);
         document.getElementById('workspace-entry').hidden = verified;
         document.getElementById('workspace-private').hidden = !verified;
         document.getElementById('workspace-activity').hidden = !verified;
-        document.getElementById('entry-title').textContent = arcfxWallet.connected
-          ? 'Verify ownership to open your workspace.' : 'Connect your wallet to open your ArcFX workspace.';
-        entryButton.textContent = entryBusy ? 'Continue in your wallet…' : arcfxWallet.connected ? 'Verify wallet ownership' : 'Connect wallet';
-        entryButton.disabled = entryBusy || (arcfxWallet.connected && !arcfxWallet.onArc);
-        checkNetwork();
+        document.getElementById('entry-title').textContent = !arcfxWallet.connected
+          ? 'Connect your wallet to open your ArcFX workspace.'
+          : !onMainnet ? 'Connected wallet is on the wrong network.'
+          : 'Verify ownership to open your workspace.';
+        entryButton.textContent = entryBusy ? 'Continue in your wallet…'
+          : !arcfxWallet.connected ? 'Connect wallet'
+          : !onMainnet ? 'Switch to Arc Mainnet'
+          : 'Verify wallet ownership';
+        entryButton.disabled = entryBusy;
         if (address && address !== currentAddr) refreshAll(address);
         if (!address) clearBalances();
       }
       entryButton.addEventListener('click', async function(){
         if (entryBusy) return;
         entryBusy = true;
-        entryFeedback.textContent = 'Connect your selected wallet and approve the ArcFX session message. No payment is requested.';
+        entryFeedback.textContent = !arcfxWallet.connected
+          ? 'Connect the selected wallet. No payment is requested.'
+          : !checkNetwork()
+            ? 'Select Arc Mainnet in your wallet to continue. No payment is requested.'
+            : 'Verify ownership with the ArcFX session message. No payment is requested.';
         renderWorkspace();
         try {
-          await arcfxApi.connectOwner();
+          if (!arcfxWallet.connected) await arcfxWallet.connectCurrentNetwork();
+          else if (!checkNetwork()) {
+            var switched = await arcfxWallet.switchToArcMainnet();
+            if (!switched) throw new Error('Arc Mainnet was not selected.');
+          } else await arcfxApi.connectReceivablesOwner();
           entryFeedback.textContent = '';
         } catch (error) {
           entryFeedback.textContent = 'Wallet verification was not completed. Nothing was submitted. You can try again.';
@@ -587,8 +574,7 @@
         }
       });
       arcfxWallet.onChange(renderWorkspace);
-      arcfxAuth.onChange(renderWorkspace);
-      arcfxAuth.ready().then(renderWorkspace);
+      renderWorkspace();
       // Re-check the existing session's expiry without asking for a signature.
       window.setInterval(renderWorkspace, 30000);
 

@@ -66,7 +66,7 @@ interface MountConfig {
 // ── Stats bar items ────────────────────────────────────────────────────────
 // PRODUCT mode: leads with environment status, has pulsing dot
 const PRODUCT_STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boolean; valueColor?: string }> = [
-  { label: 'Arc Testnet', value: 'Live',         dot: true },
+  { label: 'Arc Mainnet', value: 'Live',         dot: true },
   { label: 'Settlement',  value: '&lt; 1 second', valueColor: '#00d4aa' },
   { label: 'Gas token',   value: 'USDC' },
   { label: 'Avg fee',     value: '$0.0002',       valueColor: '#00d4aa' },
@@ -77,7 +77,7 @@ const PRODUCT_STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boole
 // MARKETING mode keeps the release status visible without presenting a live
 // product dashboard before a visitor has entered the workspace.
 const MARKETING_STATS_BAR_ITEMS: Array<{ label: string; value: string; dot?: boolean; valueColor?: string }> = [
-  { label: 'Current release', value: 'Arc Testnet' },
+  { label: 'Current release', value: 'Arc Mainnet' },
   { label: 'Workspace',       value: 'Wallet-first' },
   { label: 'Payments',        value: '0.15% fee' },
   { label: 'Evidence',        value: 'Decision trail' },
@@ -156,8 +156,8 @@ const CANONICAL_CSS = `
   .stats-bar-sep { width:1px; height:14px; background:#1e293b; margin:0 20px; flex-shrink:0; }
   @keyframes arcfx-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-  /* ── Mobile (≤768px) ── */
-  @media (max-width: 768px) {
+  /* ── Compact workspace nav (≤980px) ── */
+  @media (max-width: 980px) {
     /* Stats bar: scroll horizontally instead of overflowing the viewport */
     .stats-bar-inner { justify-content: flex-start; overflow-x: auto; padding: 0 16px; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; }
     .stats-bar-inner::-webkit-scrollbar { display: none; }
@@ -184,7 +184,7 @@ const CANONICAL_CSS = `
       white-space: nowrap;
     }
     /* The network pill is decorative next to the address; the stats bar already
-       says "Arc Testnet · Live". Dropping it reclaims the width the nav needs. */
+       identifies Arc Mainnet. Dropping it reclaims the width the nav needs. */
     .arcfx-testnet-pill { display: none !important; }
   }
 
@@ -206,18 +206,17 @@ const CANONICAL_CSS = `
   #arcfx-contacts-btn:hover, [id^="arcfx-contacts-btn"]:hover { border-color: var(--fx-accent) !important; color: var(--fx-ink) !important; }
   #connect-btn:hover { border-color: var(--fx-accent); }
 
-  /* The nav's primary call to action. This was an inline style plus an
-     onmouseover/onmouseout pair writing a dark blue straight onto the element —
-     which is both why it ignored the register and why script-src still needed
-     'unsafe-inline'. As a class it does neither. */
+  /* Header navigation stays secondary; the page's own workspace action is the
+     single primary CTA. This is a class rather than inline hover scripting so
+     it remains CSP-safe and follows the shared token register. */
   .arcfx-cta {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 18px; border-radius: 7px;
-    background: var(--fx-accent); color: var(--fx-on-accent);
+    border: 1px solid var(--fx-line); background: var(--fx-surface); color: var(--fx-ink);
     font-size: 13.5px; font-weight: 600; text-decoration: none;
-    transition: opacity .15s;
+    transition: border-color .15s, background .15s;
   }
-  .arcfx-cta:hover { opacity: .86; }
+  .arcfx-cta:hover { border-color: var(--fx-ink); background: var(--fx-elevated); }
 
   [data-register] .arcfx-navlink { color: var(--fx-muted); }
   [data-register] .arcfx-navlink:hover { color: var(--fx-ink); background: var(--fx-sunken); }
@@ -424,8 +423,8 @@ function buildMarketingNav(activeLink: ActiveLink): string {
 }
 
 function buildProductNav(pageKey: PageKey, activeLink: ActiveLink, activeTool: ActiveTool): string {
-  const receivablesWorkspace = pageKey === "customers" || pageKey === "invoices" || pageKey === "invoice";
-  const networkPillLabel = receivablesWorkspace ? "Mainnet workspace" : "Testnet";
+  const receivablesWorkspace = pageKey === "app" || pageKey === "customers" || pageKey === "invoices" || pageKey === "invoice";
+  const networkPillLabel = "Arc Mainnet · eip155:5042";
   const isToolsActive = activeLink === 'tools';
   const toolsBtnColor = isToolsActive ? '#f1f5f9' : '#94a3b8';
   const toolsBtnBg    = isToolsActive ? '#1e293b' : 'transparent';
@@ -762,7 +761,7 @@ function wireBehavior(pageKey: PageKey, mode: Mode): void {
   // owner session. A connected click opens the app-level account menu instead
   // of repeating either prompt.
   const connectBtn = document.getElementById('connect-btn');
-  const mainnetReceivablesPage = pageKey === 'customers' || pageKey === 'invoices' || pageKey === 'invoice';
+  const mainnetReceivablesPage = pageKey === 'app' || pageKey === 'customers' || pageKey === 'invoices' || pageKey === 'invoice';
   const accountMenu = document.getElementById('arcfx-account-menu') as HTMLElement | null;
   const accountWrap = document.getElementById('arcfx-account-wrap');
   const disconnectBtn = document.getElementById('arcfx-disconnect-btn');

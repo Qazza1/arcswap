@@ -160,12 +160,20 @@ function workspaceReady(
     paintReceivablesNetwork(state);
     return true;
   }
+  const wrongNetwork = state.connected;
   container.replaceChildren(
     empty(
-      "Open your receivables workspace",
-      "Connect your selected wallet on Arc Mainnet (chain 5042) to view and manage your records.",
-      action("Connect wallet", "fx-button--primary", async () => {
+      wrongNetwork ? "Connected wallet is on the wrong network" : "Open your receivables workspace",
+      wrongNetwork
+        ? "ArcFX requires Arc Mainnet · Chain 5042."
+        : "Connect your selected wallet on Arc Mainnet (chain 5042) to view and manage your records.",
+      action(wrongNetwork ? "Switch to Arc Mainnet" : "Connect wallet", "fx-button--primary", async () => {
         try {
+          if (wrongNetwork) {
+            const switched = await arcfxWallet.switchToArcMainnet();
+            if (!switched) throw new Error("Arc Mainnet was not selected. No workspace action was taken.");
+            return;
+          }
           await arcfxApi.connectReceivablesOwner();
           if (!mainnetSelected())
             throw new Error(

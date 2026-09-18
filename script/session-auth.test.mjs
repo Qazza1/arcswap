@@ -995,3 +995,15 @@ test("Mainnet receivables clearly keeps Agent Evidence unavailable", () => {
   assert.match(apiSource, /listReceivablesInvoices/);
   assert.match(walletSource, /connectCurrentNetwork/);
 });
+
+test("Arc Mainnet switching is explicit, pinned, and revalidated", () => {
+  assert.match(walletSource, /ARC_MAINNET_CHAIN_ID_HEX = ARC_MAINNET\.chainId/);
+  assert.match(walletSource, /chainId: "0x13b2"/);
+  assert.match(walletSource, /rpcUrls: \["https:\/\/rpc\.mainnet\.arc\.io"\]/);
+  const switchPath = walletSource.slice(walletSource.indexOf("async function switchToArcMainnet"), walletSource.indexOf("async function connect()"));
+  assert.match(switchPath, /selectedProvider\?\.provider/, "switching stays on the selected EIP-6963 provider");
+  assert.match(switchPath, /wallet_switchEthereumChain/, "switch uses the exact EIP-1193 switch method");
+  assert.match(switchPath, /wallet_addEthereumChain/, "unknown-chain fallback is scoped to the Mainnet profile");
+  assert.match(switchPath, /await refreshSelectedProvider\(provider\)/, "switch result is revalidated through a complete provider snapshot");
+  assert.doesNotMatch(switchPath, /\.approve\(|\.pay\(/, "switching cannot reach payment methods");
+});

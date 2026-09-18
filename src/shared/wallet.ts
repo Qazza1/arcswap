@@ -19,6 +19,20 @@ export const ARC_TESTNET = {
   blockExplorerUrls: ["https://testnet.arcscan.app"],
 } as const;
 
+/**
+ * Production workspace profile. This is intentionally separate from the
+ * legacy Testnet transaction profile: selecting it is always an explicit
+ * owner action and never happens during silent restore or page load.
+ */
+export const ARC_MAINNET = {
+  chainId: "0x13b2", // 5042
+  chainName: "Arc Mainnet",
+  nativeCurrency: { name: "USD Coin", symbol: "USDC", decimals: 18 },
+  rpcUrls: ["https://rpc.mainnet.arc.io"],
+} as const;
+export const ARC_MAINNET_CHAIN_ID_HEX = ARC_MAINNET.chainId;
+export const ARC_MAINNET_CHAIN_ID_DEC = 5042;
+
 export const ARC_CHAIN_ID_HEX = ARC_TESTNET.chainId;
 export const ARC_CHAIN_ID_DEC = 5042002;
 
@@ -112,7 +126,11 @@ function paintHeader(): void {
   } else {
     if (fullAddress) fullAddress.textContent = state.address;
     if (providerLabel) providerLabel.textContent = selectedProvider?.info?.name || selectedProvider?.info?.rdns || "Browser wallet";
-    if (networkLabel) networkLabel.textContent = state.onArc ? "Arc Testnet" : "Wrong network";
+    if (networkLabel) {
+      networkLabel.textContent = state.chainId?.toLowerCase() === ARC_MAINNET_CHAIN_ID_HEX
+        ? "Arc Mainnet · eip155:5042"
+        : state.onArc ? "Arc Testnet" : "Wrong network";
+    }
   }
   const display = document.getElementById("wallet-display");
   if (display) {
@@ -496,6 +514,32 @@ async function connectCurrentNetwork(): Promise<WalletState> {
 }
 
 /**
+ * Explicitly switch the already selected EIP-6963 provider to Arc Mainnet.
+ * This never runs during connect, restore, or transaction preparation. The
+ * final provider snapshot is re-read so an add/switch response is never
+ * mistaken for a trusted chain assertion.
+ */
+async function switchToArcMainnet(): Promise<boolean> {
+  const provider = selectedProvider?.provider;
+  if (!provider) return false;
+  const revision = providerRevision;
+  try {
+    await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_MAINNET_CHAIN_ID_HEX }] });
+  } catch (error: any) {
+    const code = error?.code ?? error?.error?.code ?? error?.info?.error?.code;
+    if (code === 4902 || String(error?.message || "").includes("4902")) {
+      try { await provider.request({ method: "wallet_addEthereumChain", params: [ARC_MAINNET as any] }); }
+      catch { /* rejection is reconciled below and remains fail-closed */ }
+    }
+  }
+  if (!isCurrentProvider(provider, revision)) return false;
+  await refreshSelectedProvider(provider);
+  return isCurrentProvider(provider, revision)
+    && state.connected
+    && state.chainId?.toLowerCase() === ARC_MAINNET_CHAIN_ID_HEX;
+}
+
+/**
  * Explicit connection for the legacy Testnet transaction UI. New Mainnet
  * receivables pages deliberately use connectCurrentNetwork instead, so this
  * Testnet switch cannot accidentally retarget the existing payer flow.
@@ -547,8 +591,8 @@ export const arcfxWallet = {
   get provider(): Eip1193Provider | null { return selectedProvider?.provider || null; },
   get providerInfo(): Readonly<Eip6963Info> | null { return selectedProvider?.info || null; },
   get isExplicitlySignedOut(): boolean { return explicitlySignedOut(); },
-  restore, connect, connectCurrentNetwork, disconnect, ensureArc, request, signMessage, onChange, shortAddress, refreshHeader: paintHeader,
-  ARC_TESTNET, ARC_CHAIN_ID_HEX, ARC_CHAIN_ID_DEC,
+  restore, connect, connectCurrentNetwork, disconnect, ensureArc, switchToArcMainnet, request, signMessage, onChange, shortAddress, refreshHeader: paintHeader,
+  ARC_TESTNET, ARC_CHAIN_ID_HEX, ARC_CHAIN_ID_DEC, ARC_MAINNET, ARC_MAINNET_CHAIN_ID_HEX, ARC_MAINNET_CHAIN_ID_DEC,
 };
 
 if (typeof window !== "undefined") {

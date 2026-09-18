@@ -89,7 +89,10 @@ function render(message?: { text: string; type?: string; transactionHash?: strin
   shell.append(brand);
   const card = el("section", "payer-card");
   if (!intent || !invoice) {
-    card.append(el("div", "payer-body", notice?.text || "Loading invoice…"));
+    const body = el("div", "payer-body");
+    if (notice) body.append(stateNotice(notice.text, notice.type));
+    else body.append(el("div", "payer-loading", "Loading invoice…"));
+    card.append(body);
     shell.append(card); root.append(shell); return;
   }
   const header = el("header", "payer-head");
@@ -128,11 +131,14 @@ function render(message?: { text: string; type?: string; transactionHash?: strin
   if (paymentIncluded) {
     actions.append(el("p", "payer-fine", "This browser observed the payment transaction included. Further payment attempts are disabled; wait for the authoritative invoice status refresh."));
   } else if (!walletReady()) {
-    const connect = el("button", "payer-button", "Connect wallet on Arc Mainnet");
+    const wrongNetwork = Boolean(arcfxWallet.connected && arcfxWallet.address && arcfxWallet.chainId?.toLowerCase() !== ARC_MAINNET_PAYER.chainIdHex);
+    const connect = el("button", "payer-button", wrongNetwork ? "Switch to Arc Mainnet" : "Connect wallet on Arc Mainnet");
     connect.type = "button";
     connect.disabled = busy;
-    connect.addEventListener("click", () => void connectWallet());
-    actions.append(connect, el("p", "payer-fine", "Your wallet must already be set to Arc Mainnet (chain 5042). ArcFX will not switch networks automatically."));
+    connect.addEventListener("click", () => void (wrongNetwork ? switchWalletToMainnet() : connectWallet()));
+    actions.append(connect, el("p", "payer-fine", wrongNetwork
+      ? "ArcFX requires Arc Mainnet · Chain 5042. Switching is requested only after you select this action."
+      : "Connect the selected wallet to continue. ArcFX does not switch networks automatically."));
   } else if (grossAtomic !== null && allowance !== null) {
     const nextAction = allowanceAction(allowance, grossAtomic);
     const button = el("button", "payer-button", nextAction === "approve" ? `Approve exactly ${usdc(grossAtomic)}` : `Pay ${usdc(grossAtomic)}`);
@@ -151,15 +157,31 @@ async function connectWallet() {
   busy = true; render({ text: "Connecting the selected wallet…" });
   try {
     const state = await arcfxWallet.connectCurrentNetwork();
-    if (!state.connected || state.chainId?.toLowerCase() !== ARC_MAINNET_PAYER.chainIdHex || !arcfxWallet.provider || !state.address) {
-      throw new Error("Switch your selected wallet to Arc Mainnet (chain 5042), then connect again.");
-    }
-    provider = new BrowserProvider(arcfxWallet.provider);
-    signerAddress = state.address;
-    if (signerAddress.toLowerCase() === intent?.recipient.toLowerCase()) {
-      throw new Error("You cannot pay your own invoice.");
-    }
-    await refreshQuoteAndAllowance();
+    await establishWallet(state);
+    render();
+  } catch (error) {
+    render({ text: failureMessage(error), type: "error" });
+  } finally { busy = false; render(); }
+}
+
+async function establishWallet(state: { connected: boolean; chainId: string | null; address: string | null }): Promise<void> {
+  if (!state.connected || state.chainId?.toLowerCase() !== ARC_MAINNET_PAYER.chainIdHex || !arcfxWallet.provider || !state.address) {
+    throw new Error("Arc Mainnet (chain 5042) is required before a payment can be prepared.");
+  }
+  provider = new BrowserProvider(arcfxWallet.provider);
+  signerAddress = state.address;
+  if (signerAddress.toLowerCase() === intent?.recipient.toLowerCase()) throw new Error("You cannot pay your own invoice.");
+  await refreshQuoteAndAllowance();
+}
+
+/** User-triggered network selection only. It performs no approval or payment. */
+async function switchWalletToMainnet() {
+  if (busy) return;
+  busy = true; render({ text: "Requesting Arc Mainnet from the selected wallet…" });
+  try {
+    const switched = await arcfxWallet.switchToArcMainnet();
+    if (!switched) throw new Error("Arc Mainnet was not selected. No payment action was requested.");
+    await establishWallet(arcfxWallet.state);
     render();
   } catch (error) {
     render({ text: failureMessage(error), type: "error" });

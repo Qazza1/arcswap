@@ -69,7 +69,12 @@ test("Mainnet payer uses exact allowance and fee math", async (t) => {
 
 test("payer path keeps approval, payment, and status authority separate", () => {
   assert.match(payerSource, /arcfxWallet\.connectCurrentNetwork\(\)/, "uses the pinned selected provider without a network switch");
-  assert.doesNotMatch(payerSource, /wallet_switchEthereumChain|window\.ethereum/, "no automatic switch or unpinned provider access");
+  assert.doesNotMatch(payerSource, /window\.ethereum/, "never accesses an unpinned provider");
+  const connect = payerSource.slice(payerSource.indexOf("async function connectWallet"), payerSource.indexOf("async function establishWallet"));
+  assert.doesNotMatch(connect, /wallet_switchEthereumChain|switchToArcMainnet/, "connecting never changes the wallet network automatically");
+  const switchPath = payerSource.slice(payerSource.indexOf("async function switchWalletToMainnet"), payerSource.indexOf("async function approveExact"));
+  assert.match(switchPath, /arcfxWallet\.switchToArcMainnet\(\)/, "a user-selected wrong-network action uses the pinned wallet helper");
+  assert.doesNotMatch(switchPath, /\.approve\(|\.pay\(/, "network switching cannot request an approval or payment");
   const approval = payerSource.slice(payerSource.indexOf("async function approveExact"), payerSource.indexOf("async function submitPayment"));
   assert.match(approval, /await loadAuthoritativeInvoice\(\)/, "approval rechecks authoritative fields before the wallet prompt");
   assert.match(approval, /token\.approve\(ARC_MAINNET_PAYER\.paymentsAddress, grossAtomic\)/);
