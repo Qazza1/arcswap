@@ -5,6 +5,7 @@ import { appPath } from "../shared/appOrigin";
 
 const root = document.getElementById("entry-root");
 if (!root) throw new Error("Missing app entry root.");
+document.body.classList.add("app-workspace");
 
 function render(message = "") {
   const state = arcfxWallet.state;

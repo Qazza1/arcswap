@@ -139,8 +139,8 @@
   <div id="arcfx-stats-bar"></div>
   <div id="arcfx-nav"></div>
   <script type="module">
-    import { arcfxMountHeader } from '/src/shared/header.ts';
-    arcfxMountHeader({ pageKey: 'trade', activeLink: 'trade', activeTool: null });
+    import { mountPublicShell } from '/src/shared/publicShell.ts';
+    mountPublicShell();
   
     /* ── Event wiring (static markup) ──────────────────────────────
        Replaces inline on* attributes so script-src needs no 'unsafe-inline'.

@@ -378,12 +378,8 @@
   <!-- Shared header module — single source of truth across all pages.
        Edit /src/shared/header.ts to change the nav/stats-bar everywhere. -->
   <script type="module">
-    import { arcfxMountHeader } from '/src/shared/header.ts';
-    arcfxMountHeader({
-      pageKey: 'multisend',
-      activeLink: 'tools',
-      activeTool: 'multisend'
-    });
+    import { mountPublicShell } from '/src/shared/publicShell.ts';
+    mountPublicShell();
   </script>
 
   <div class="page">

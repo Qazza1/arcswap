@@ -154,13 +154,8 @@
   <!-- Shared header module — single source of truth across all pages.
        Edit /src/shared/header.ts to change the nav/stats-bar everywhere. -->
   <script type="module">
-    import { arcfxMountHeader } from '/src/shared/header.ts';
-    arcfxMountHeader({
-      pageKey:'ecosystem',
-      activeLink: 'ecosystem',
-      activeTool: null,
-      mode: 'product'
-    });
+    import { mountPublicShell } from '/src/shared/publicShell.ts';
+    mountPublicShell();
   
     /* ── Event wiring (static markup) ──────────────────────────────
        Replaces inline on* attributes so script-src needs no 'unsafe-inline'.

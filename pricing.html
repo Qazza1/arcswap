@@ -31,8 +31,8 @@
     <section class="section" aria-labelledby="faq-title"><h2 id="faq-title">Questions</h2><div class="faq"><article><h3>Which asset is used for Mainnet invoice payment?</h3><p>The Arc Mainnet payer path uses the canonical USDC contract selected by the authoritative public invoice.</p></article><article><h3>Does Agent Evidence add a payment fee or execute a payment?</h3><p>Agent Evidence analyzes and records a decision trail. It does not approve, submit, or execute a payment.</p></article><article><h3>Does this page initiate a payment?</h3><p>No. It is informational. A payment requires an invoice-specific payer flow and an explicit wallet transaction confirmation.</p></article></div><a class="cta" href="https://app.arcfx.app/entry">Open ArcFX →</a></section>
   </main>
   <script type="module">
-    import { arcfxMountHeader } from '/src/shared/header.ts';
-    arcfxMountHeader({ pageKey: 'pricing', activeLink: 'pricing', mode: 'marketing' });
+    import { mountPublicShell } from '/src/shared/publicShell.ts';
+    mountPublicShell();
     const input = document.getElementById('calc-amount');
     const fee = document.getElementById('calc-fee');
     const total = document.getElementById('calc-total');

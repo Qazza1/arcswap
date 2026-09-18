@@ -160,19 +160,13 @@
   </style>
 </head>
 <body>
-  <!-- Header mount points — populated by /src/shared/header.ts -->
+  <!-- Public product shell: wallet controls belong only to app.arcfx.app. -->
   <div id="arcfx-stats-bar"></div>
   <div id="arcfx-nav"></div>
 
-  <!-- Shared header module — single source of truth across all pages.
-       Edit /src/shared/header.ts to change the nav/stats-bar everywhere. -->
   <script type="module">
-    import { arcfxMountHeader } from '/src/shared/header.ts';
-    arcfxMountHeader({
-      pageKey:'docs',
-      activeLink: 'docs',
-      mode: 'product'
-    });
+    import { mountPublicShell } from '/src/shared/publicShell.ts';
+    mountPublicShell();
   </script>
 
 <div class="docs-layout">
@@ -216,7 +210,7 @@
           <div class="section-eyebrow">Documentation</div>
           <h1 class="section-title">What is ArcFX</h1>
           <p class="section-sub">ArcFX is a non-custodial stablecoin toolkit for teams, built on <strong>Arc</strong> &mdash; Circle&rsquo;s Layer-1 blockchain for stablecoin finance. Swap and bridge stablecoins, pay up to 500 wallets at once, and send payment links and invoices that settle on-chain &mdash; all from your own wallet.</p>
-          <div class="info-box info-amber" style="margin-top:24px;">&#9888; ArcFX is currently live on <strong>Arc Testnet</strong>. Testnet USDC and EURC have no real-world value. Mainnet support will follow Arc&rsquo;s mainnet launch.</div>
+          <div class="info-box info-amber" style="margin-top:24px;">&#9888; <strong>Legacy Testnet reference.</strong> This guide documents deliberate Testnet-only swap, bridge, and legacy tool surfaces. The production receivables workspace and payment observation run on Arc Mainnet (chain 5042).</div>
           <div class="info-box info-green">Non-custodial by design:ArcFX never holds your funds. Every action is a transaction you sign in your own wallet.</div>
         </div>
 
@@ -239,7 +233,7 @@
         <!-- ── Network & contracts ── -->
         <div class="section" id="network">
           <h2 class="section-title">Network &amp; contracts</h2>
-          <p class="section-sub">ArcFX is deployed on Arc Testnet. The network details and on-chain contracts below are public and verifiable on ArcScan.</p>
+          <p class="section-sub">The network details below apply only to the legacy Arc Testnet development surfaces documented in this guide. They are not the production receivables configuration.</p>
 
           <div class="code-label" style="margin-top:24px;">Network</div>
           <table class="params-table" style="margin-bottom:24px;border:1px solid var(--border);border-radius:8px;overflow:hidden;">

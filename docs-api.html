@@ -107,8 +107,8 @@
   <div id="arcfx-stats-bar"></div>
   <div id="arcfx-nav"></div>
   <script type="module">
-    import { arcfxMountHeader } from '/src/shared/header.ts';
-    arcfxMountHeader({ pageKey:'docs-api', activeLink: 'developers', activeTool: null });
+    import { mountPublicShell } from '/src/shared/publicShell.ts';
+    mountPublicShell();
   
     /* ── Event wiring (static markup) ──────────────────────────────
        Replaces inline on* attributes so script-src needs no 'unsafe-inline'.
@@ -136,7 +136,7 @@
       <div class="page-eyebrow">Developer reference</div>
       <h1 class="page-title">ArcFX API</h1>
       <p class="page-lead">A read API over ArcFX's on-chain payment activity. Check whether an invoice has been paid, and pull payment history — all indexed from Arc and served as JSON. Authenticate with an API key; no wallet or signing required.</p>
-      <span class="testnet-pill"><span class="dot"></span>Arc Testnet · base URL below</span>
+      <span class="testnet-pill"><span class="dot"></span>Core payment observation · Arc Mainnet (5042)</span>
     </div>
 
     <div class="layout">
@@ -185,7 +185,7 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
             <div class="code-block-hdr"><span class="code-block-lbl">Header</span><button data-fxh="h3" class="copy-btn">Copy</button></div>
             <pre><code>Authorization: Bearer arcfx_sk_test_xxxxxxxxxxxxxxxx</code></pre>
           </div>
-          <p>Keys are scoped to Arc Testnet and prefixed <code>arcfx_sk_test_</code>. Treat your key like a password — it's stored only as a hash on our side and shown to you exactly once at issuance.</p>
+          <p>Integration keys are accepted by the active ArcFX API profile. Their historical <code>arcfx_sk_test_</code> prefix does not select an Arc network. Treat a key like a password — it is stored only as a hash and shown once at issuance.</p>
         </section>
 
         <!-- KEYS -->
@@ -194,7 +194,7 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
           <div class="endpoint">
             <div class="endpoint-hdr"><span class="method post">POST</span><span class="endpoint-path">/api/v1/keys</span></div>
             <div class="endpoint-body">
-              <p class="endpoint-desc">Issues a new Testnet API key. Self-serve — no key required to call this. The key is returned <strong>once</strong> in the response and cannot be retrieved again, so save it immediately.</p>
+              <p class="endpoint-desc">Issues a new integration API key. Self-serve — no key is required to call this endpoint. The key is returned <strong>once</strong> and cannot be retrieved again, so save it immediately.</p>
               <h3>Body parameters</h3>
               <table class="params">
                 <tr><th>Field</th><th>Type</th><th>Description</th></tr>
@@ -265,7 +265,7 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
     <span class="tok-key">"net"</span>: <span class="tok-str">"99.90"</span>,
     <span class="tok-key">"blockNumber"</span>: <span class="tok-num">46716837</span>,
     <span class="tok-key">"blockTime"</span>: <span class="tok-str">"2026-06-12T..."</span>,
-    <span class="tok-key">"explorer"</span>: <span class="tok-str">"https://testnet.arcscan.app/tx/0x..."</span>
+    <span class="tok-key">"explorer"</span>: <span class="tok-str">"https://explorer.arc.io/tx/0x..."</span>
   }
 }</code></pre>
               </div>
@@ -314,7 +314,7 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
       <span class="tok-key">"net"</span>: <span class="tok-str">"99.90"</span>,
       <span class="tok-key">"blockNumber"</span>: <span class="tok-num">46716837</span>,
       <span class="tok-key">"blockTime"</span>: <span class="tok-str">"2026-06-12T..."</span>,
-      <span class="tok-key">"explorer"</span>: <span class="tok-str">"https://testnet.arcscan.app/tx/0x..."</span>
+      <span class="tok-key">"explorer"</span>: <span class="tok-str">"https://explorer.arc.io/tx/0x..."</span>
     }
   ]
 }</code></pre>
@@ -339,7 +339,7 @@ curl https://arcfx-backend-production.up.railway.app/api/v1/invoices/status\<spa
           <div class="note">Questions, higher limits, or production access? Email <a href="mailto:support@arcfx.app">support@arcfx.app</a>.</div>
         </section>
 
-        <div class="footer-note">ArcFX API · Arc Testnet · read-only payment data indexed from on-chain events.</div>
+        <div class="footer-note">ArcFX API · Core payment observation: Arc Mainnet · x402 and Agent Evidence remain Testnet-only / unavailable on Mainnet.</div>
 
       </div>
     </div>

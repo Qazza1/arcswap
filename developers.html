@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ArcFX — Developers</title>
   <meta name="description" content="Build on ArcFX. REST API for stablecoin payments on Arc — query payments, poll invoice status, and track on-chain settlement in real time." />
-  <link rel="icon" href="/logo.png" type="image/png" />
+  <link rel="icon" href="/arcfx-logo-transparent.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
@@ -166,17 +166,20 @@
           <div class="base-url">
             <span class="mono" id="base-url-text">https://arcfx-backend-production.up.railway.app</span>
           </div>
-          <div class="note" style="margin-top:16px;"><strong>Testnet.</strong> The API currently serves Arc Testnet data. Amounts are in human-readable units (e.g. <code>1.000000</code> USDC).</div>
+          <div class="note" style="margin-top:16px;"><strong>Core API status.</strong> ArcFX payment observation and receivables operate on Arc Mainnet (chain 5042). Amounts are returned as human-readable USDC values where documented.</div>
+
+          <h3>Agent Evidence</h3>
+          <p><strong>Testnet-only / unavailable on Mainnet.</strong> Agent Evidence is not enabled for the current Arc Mainnet workspace. Its separate mandate and sealed-bundle flow remains available only on deliberate Testnet surfaces.</p>
 
           <h3>Agent payments (x402)</h3>
-          <p>ArcFX also speaks <strong>x402</strong>, the HTTP 402 payment standard. An agent requests an invoice, receives <code>402 Payment Required</code> with the payment requirements, signs a gasless EIP-3009 authorization, and repeats the request with a <code>PAYMENT-SIGNATURE</code> header. No API key is involved — the signature is the authorization.</p>
+          <p><strong>Testnet-only / unavailable on Mainnet.</strong> x402 is deliberately disabled under the active Arc Mainnet profile. Do not use these endpoints for a Mainnet integration.</p>
           <ul>
             <li><code>GET /v1/x402/discovery</code> — scheme, network, asset and the EIP-712 domain to sign against</li>
             <li><code>GET /v1/x402/invoice/:number</code> — returns <code>402</code> unpaid; returns the receipt once paid</li>
             <li><code>POST /v1/x402/verify</code> and <code>POST /v1/x402/settle</code> — facilitator-shaped endpoints</li>
           </ul>
           <div class="note" style="margin-top:16px;">
-            <strong>See it run.</strong> The <a href="/agent" style="color:var(--fx-accent);">agent payments page</a> performs the whole exchange live and prints the real request and response at every step.
+            <strong>Development reference.</strong> The legacy <a href="/agent" style="color:var(--fx-accent);">agent payments page</a> is a deliberate Testnet-only surface, not a Mainnet payment path.
           </div>
         </section>
 
@@ -184,11 +187,11 @@
         <section id="auth">
           <h2>Authentication</h2>
           <p>Authenticated endpoints require an API key, sent as a Bearer token in the <code>Authorization</code> header:</p>
-          <pre><span class="c-key">Authorization</span>: Bearer arcfx_sk_test_...</pre>
+          <pre><span class="c-key">Authorization</span>: Bearer arcfx_sk_...</pre>
           <p>Keep your key secret — treat it like a password, and never embed it in client-side code you ship to users.</p>
 
           <h3>Get an API key</h3>
-          <p>Generate a testnet key instantly. Enter your email (so we can reach you about your integration), and we'll issue a key. It's shown once — copy it immediately.</p>
+          <p>Generate an integration key with your email (so we can reach you about your integration). It is shown once — copy it immediately. The historical <code>test</code> segment in a key format does not select the active network.</p>
           <div class="card">
             <div class="tryit-row">
               <input class="tryit-input" type="email" id="key-email" placeholder="you@example.com" />
@@ -234,7 +237,7 @@
       <span class="c-key">"net"</span>: <span class="c-str">"0.998500"</span>,
       <span class="c-key">"blockNumber"</span>: <span class="c-num">45944963</span>,
       <span class="c-key">"blockTime"</span>: <span class="c-str">"2026-06-07T09:15:19.000Z"</span>,
-      <span class="c-key">"explorer"</span>: <span class="c-str">"https://testnet.arcscan.app/tx/0x4ec3…"</span>
+      <span class="c-key">"explorer"</span>: <span class="c-str">"https://explorer.arc.io/tx/0x4ec3…"</span>
     }
   ]
 }</pre>
@@ -414,8 +417,8 @@
   </div>
 
   <script type="module">
-    import { arcfxMountHeader } from '/src/shared/header.ts';
-    arcfxMountHeader({ pageKey:'developers', activeLink: 'developers', activeTool: null });
+    import { mountPublicShell } from '/src/shared/publicShell.ts';
+    mountPublicShell();
   </script>
 
   <script type="module">
