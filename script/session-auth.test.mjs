@@ -692,7 +692,8 @@ test("wallet freshness guards discard delayed dashboard and analytics results af
     const dashboardSource = fs.readFileSync(new URL("../src/workspace/dashboard.ts", import.meta.url), "utf8");
     const analyticsSource = fs.readFileSync(new URL("../src/analytics.ts", import.meta.url), "utf8");
     assert.match(dashboardSource, /arcfxWallet\.onChange\(\(\) => void render\(\)\)/);
-    assert.match(dashboardSource, /arcfxApi\.listReceivablesInvoices\(\)/);
+    assert.match(dashboardSource, /arcfxApi\.getReceivablesDashboard\(\)/);
+    assert.match(dashboardSource, /version === renderVersion/);
     assert.match(analyticsSource, /breakdownLoads\.isCurrent\(ticket\)/);
   } finally {
     await server.close();

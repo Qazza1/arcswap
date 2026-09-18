@@ -390,6 +390,7 @@ export const arcfxApi = {
     receivablesPost("/v1/customers/archive", "customer archive", { id, archived }),
   listReceivablesInvoices: (status?: string) =>
     receivablesGet("/v1/invoice-records", status ? { status } : {}),
+  getReceivablesDashboard: () => receivablesGet("/v1/dashboard"),
   createReceivablesInvoice: (invoice: unknown) =>
     receivablesPost("/v1/invoice-records", "invoice write", invoice),
   updateReceivablesInvoice: (payload: unknown) =>

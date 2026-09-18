@@ -1,4 +1,16 @@
 @import "../shared/tokens.css";
+.dashboard-freshness { width: min(1240px, calc(100% - 56px)); margin: 10px auto 0; color: var(--fx-muted); font-size: 11px; }
+@media(max-width:520px) { .dashboard-freshness { width: min(100% - 28px, 1240px); } }
+.dashboard-activity-list { margin: 0; padding: 0; list-style: none; }
+.dashboard-loading { margin: 0; padding: 28px 20px; color: var(--fx-muted); font-size: 13px; }
+.dashboard-row-main, .dashboard-row-end { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.dashboard-row-main { flex: 1; }
+.dashboard-row-end { align-items: flex-end; text-align: right; }
+.dashboard-row .dashboard-event { color: var(--fx-accent); font: 600 10px var(--fx-mono); letter-spacing: .05em; text-transform: uppercase; }
+.dashboard-row .dashboard-amount { color: var(--fx-ink); font: 600 13px var(--fx-mono); }
+.dashboard-row-links { display: flex; justify-content: flex-end; gap: 12px; margin-top: 4px; }
+.dashboard-row-links a { color: var(--fx-accent); font-size: 11px; font-weight: 600; }
+.dashboard-row-links a:focus-visible { outline: 2px solid var(--fx-accent); outline-offset: 3px; }
 .dashboard-head h1 { margin: 0; font: 680 clamp(31px,4vw,47px)/1.03 var(--fx-display); letter-spacing: -.05em; }
 .dashboard-empty h1 { margin: 0; font: 680 clamp(31px,4vw,47px)/1.03 var(--fx-display); letter-spacing: -.05em; }
 .dashboard-panel-head h2 { margin: 0; font: 650 17px var(--fx-display); }
