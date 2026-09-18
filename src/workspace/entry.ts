@@ -49,5 +49,7 @@ async function proceed() {
 
 arcfxWallet.onChange(() => render());
 // Existing same-origin sessions can continue to the dashboard without a new prompt.
-if (arcfxApi.hasReceivablesOwnerSession()) window.location.replace(appPath("/dashboard"));
-else render();
+void arcfxApi.hasReceivablesOwnerSession().then((hasSession) => {
+  if (hasSession) window.location.replace(appPath("/dashboard"));
+  else render();
+});

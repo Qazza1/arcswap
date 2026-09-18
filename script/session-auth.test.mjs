@@ -493,6 +493,134 @@ test("universal owner auth survives navigation, supports real ArcFX disconnect, 
   }
 });
 
+test("Mainnet receivables preserve a valid owner bearer through silent restore and transient provider refresh", async (t) => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const originalLocalStorage = globalThis.localStorage;
+  const originalFetch = globalThis.fetch;
+  const storage = new MemoryStorage();
+  const local = new MemoryStorage();
+  const prompts = [];
+  const { provider, control } = statefulProvider(owner.address, "0x13b2", prompts);
+  let serial = 0;
+  let dashboardStatus = 200;
+
+  const session = (wallet = owner.address, expiresAt = "2099-08-30T18:00:00.000Z") => JSON.stringify({
+    sessionToken: "v1.mainnet.iv.ciphertext.tag",
+    wallet: wallet.toLowerCase(),
+    chainId: "0x13b2",
+    expiresAt,
+  });
+
+  async function document() {
+    globalThis.window = new FakeWindow(provider);
+    globalThis.window.ARCFX_API_BASE = "https://arcfx.test";
+    globalThis.sessionStorage = storage;
+    globalThis.localStorage = local;
+    globalThis.fetch = async (input, init) => {
+      const url = new URL(String(input));
+      const body = init?.body ? JSON.parse(String(init.body)) : null;
+      if (url.pathname === "/v1/auth/session") return response({
+        sessionToken: `v1.mainnet.${++serial}.ciphertext.tag`,
+        wallet: body.wallet,
+        expiresAt: "2099-08-30T18:00:00.000Z",
+      }, 201);
+      if (url.pathname === "/v1/dashboard") {
+        assert.match(header(init, "authorization"), /^Bearer v1\.mainnet\./);
+        return response({ error: "expired" }, dashboardStatus);
+      }
+      throw new Error(`unexpected request ${url.pathname}`);
+    };
+    const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, appType: "custom" });
+    const api = await server.ssrLoadModule(`/src/shared/arcfxApi.ts?mainnet-receivables=${++serial}`);
+    const walletModule = await server.ssrLoadModule(`/src/shared/wallet.ts?mainnet-receivables=${serial}`);
+    return { server, api, walletModule };
+  }
+
+  try {
+    // First document creates the only session-create signature and stores the
+    // exact-chain tab bearer returned by the server.
+    const first = await document();
+    await first.api.arcfxApi.connectReceivablesOwner();
+    assert.equal(prompts.filter((prompt) => /^ArcFX session create\n/.test(prompt.message)).length, 1);
+    assert.ok(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), "the successful 201 response is stored");
+    await first.server.close();
+
+    // A fresh document first receives the wallet module's deliberately
+    // untrusted snapshot. Its immediate onChange callback must not erase the
+    // bearer before silent restore proves the same selected provider/account.
+    const second = await document();
+    assert.equal(await second.api.arcfxApi.hasReceivablesOwnerSession(), true, "same wallet and Arc Mainnet silently reuse the bearer");
+    assert.ok(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), "pre-restore onChange did not clear the valid session");
+    await second.api.arcfxApi.getReceivablesDashboard();
+    assert.equal(prompts.filter((prompt) => /^ArcFX session create\n/.test(prompt.message)).length, 1, "dashboard navigation adds no second personal_sign");
+
+    // Provider events briefly make the snapshot untrusted. The bearer remains
+    // unavailable for reads during that interval, but is not destroyed unless
+    // the completed selected-provider snapshot proves a real mismatch.
+    const wait = pauseNextChain(control);
+    const refreshing = provider.emit("chainChanged", "0x13b2");
+    await wait.started;
+    assert.ok(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), "temporary refresh uncertainty does not destroy the bearer");
+    wait.release();
+    await refreshing;
+    assert.equal(await second.api.arcfxApi.hasReceivablesOwnerSession(), true, "the same restored Mainnet snapshot retains the bearer");
+
+    control.accounts = [other.address];
+    await provider.emit("accountsChanged", [other.address]);
+    assert.equal(await second.api.arcfxApi.hasReceivablesOwnerSession(), false, "a genuine accountsChanged after readiness invalidates the bearer");
+    assert.equal(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), null, "account change clears the bearer");
+    control.accounts = [owner.address];
+    await provider.emit("accountsChanged", [owner.address]);
+    await second.api.arcfxApi.hasReceivablesOwnerSession();
+    storage.setItem("arcfx:mainnet-receivables-owner-session:v1", session());
+    assert.equal(await second.api.arcfxApi.hasReceivablesOwnerSession(), true, "a new valid same-wallet bearer can be read after the transition");
+
+    // Server authentication failure clears the bearer and surfaces an error;
+    // it does not silently create a replacement login session.
+    dashboardStatus = 401;
+    await assert.rejects(() => second.api.arcfxApi.getReceivablesDashboard(), /expired/);
+    assert.equal(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), null, "401 clears the invalid bearer");
+    assert.equal(prompts.filter((prompt) => /^ArcFX session create\n/.test(prompt.message)).length, 1, "401 fails closed without an automatic signature");
+    await second.server.close();
+
+    // Restored different account and wrong chain each authoritatively prove
+    // the stored bearer no longer belongs to the active Mainnet workspace.
+    storage.setItem("arcfx:mainnet-receivables-owner-session:v1", session());
+    control.accounts = [other.address];
+    control.chainId = "0x13b2";
+    const differentWallet = await document();
+    assert.equal(await differentWallet.api.arcfxApi.hasReceivablesOwnerSession(), false);
+    assert.equal(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), null, "different restored wallet clears the bearer");
+    await differentWallet.server.close();
+
+    storage.setItem("arcfx:mainnet-receivables-owner-session:v1", session(other.address));
+    control.chainId = "0x1";
+    const wrongChain = await document();
+    const wrongChainSession = await wrongChain.api.arcfxApi.hasReceivablesOwnerSession();
+    assert.equal(wrongChainSession, false);
+    assert.equal(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), null, "wrong restored chain clears the bearer");
+    await wrongChain.server.close();
+
+    // Expiry and explicit ArcFX Disconnect remain authoritative local clears.
+    storage.setItem("arcfx:mainnet-receivables-owner-session:v1", session(other.address, "2000-08-30T18:00:00.000Z"));
+    control.chainId = "0x13b2";
+    const expired = await document();
+    assert.equal(await expired.api.arcfxApi.hasReceivablesOwnerSession(), false);
+    assert.equal(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), null, "expired bearer clears");
+    storage.setItem("arcfx:mainnet-receivables-owner-session:v1", session(other.address));
+    expired.walletModule.arcfxWallet.disconnect();
+    assert.equal(await expired.api.arcfxApi.hasReceivablesOwnerSession(), false);
+    assert.equal(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), null, "explicit Disconnect clears the bearer");
+    await expired.server.close();
+  } finally {
+    globalThis.window = originalWindow;
+    globalThis.sessionStorage = originalStorage;
+    globalThis.localStorage = originalLocalStorage;
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("late EIP-6963 announcements cannot replace a pinned provider or affect its wallet state", async () => {
   const originalWindow = globalThis.window;
   const originalStorage = globalThis.sessionStorage;
@@ -693,6 +821,8 @@ test("wallet freshness guards discard delayed dashboard and analytics results af
     const analyticsSource = fs.readFileSync(new URL("../src/analytics.ts", import.meta.url), "utf8");
     assert.match(dashboardSource, /arcfxWallet\.onChange\(\(\) => void render\(\)\)/);
     assert.match(dashboardSource, /arcfxApi\.getReceivablesDashboard\(\)/);
+    assert.match(dashboardSource, /await arcfxApi\.hasReceivablesOwnerSession\(\)/, "dashboard waits for owner-session restoration before deciding authentication");
+    assert.match(dashboardSource, /Restoring secure workspace/, "dashboard removes prior financial data while the provider snapshot is untrusted");
     assert.match(dashboardSource, /version === renderVersion/);
     assert.match(analyticsSource, /breakdownLoads\.isCurrent\(ticket\)/);
   } finally {

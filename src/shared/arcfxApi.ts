@@ -137,6 +137,9 @@ async function ownerSession(): Promise<OwnerSession> {
 
 type ReceivablesOwnerSession = OwnerSession & { chainId: string };
 let receivablesBootstrapPending: Promise<ReceivablesOwnerSession> | null = null;
+let receivablesReadyPending: Promise<boolean> | null = null;
+let receivablesReadyResolved = false;
+let receivablesReconciliationPending: Promise<void> | null = null;
 
 function mainnetReceivablesWallet(): { wallet: string; chainId: string } {
   const wallet = arcfxWallet.address?.toLowerCase();
@@ -153,8 +156,8 @@ function clearReceivablesAuthCache(): void {
 }
 
 function storedReceivablesOwnerSession(): ReceivablesOwnerSession | null {
-  const expected = mainnetReceivablesWallet();
   try {
+    const expected = mainnetReceivablesWallet();
     const raw = sessionStorage.getItem(RECEIVABLES_OWNER_SESSION_STORAGE_KEY);
     const value = raw ? JSON.parse(raw) : null;
     if (!value || typeof value.sessionToken !== "string" || !/^[A-Za-z0-9._-]+$/.test(value.sessionToken)
@@ -171,7 +174,41 @@ function storedReceivablesOwnerSession(): ReceivablesOwnerSession | null {
   }
 }
 
+/**
+ * A new app-origin document starts with an intentionally untrusted wallet
+ * snapshot while its pinned EIP-6963 provider is restored. Do not compare or
+ * delete the tab-scoped bearer until that silent restore has settled. This is
+ * the Mainnet receivables equivalent of arcfxAuth.ready().
+ */
+async function receivablesSessionReady(): Promise<boolean> {
+  if (receivablesReadyPending) return receivablesReadyPending;
+  const pending = (async () => {
+    await arcfxWallet.restore();
+    receivablesReadyResolved = true;
+    return Boolean(storedReceivablesOwnerSession());
+  })();
+  receivablesReadyPending = pending;
+  try { return await pending; }
+  finally { if (receivablesReadyPending === pending) receivablesReadyPending = null; }
+}
+
+/** Reconcile only a settled selected-provider snapshot; restore joins an in-flight event refresh. */
+function reconcileReceivablesSessionAfterWalletChange(): void {
+  if (!receivablesReadyResolved || receivablesReconciliationPending) return;
+  // Defer the restore by one microtask so an explicit Disconnect's synchronous
+  // wallet emit sees this pending guard before it can re-enter reconciliation.
+  const pending = Promise.resolve().then(async () => {
+    await arcfxWallet.restore();
+    if (receivablesReadyResolved) storedReceivablesOwnerSession();
+  });
+  receivablesReconciliationPending = pending;
+  pending.finally(() => {
+    if (receivablesReconciliationPending === pending) receivablesReconciliationPending = null;
+  }).catch(() => { clearReceivablesAuthCache(); });
+}
+
 async function receivablesOwnerSession(): Promise<ReceivablesOwnerSession> {
+  await receivablesSessionReady();
   const existing = storedReceivablesOwnerSession();
   if (existing) return existing;
   if (!receivablesBootstrapPending) {
@@ -198,7 +235,7 @@ function assertSameReceivablesWallet(expected: { wallet: string; chainId: string
   }
 }
 
-async function receivablesGet(path: string, params: Record<string, string> = {}, retry = true): Promise<any> {
+async function receivablesGet(path: string, params: Record<string, string> = {}): Promise<any> {
   const session = await receivablesOwnerSession();
   const expected = { wallet: session.wallet, chainId: session.chainId };
   const qs = new URLSearchParams(params);
@@ -209,9 +246,8 @@ async function receivablesGet(path: string, params: Record<string, string> = {},
     assertSameReceivablesWallet(expected);
     return result;
   } catch (error) {
-    if (retry && error instanceof ApiError && error.status === 401) {
+    if (error instanceof ApiError && error.status === 401) {
       clearReceivablesAuthCache();
-      return receivablesGet(path, params, false);
     }
     throw error;
   }
@@ -229,21 +265,14 @@ async function connectReceivablesOwner(): Promise<void> {
   await receivablesOwnerSession();
 }
 
-/** Read-only UI hint; never exposes or copies the opaque owner bearer. */
-function hasReceivablesOwnerSession(): boolean {
-  try { return Boolean(storedReceivablesOwnerSession()); }
+/** Read-only UI hint; it waits for a silent restore and never exposes the bearer. */
+async function hasReceivablesOwnerSession(): Promise<boolean> {
+  try { return await receivablesSessionReady(); }
   catch { return false; }
 }
 
 arcfxWallet.onChange(() => {
-  try {
-    const stored = sessionStorage.getItem(RECEIVABLES_OWNER_SESSION_STORAGE_KEY);
-    const current = arcfxWallet.address?.toLowerCase();
-    const value = stored ? JSON.parse(stored) : null;
-    if (!value || value.wallet?.toLowerCase() !== current || arcfxWallet.chainId?.toLowerCase() !== ARCFX_MAINNET_CHAIN_ID_HEX) {
-      clearReceivablesAuthCache();
-    }
-  } catch { clearReceivablesAuthCache(); }
+  reconcileReceivablesSessionAfterWalletChange();
 });
 
 export class ApiError extends Error {
