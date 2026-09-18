@@ -85,7 +85,11 @@ function render(message?: { text: string; type?: string; transactionHash?: strin
   const shell = el("div", "payer-shell");
   const brand = el("a", "payer-brand") as HTMLAnchorElement;
   brand.href = "/";
-  brand.append(el("span", "payer-brand-mark", "A"), el("span", "", "ArcFX"));
+  const logo = document.createElement("img");
+  logo.src = "/arcfx-logo-transparent.png";
+  logo.alt = "ArcFX";
+  logo.className = "payer-brand-logo";
+  brand.append(logo);
   shell.append(brand);
   const card = el("section", "payer-card");
   if (!intent || !invoice) {

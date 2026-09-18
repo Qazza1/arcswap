@@ -5,6 +5,7 @@ body { margin: 0; min-width: 0; background: var(--fx-bg); color: var(--fx-ink); 
 a { color: inherit; }
 .payer-shell { width: min(100% - 32px, 720px); margin: 0 auto; padding: 36px 0 64px; }
 .payer-brand { display: inline-flex; align-items: center; gap: 9px; color: var(--fx-ink); text-decoration: none; font-weight: 700; }
+.payer-brand-logo { display: block; width: 116px; height: auto; }
 .payer-brand-mark { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 7px; background: var(--fx-accent); color: var(--fx-on-accent); font-family: "JetBrains Mono", monospace; font-size: 12px; }
 .payer-card { margin-top: 28px; border: 1px solid var(--fx-line); border-radius: var(--fx-r-lg); overflow: hidden; background: var(--fx-elevated); box-shadow: var(--fx-shadow-md); }
 .payer-head { padding: 28px 28px 22px; border-bottom: 1px solid var(--fx-line); background: linear-gradient(135deg, var(--fx-accent-soft), transparent 62%); }

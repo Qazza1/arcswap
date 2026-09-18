@@ -686,9 +686,13 @@ test("wallet freshness guards discard delayed dashboard and analytics results af
     const analyticsB = analytics.begin(walletB);
     assert.equal(analytics.isCurrent(analyticsB), true, "analytics B response may render after a new load");
 
-    const dashboardSource = fs.readFileSync(new URL("../app.html", import.meta.url), "utf8");
+    // The dashboard moved from the legacy /app document into its dedicated
+    // app-origin module. It still has to repaint on the selected provider's
+    // latest state, while the API layer rejects reads whose wallet changed.
+    const dashboardSource = fs.readFileSync(new URL("../src/workspace/dashboard.ts", import.meta.url), "utf8");
     const analyticsSource = fs.readFileSync(new URL("../src/analytics.ts", import.meta.url), "utf8");
-    assert.match(dashboardSource, /dashboardLoads\.isCurrent\(ticket\)/);
+    assert.match(dashboardSource, /arcfxWallet\.onChange\(\(\) => void render\(\)\)/);
+    assert.match(dashboardSource, /arcfxApi\.listReceivablesInvoices\(\)/);
     assert.match(analyticsSource, /breakdownLoads\.isCurrent\(ticket\)/);
   } finally {
     await server.close();

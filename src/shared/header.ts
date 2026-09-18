@@ -106,15 +106,17 @@ const MORE_LINKS: Array<{ href: string; label: string; key: ActiveLink }> = [
 // ── MARKETING nav links (used on /, /pricing, /ecosystem, /docs, /security) ──
 const MARKETING_NAV_LINKS: Array<{ href: string; label: string; key: ActiveLink }> = [
   { href: '/#product',  label: 'Product',  key: 'use-cases' },
-  { href: '/pricing',   label: 'Pricing',  key: 'pricing' },
+  { href: '/#invoicing', label: 'Invoicing', key: 'use-cases' },
+  { href: '/#payments', label: 'Payments', key: 'use-cases' },
   { href: '/security',  label: 'Security', key: 'security' },
-  { href: '/docs',      label: 'Docs',     key: 'docs' },
+  { href: '/developers', label: 'Developers', key: 'developers' },
+  { href: '/pricing',   label: 'Pricing',  key: 'pricing' },
 ];
 
 // The public/app subdomain split is intentionally a future hosting decision.
 // Keeping one route constant now makes the later move mechanical, not a
 // behaviour change to wallet or owner-session handling.
-const APP_ENTRY_HREF = '/app';
+const APP_ENTRY_HREF = 'https://app.arcfx.app/entry';
 
 // ── Single source of truth: tools dropdown items ───────────────────────────
 const TOOLS: Array<{ href: string; key: ActiveTool; name: string; sub: string; svg: string }> = [
@@ -405,10 +407,9 @@ function buildMarketingNav(activeLink: ActiveLink): string {
   ].join('');
 
   return `
-<nav class="arcfx-nav arcfx-nav--marketing" aria-label="Public navigation" style="position:sticky;top:0;z-index:50;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(2,6,23,0.97);border-bottom:1px solid #1e293b;backdrop-filter:blur(12px);">
+<nav class="arcfx-nav arcfx-nav--marketing" aria-label="Public navigation" style="position:sticky;top:0;z-index:50;min-height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px;background:rgba(250,249,247,.94);border-bottom:1px solid var(--fx-line);backdrop-filter:blur(12px);">
   <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
-    ${arcfxMark(26)}
-    <span class="arcfx-wordmark" style="font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:16px;font-weight:700;color:var(--fx-ink);letter-spacing:-0.02em;">ArcFX</span>
+    <img src="/arcfx-logo-transparent.png" width="118" height="40" alt="ArcFX" style="display:block;width:118px;height:auto;" />
   </a>
   <div class="arcfx-nav-center" style="display:flex;align-items:center;gap:2px;">
     ${links}

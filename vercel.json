@@ -1,4 +1,46 @@
 {
+  "redirects": [
+    {
+      "source": "/app",
+      "destination": "https://app.arcfx.app/dashboard",
+      "permanent": false
+    },
+    {
+      "source": "/app/",
+      "destination": "https://app.arcfx.app/dashboard",
+      "permanent": false
+    },
+    {
+      "source": "/customers",
+      "destination": "https://app.arcfx.app/customers",
+      "permanent": false
+    },
+    {
+      "source": "/customers/",
+      "destination": "https://app.arcfx.app/customers",
+      "permanent": false
+    },
+    {
+      "source": "/invoices",
+      "destination": "https://app.arcfx.app/invoices",
+      "permanent": false
+    },
+    {
+      "source": "/invoices/",
+      "destination": "https://app.arcfx.app/invoices",
+      "permanent": false
+    },
+    {
+      "source": "/invoice",
+      "destination": "https://app.arcfx.app/invoice",
+      "permanent": false
+    },
+    {
+      "source": "/invoice/",
+      "destination": "https://app.arcfx.app/invoice",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/circle-proxy/:path*",
@@ -11,6 +53,22 @@
     {
       "source": "/app/",
       "destination": "/app.html"
+    },
+    {
+      "source": "/entry",
+      "destination": "/entry.html"
+    },
+    {
+      "source": "/entry/",
+      "destination": "/entry.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/dashboard.html"
+    },
+    {
+      "source": "/dashboard/",
+      "destination": "/dashboard.html"
     },
     {
       "source": "/trade",
@@ -167,7 +225,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://cdn.sheetjs.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://arcfx-backend-production.up.railway.app https://rpc.testnet.arc.network https://testnet.arcscan.app; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' https://cdn.sheetjs.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://arcfx-backend-production.up.railway.app https://rpc.testnet.arc.network https://testnet.arcscan.app https://rpc.mainnet.arc.io; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
         }
       ]
     }
