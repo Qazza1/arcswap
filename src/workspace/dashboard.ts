@@ -90,13 +90,14 @@ function activityRow(item: Activity): string {
   return `<li class="dashboard-row"><div class="dashboard-row-main"><span class="dashboard-event">${label}</span><strong>${context}</strong><span>${number} · ${escape(time(item.timestamp))}</span></div><div class="dashboard-row-end">${amount ? `<strong class="dashboard-amount">${item.type === "reconciliation" ? "" : "+"}${escape(amount)}</strong>` : ""}<span>${escape(item.status || "")}</span><div class="dashboard-row-links">${detail ? `<a href="${detail}">Details</a>` : ""}${hash ? `<a href="https://explorer.arc.io/tx/${hash}" target="_blank" rel="noopener noreferrer">Explorer ↗</a>` : ""}</div></div></li>`;
 }
 
+const restoringMarkup = `<section class="dashboard-empty" aria-live="polite"><p class="dashboard-eyebrow">Arc Mainnet workspace</p><h1>Restoring secure workspace…</h1><p>Verifying the selected wallet before loading financial data.</p></section>`;
+
 let renderVersion = 0;
 async function render(): Promise<void> {
   const version = ++renderVersion;
-  // Wait for the exact selected provider's silent restore before deciding this
-  // page is unauthenticated. Remove prior private metrics immediately while
-  // the selected-provider snapshot is untrusted.
-  root.innerHTML = `<section class="dashboard-empty" aria-live="polite"><p class="dashboard-eyebrow">Arc Mainnet workspace</p><h1>Restoring secure workspace…</h1><p>Verifying the selected wallet before loading financial data.</p></section>`;
+  // Remove prior private metrics immediately while the wallet identity changes;
+  // readiness waits for the settled selected-provider snapshot.
+  root.innerHTML = restoringMarkup;
   const readiness = await arcfxApi.receivablesReadiness();
   if (version !== renderVersion) return;
   const wallet = arcfxWallet.address?.toLowerCase();
@@ -140,4 +141,6 @@ async function render(): Promise<void> {
   }
 }
 
-arcfxWallet.onChange(() => void render());
+root.innerHTML = restoringMarkup;
+// One render for the settled wallet, then one per genuine identity change.
+arcfxWallet.watch(() => void render());

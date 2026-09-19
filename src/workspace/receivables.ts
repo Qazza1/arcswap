@@ -410,7 +410,8 @@ async function invoices() {
         message(
           e instanceof Error ? e.message : "Could not load invoices.",
           "fx-notice--error"
-        )
+        ),
+        action("Retry", "", load)
       );
     }
   };
@@ -1009,7 +1010,8 @@ async function customersPage() {
         message(
           e instanceof Error ? e.message : "Could not load customers.",
           "fx-notice--error"
-        )
+        ),
+        action("Retry", "", load)
       );
     }
   };
@@ -1034,7 +1036,9 @@ export async function mountReceivables(page: Page) {
     else if (page === "invoice") await invoicePage();
     else await customersPage();
   };
-  // onChange emits the initial state and every selected-provider transition.
-  // The generation gate prevents an older restore from repainting a newer identity.
-  arcfxWallet.onChange(() => void render());
+  root.replaceChildren(message("Restoring secure workspace…"));
+  // watch() delivers the settled wallet once, then only genuine identity
+  // changes (account, chain, provider, sign-out). The version gate discards a
+  // render superseded by a newer identity.
+  arcfxWallet.watch(() => void render());
 }

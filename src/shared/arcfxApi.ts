@@ -137,9 +137,11 @@ async function ownerSession(): Promise<OwnerSession> {
 
 type ReceivablesOwnerSession = OwnerSession & { chainId: string };
 let receivablesBootstrapPending: Promise<ReceivablesOwnerSession> | null = null;
-let receivablesReadyPending: Promise<boolean> | null = null;
-let receivablesReadyResolved = false;
-let receivablesReconciliationPending: Promise<void> | null = null;
+const receivablesReads = new Set<AbortController>();
+let receivablesWalletKey: string | null = null;
+// A read that has not answered by then is reported as an explicit failure
+// instead of leaving the page in a loading state.
+const RECEIVABLES_READ_TIMEOUT_MS = 20_000;
 
 function mainnetReceivablesWallet(): { wallet: string; chainId: string } {
   const wallet = arcfxWallet.address?.toLowerCase();
@@ -177,34 +179,39 @@ function storedReceivablesOwnerSession(): ReceivablesOwnerSession | null {
 /**
  * A new app-origin document starts with an intentionally untrusted wallet
  * snapshot while its pinned EIP-6963 provider is restored. Do not compare or
- * delete the tab-scoped bearer until that silent restore has settled. This is
- * the Mainnet receivables equivalent of arcfxAuth.ready().
+ * delete the tab-scoped bearer until that one silent restore (and any
+ * in-flight provider-event refresh) has settled. After that this is a pure
+ * evaluation of settled state: it never restores, reads the provider, or
+ * notifies wallet listeners, so a wallet listener may call it safely.
  */
 async function receivablesSessionReady(): Promise<boolean> {
-  if (receivablesReadyPending) return receivablesReadyPending;
-  const pending = (async () => {
-    await arcfxWallet.restore();
-    receivablesReadyResolved = true;
-    return Boolean(storedReceivablesOwnerSession());
-  })();
-  receivablesReadyPending = pending;
-  try { return await pending; }
-  finally { if (receivablesReadyPending === pending) receivablesReadyPending = null; }
+  await arcfxWallet.settled();
+  return Boolean(storedReceivablesOwnerSession());
 }
 
-/** Reconcile only a settled selected-provider snapshot; restore joins an in-flight event refresh. */
+function walletKey(): string {
+  return [
+    arcfxWallet.connected ? 1 : 0,
+    arcfxWallet.address?.toLowerCase() || "",
+    arcfxWallet.chainId?.toLowerCase() || "",
+    arcfxWallet.isExplicitlySignedOut ? 1 : 0,
+  ].join("|");
+}
+
+/**
+ * Wallet notifications arrive only on a genuine change. Reads started for the
+ * previous wallet identity are aborted, and once the change has settled the
+ * stored bearer is re-validated (cleared on account, chain, expiry or
+ * signed-out mismatch). Nothing here restores or re-notifies.
+ */
 function reconcileReceivablesSessionAfterWalletChange(): void {
-  if (!receivablesReadyResolved || receivablesReconciliationPending) return;
-  // Defer the restore by one microtask so an explicit Disconnect's synchronous
-  // wallet emit sees this pending guard before it can re-enter reconciliation.
-  const pending = Promise.resolve().then(async () => {
-    await arcfxWallet.restore();
-    if (receivablesReadyResolved) storedReceivablesOwnerSession();
-  });
-  receivablesReconciliationPending = pending;
-  pending.finally(() => {
-    if (receivablesReconciliationPending === pending) receivablesReconciliationPending = null;
-  }).catch(() => { clearReceivablesAuthCache(); });
+  const key = walletKey();
+  if (receivablesWalletKey !== null && key !== receivablesWalletKey) {
+    for (const controller of receivablesReads) controller.abort();
+    receivablesReads.clear();
+  }
+  receivablesWalletKey = key;
+  void arcfxWallet.settled().then(() => { storedReceivablesOwnerSession(); });
 }
 
 async function receivablesOwnerSession(): Promise<ReceivablesOwnerSession> {
@@ -239,9 +246,14 @@ async function receivablesGet(path: string, params: Record<string, string> = {})
   const session = await receivablesOwnerSession();
   const expected = { wallet: session.wallet, chainId: session.chainId };
   const qs = new URLSearchParams(params);
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, RECEIVABLES_READ_TIMEOUT_MS);
+  receivablesReads.add(controller);
   try {
     const result = await parse(await fetch(`${API_BASE}${path}?${qs}`, {
       headers: { authorization: `Bearer ${session.sessionToken}` },
+      signal: controller.signal,
     }));
     assertSameReceivablesWallet(expected);
     return result;
@@ -249,7 +261,15 @@ async function receivablesGet(path: string, params: Record<string, string> = {})
     if (error instanceof ApiError && error.status === 401) {
       clearReceivablesAuthCache();
     }
+    if (controller.signal.aborted) {
+      throw new Error(timedOut
+        ? "The ArcFX server did not respond in time."
+        : "Wallet or network changed while processing the request.");
+    }
     throw error;
+  } finally {
+    clearTimeout(timer);
+    receivablesReads.delete(controller);
   }
 }
 

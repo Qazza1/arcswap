@@ -27,20 +27,56 @@ if (view in legacy) {
   const p = shell("Direct Mainnet sending is not available in the ArcFX workspace.", "NOT ENABLED"); card(p, "No transaction path", "This destination does not request an approval, sign a transaction, or move funds. Mainnet sending requires a separate implementation and release review.");
 } else if (view === "contacts") {
   const p = shell("A local wallet address book in this browser. Customers are separate server-backed business records.", "LIVE");
-  const c = card(p, "Saved addresses", "Contacts stay in this browser. They do not create or edit a Customer record.");
-  const list = node("ul", undefined, "tool-list"); c.append(list);
-  const load = (): Array<{ name: string; address: string }> => { try { const value = JSON.parse(localStorage.getItem("arcfx_address_book") || "[]"); return Array.isArray(value) ? value.filter(x => typeof x?.name === "string" && /^0x[0-9a-fA-F]{40}$/.test(x?.address)) : []; } catch { return []; } };
-  const render = () => { list.replaceChildren(); const entries = load(); if (!entries.length) list.append(node("li", "No browser contacts yet.")); entries.forEach(item => { const row = node("li"); const details = node("span"); details.append(node("strong", item.name), node("small", ` · ${item.address}`)); const copy = node("button", "Copy address", "tool-button"); copy.type = "button"; copy.addEventListener("click", () => void navigator.clipboard.writeText(item.address)); row.append(details, copy); list.append(row); }); };
-  const form = node("form", undefined, "tool-form");
-  const nameLabel = node("label", "Name"); const name = node("input"); name.required = true; name.maxLength = 80; nameLabel.append(name);
-  const addressLabel = node("label", "Wallet address"); const address = node("input"); address.required = true; address.pattern = "0x[0-9a-fA-F]{40}"; addressLabel.append(address);
-  const save = node("button", "Save contact", "tool-button"); save.type = "submit"; form.append(nameLabel, addressLabel, save); c.append(form);
-  form.addEventListener("submit", event => { event.preventDefault(); const entries = load(); const value = address.value.trim(); if (!/^0x[0-9a-fA-F]{40}$/.test(value)) return; if (!entries.some(e => e.address.toLowerCase() === value.toLowerCase())) { entries.push({ name: name.value.trim(), address: value }); localStorage.setItem("arcfx_address_book", JSON.stringify(entries)); } form.reset(); render(); }); render();
+  const KEY = "arcfx_address_book";
+  type Contact = { name: string; address: string };
+  const load = (): Contact[] => { try { const value = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(value) ? value.filter(x => typeof x?.name === "string" && /^0x[0-9a-fA-F]{40}$/.test(x?.address)) : []; } catch { return []; } };
+  const store = (entries: Contact[]): boolean => { try { localStorage.setItem(KEY, JSON.stringify(entries)); return true; } catch { return false; } };
+
+  const add = card(p, "Add a contact", "Contacts stay in this browser only. They do not create or edit a Customer record.");
+  const form = node("form", undefined, "contact-form"); form.noValidate = true;
+  const field = (label: string, id: string, placeholder: string) => { const wrap = node("div", undefined, "contact-field"); const l = node("label", label); l.htmlFor = id; const input = node("input"); input.id = id; input.placeholder = placeholder; input.autocomplete = "off"; input.spellcheck = false; wrap.append(l, input); return { wrap, input }; };
+  const name = field("Name", "contact-name", "Supplier, teammate, or wallet label"); name.input.maxLength = 80;
+  const address = field("Wallet address", "contact-address", "0x…"); address.input.classList.add("contact-mono");
+  const save = node("button", "Save contact", "tool-button tool-button--primary"); save.type = "submit";
+  const feedback = node("p", undefined, "contact-feedback"); feedback.setAttribute("role", "status");
+  form.append(name.wrap, address.wrap, save); add.append(form, feedback);
+
+  const saved = card(p, "Saved contacts", "");
+  const count = saved.querySelector("p")!;
+  const list = node("ul", undefined, "contact-list"); saved.append(list);
+  const say = (text: string, tone: "ok" | "error" | "" = "") => { feedback.textContent = text; feedback.className = `contact-feedback${tone ? ` contact-feedback--${tone}` : ""}`; };
+  const render = () => {
+    const entries = load();
+    count.textContent = entries.length ? `${entries.length} saved in this browser.` : "";
+    list.replaceChildren();
+    if (!entries.length) { const e = node("li", undefined, "contact-empty"); e.append(node("strong", "No contacts yet"), node("span", "Save a wallet address above to reuse it later in this browser.")); list.append(e); return; }
+    for (const item of entries) {
+      const row = node("li", undefined, "contact-row");
+      const details = node("div", undefined, "contact-details"); details.append(node("strong", item.name), node("code", item.address));
+      const actions = node("div", undefined, "contact-actions");
+      const copy = node("button", "Copy", "tool-button"); copy.type = "button"; copy.setAttribute("aria-label", `Copy address for ${item.name}`);
+      copy.addEventListener("click", () => { navigator.clipboard?.writeText(item.address).then(() => say(`Copied ${item.name}'s address.`, "ok"), () => say("Could not copy. Select the address and copy it manually.", "error")); });
+      const remove = node("button", "Delete", "tool-button tool-button--danger"); remove.type = "button"; remove.setAttribute("aria-label", `Delete ${item.name}`);
+      remove.addEventListener("click", () => { if (store(load().filter(e => e.address.toLowerCase() !== item.address.toLowerCase()))) { say(`Deleted ${item.name}.`); render(); } else say("This browser blocked local storage.", "error"); });
+      actions.append(copy, remove); row.append(details, actions); list.append(row);
+    }
+  };
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    const label = name.input.value.trim(); const value = address.input.value.trim();
+    if (!label) { say("Enter a name for this contact.", "error"); name.input.focus(); return; }
+    if (!/^0x[0-9a-fA-F]{40}$/.test(value)) { say("Enter a 0x wallet address with 40 hexadecimal characters.", "error"); address.input.focus(); return; }
+    const entries = load();
+    if (entries.some(e => e.address.toLowerCase() === value.toLowerCase())) { say("That address is already saved.", "error"); return; }
+    if (!store([...entries, { name: label, address: value }])) { say("This browser blocked local storage.", "error"); return; }
+    form.reset(); say(`Saved ${label}.`, "ok"); render();
+  });
+  render();
 } else if (view === "settings") {
   const p = shell("Selected wallet and local ArcFX session state. No session token is displayed here.", "LIVE"); const c = card(p, "Connection", "ArcFX Disconnect is local to this app; it does not disconnect your browser wallet globally.");
   const detail = node("p", "Restoring selected wallet…", "tool-note"); c.append(detail);
   const render = async () => { detail.textContent = "Restoring selected wallet…"; const readiness = await arcfxApi.receivablesReadiness(); detail.textContent = `Wallet: ${arcfxWallet.address || "Not connected"} · Provider: ${arcfxWallet.providerInfo?.name || "Selected browser provider"} · Chain: ${arcfxWallet.chainId || "Unknown"} · Session: ${readiness}`; };
-  arcfxWallet.onChange(() => void render());
+  arcfxWallet.watch(() => void render());
   const disconnect = node("button", "Disconnect ArcFX", "tool-button"); disconnect.type = "button"; disconnect.addEventListener("click", () => { arcfxWallet.disconnect(); location.assign(appPath("/entry")); }); c.append(disconnect, link("Public ArcFX website ↗", "https://www.arcfx.app", true));
 } else {
   const p = shell(view === "activity" ? "Owner-scoped Arc Mainnet business events from the authoritative dashboard." : "Owner-scoped Arc Mainnet metrics, distinct from public protocol statistics.", "LIVE");
@@ -61,5 +97,5 @@ if (view in legacy) {
       }
     } catch { if (current === version) c.replaceChildren(node("h2", "Business data unavailable"), node("p", "The owner-authenticated read failed. Refresh or verify the wallet session before retrying.")); }
   };
-  arcfxWallet.onChange(() => void render());
+  arcfxWallet.watch(() => void render());
 }

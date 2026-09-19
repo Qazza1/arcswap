@@ -1,0 +1,32 @@
+/*
+ * Skip links, linked directly from each app page's HTML so they stay hidden
+ * until keyboard focus even before (or without) the page's JavaScript.
+ * Literal fallbacks cover the moment before the token stylesheet loads.
+ */
+.app-skip,
+.workspace-skip {
+  position: fixed;
+  z-index: 1000;
+  top: 10px;
+  left: 10px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  padding: 8px 11px;
+  border-radius: var(--fx-r-sm, 8px);
+  background: var(--fx-ink, #1c1917);
+  color: var(--fx-on-accent, #ffffff);
+  font: 600 13px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+  text-decoration: none;
+}
+.app-skip:focus,
+.workspace-skip:focus {
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  outline: 2px solid var(--fx-accent, #b45309);
+  outline-offset: 2px;
+}

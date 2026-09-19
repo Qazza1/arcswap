@@ -6,13 +6,21 @@
  */
 export const ARCFX_APP_ORIGIN = "https://app.arcfx.app";
 
+// Vercel preview deployments of this project (team-scoped hostnames). A preview
+// is its own origin with its own tab-scoped session, so app links must stay on
+// it rather than jumping to production.
+const PREVIEW_HOST = /^arcswap-[a-z0-9-]+-qazza-s-projects\.vercel\.app$/;
+
+function appHost(host: string): boolean {
+  return host === "app.arcfx.app" || host === "localhost" || host === "127.0.0.1" || PREVIEW_HOST.test(host);
+}
+
 export function appPath(path: string): string {
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1" || host === "app.arcfx.app") return normalized;
+  if (appHost(window.location.hostname)) return normalized;
   return `${ARCFX_APP_ORIGIN}${normalized}`;
 }
 
 export function isAppOrigin(): boolean {
-  return window.location.hostname === "app.arcfx.app" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  return appHost(window.location.hostname);
 }

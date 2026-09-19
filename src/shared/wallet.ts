@@ -91,9 +91,45 @@ let selectedRefresh: { provider: Eip1193Provider; promise: Promise<void> } | nul
 let selectedAccountsChanged: ((accounts: string[]) => Promise<void>) | null = null;
 let selectedChainChanged: ((chainId: string) => Promise<void>) | null = null;
 
+let bootstrapping: Promise<WalletState> | null = null;
+let lastEmittedKey: string | null = null;
+const providerIds = new WeakMap<Eip1193Provider, number>();
+let nextProviderId = 0;
+
 function snapshot(): WalletState { return { ...state }; }
 
+function providerId(provider: Eip1193Provider | undefined): number {
+  if (!provider) return 0;
+  let id = providerIds.get(provider);
+  if (!id) { id = ++nextProviderId; providerIds.set(provider, id); }
+  return id;
+}
+
+/**
+ * The identity of a wallet state for listeners: connection, account, chain,
+ * the exact selected provider object, and the ArcFX signed-out marker. Two
+ * states with the same key are indistinguishable to every consumer.
+ */
+function stateKey(): string {
+  return [
+    state.connected ? 1 : 0,
+    state.address?.toLowerCase() || "",
+    state.chainId?.toLowerCase() || "",
+    providerId(selectedProvider?.provider),
+    explicitlySignedOut() ? 1 : 0,
+  ].join("|");
+}
+
+/**
+ * Notify listeners only when the meaningful wallet state changed. A silent
+ * restore that re-reads the same accounts/chain must never re-notify: page
+ * listeners respond to notifications by reading readiness, and an unchanged
+ * re-notification is what allowed a restore → emit → render → restore cycle.
+ */
 function emit(): void {
+  const key = stateKey();
+  if (key === lastEmittedKey) return;
+  lastEmittedKey = key;
   const s = snapshot();
   for (const fn of listeners) {
     try { fn(s); } catch (err) { console.error("[wallet] listener failed:", err); }
@@ -457,6 +493,52 @@ async function restore(): Promise<WalletState> {
   try { return await restoring; } finally { restoring = null; }
 }
 
+/**
+ * The document's one silent restoration. Every caller shares the same promise;
+ * later callers never trigger another provider read.
+ */
+function bootstrap(): Promise<WalletState> {
+  if (!bootstrapping) bootstrapping = restore().catch(() => snapshot());
+  return bootstrapping;
+}
+
+/**
+ * Resolve once the initial restore and any in-flight provider-event refresh
+ * have committed. It performs no provider request and never notifies, so it is
+ * safe to call from a wallet listener.
+ */
+async function settled(): Promise<WalletState> {
+  await bootstrap();
+  const pendingWork = (): Promise<unknown> | null => selectedRefresh?.promise || restoring;
+  for (let pending = pendingWork(); pending; pending = pendingWork()) {
+    await pending.catch(() => { /* snapshots fail closed */ });
+  }
+  return snapshot();
+}
+
+/**
+ * Deliver the settled wallet state once, then again only when the meaningful
+ * state key changes. Pages use this to render once per wallet identity.
+ */
+function watch(fn: Listener): () => void {
+  let active = true;
+  let delivered: string | null = null;
+  let unsubscribe: () => void = () => {};
+  const deliver = () => {
+    if (!active) return;
+    const key = stateKey();
+    if (key === delivered) return;
+    delivered = key;
+    try { fn(snapshot()); } catch (err) { console.error("[wallet] watcher failed:", err); }
+  };
+  void settled().then(() => {
+    if (!active) return;
+    deliver();
+    unsubscribe = onChange(deliver);
+  });
+  return () => { active = false; unsubscribe(); };
+}
+
 async function ensureArc(): Promise<boolean> {
   const provider = selectedProvider?.provider;
   if (!provider) return false;
@@ -591,7 +673,7 @@ export const arcfxWallet = {
   get provider(): Eip1193Provider | null { return selectedProvider?.provider || null; },
   get providerInfo(): Readonly<Eip6963Info> | null { return selectedProvider?.info || null; },
   get isExplicitlySignedOut(): boolean { return explicitlySignedOut(); },
-  restore, connect, connectCurrentNetwork, disconnect, ensureArc, switchToArcMainnet, request, signMessage, onChange, shortAddress, refreshHeader: paintHeader,
+  restore, bootstrap, settled, watch, connect, connectCurrentNetwork, disconnect, ensureArc, switchToArcMainnet, request, signMessage, onChange, shortAddress, refreshHeader: paintHeader,
   ARC_TESTNET, ARC_CHAIN_ID_HEX, ARC_CHAIN_ID_DEC, ARC_MAINNET, ARC_MAINNET_CHAIN_ID_HEX, ARC_MAINNET_CHAIN_ID_DEC,
 };
 
@@ -603,5 +685,5 @@ if (typeof window !== "undefined") {
       alert(error?.message || "Could not connect wallet.");
     });
   }
-  restore().catch(() => { /* no wallet, or silent restoration was unavailable */ });
+  void bootstrap();
 }

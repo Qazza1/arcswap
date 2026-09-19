@@ -105,7 +105,8 @@ function invalidate(): void {
 async function ready(): Promise<AuthStatus> {
   if (readyPending) return readyPending;
   readyPending = (async () => {
-    await arcfxWallet.restore();
+    // Joins the document's one silent restore; never re-reads or re-notifies.
+    await arcfxWallet.settled();
     observedWallet = arcfxWallet.address?.toLowerCase() || null;
     readyResolved = true;
     emit(storedOwnerSession() ? "AUTHENTICATED" : connectedStatus());

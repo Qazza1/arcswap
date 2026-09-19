@@ -10,7 +10,6 @@ const group: Array<{ title: string; links: Link[] }> = [
   { title: "Receivables", links: [
     { label: "Invoices", href: "/invoices", status: "LIVE" },
     { label: "Customers", href: "/customers", status: "LIVE" },
-    { label: "New invoice", href: "/invoice", status: "LIVE" },
     { label: "Payment Links", href: "/workspace?view=payment-links", status: "TESTNET" },
   ] },
   { title: "Payments", links: [
@@ -34,7 +33,8 @@ const group: Array<{ title: string; links: Link[] }> = [
 ];
 const titles: Record<AppPage, string> = { dashboard: "Dashboard", invoices: "Invoices", customers: "Customers", invoice: "Invoice", entry: "Secure entry", workspace: "Workspace" };
 const short = (address: string | null) => address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Not connected";
-const activeHref = (href: string) => location.pathname + location.search === href || (location.pathname === href && !location.search);
+// A single invoice (new or existing) belongs to the Invoices section.
+const activeHref = (href: string) => location.pathname + location.search === href || (location.pathname === href && !location.search) || (href === "/invoices" && location.pathname === "/invoice");
 
 export function mountAppShell(page: AppPage, title = titles[page]): void {
   const renderNav = () => group.map(section => `<div class="app-nav-group"><p class="app-nav-label">${section.title}</p><nav class="app-nav" aria-label="${section.title}">${section.links.map(link => {
