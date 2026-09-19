@@ -1,0 +1,22 @@
+@import "../shared/tokens.css";
+.tool-page { width: min(1060px, calc(100% - 56px)); margin: 38px auto 72px; }
+.tool-kicker { margin: 0 0 8px; color: var(--fx-muted); font: 600 10px var(--fx-mono); letter-spacing: .12em; text-transform: uppercase; }
+.tool-page h1 { margin: 0; font: 680 clamp(30px, 4vw, 46px)/1.08 var(--fx-display); letter-spacing: -.05em; }
+.tool-intro { max-width: 670px; margin: 12px 0 26px; color: var(--fx-muted); font-size: 14px; line-height: 1.65; }
+.tool-card { padding: 22px; border: 1px solid var(--fx-line); border-radius: var(--fx-r-lg); background: var(--fx-elevated); box-shadow: var(--fx-shadow-sm); }
+.tool-card + .tool-card { margin-top: 12px; }
+.tool-card h2 { margin: 0 0 9px; font-size: 17px; }
+.tool-card p { margin: 0 0 15px; color: var(--fx-muted); font-size: 13px; line-height: 1.6; }
+.tool-status { display: inline-block; margin-bottom: 16px; padding: 5px 8px; border: 1px solid var(--fx-line); border-radius: 99px; color: var(--fx-muted); font: 600 10px var(--fx-mono); }
+.tool-status--testnet { color: var(--fx-warn); background: var(--fx-warn-bg); }
+.tool-status--live { color: var(--fx-ok); background: var(--fx-ok-bg); }
+.tool-link, .tool-button { display: inline-flex; min-height: 39px; align-items: center; padding: 8px 12px; border: 1px solid var(--fx-line); border-radius: var(--fx-r-sm); background: var(--fx-surface); color: var(--fx-ink); cursor: pointer; font: 600 12px var(--fx-body); }
+.tool-link:hover, .tool-button:hover { border-color: var(--fx-accent); }
+.tool-list { margin: 0; padding: 0; list-style: none; }
+.tool-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 0; border-top: 1px solid var(--fx-line-soft); font-size: 13px; }
+.tool-list small { color: var(--fx-muted); font: 500 11px var(--fx-mono); }
+.tool-form { display: grid; gap: 10px; grid-template-columns: 1fr 1fr auto; }
+.tool-form label { display: grid; gap: 5px; color: var(--fx-muted); font-size: 12px; }
+.tool-form input { width: 100%; min-height: 39px; padding: 8px; border: 1px solid var(--fx-line); border-radius: var(--fx-r-sm); background: var(--fx-surface); color: var(--fx-ink); font: 12px var(--fx-body); }
+.tool-note { color: var(--fx-muted); font-size: 12px; }
+@media(max-width: 600px) { .tool-page { width: calc(100% - 28px); margin-top: 27px; } .tool-card { padding: 17px; } .tool-form { grid-template-columns: 1fr; } }

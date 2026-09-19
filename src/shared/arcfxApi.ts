@@ -266,10 +266,22 @@ async function connectReceivablesOwner(): Promise<void> {
 }
 
 /** Read-only UI hint; it waits for a silent restore and never exposes the bearer. */
-async function hasReceivablesOwnerSession(): Promise<boolean> {
-  try { return await receivablesSessionReady(); }
-  catch { return false; }
-}
+  async function hasReceivablesOwnerSession(): Promise<boolean> {
+    try { return await receivablesSessionReady(); }
+    catch { return false; }
+  }
+
+  /** Settled, signature-free readiness shared by every Mainnet workspace page. */
+  async function receivablesReadiness(): Promise<"AUTHENTICATED" | "DISCONNECTED" | "WRONG_NETWORK" | "CONNECTED_NOT_AUTHENTICATED" | "API_ERROR"> {
+    try {
+      const authenticated = await receivablesSessionReady();
+      if (arcfxWallet.isExplicitlySignedOut || !arcfxWallet.connected || !arcfxWallet.address) return "DISCONNECTED";
+      if (arcfxWallet.chainId?.toLowerCase() !== ARCFX_MAINNET_CHAIN_ID_HEX) return "WRONG_NETWORK";
+      return authenticated ? "AUTHENTICATED" : "CONNECTED_NOT_AUTHENTICATED";
+    } catch {
+      return "API_ERROR";
+    }
+  }
 
 arcfxWallet.onChange(() => {
   reconcileReceivablesSessionAfterWalletChange();
@@ -369,7 +381,7 @@ async function publicGet(path: string): Promise<any> {
 
 export const arcfxApi = {
   base: API_BASE,
-  get, post, publicGet, digestOf, messageFor, clearAuthCache, connectOwner, connectReceivablesOwner, hasReceivablesOwnerSession,
+  get, post, publicGet, digestOf, messageFor, clearAuthCache, connectOwner, connectReceivablesOwner, hasReceivablesOwnerSession, receivablesReadiness,
 
   // ── Convenience wrappers, so pages do not repeat action strings ──────────
   listCustomers: (opts: { archived?: boolean } = {}) =>

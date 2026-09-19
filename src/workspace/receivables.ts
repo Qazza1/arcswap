@@ -1,6 +1,7 @@
 import "./receivables.css";
 import { arcfxApi } from "../shared/arcfxApi";
-import { arcfxWallet, type WalletState } from "../shared/wallet";
+import { arcfxWallet } from "../shared/wallet";
+import { appPath } from "../shared/appOrigin";
 
 type Invoice = {
   id: string;
@@ -119,10 +120,7 @@ function workspaceHeader(
     make("p", "receivables-subtitle", subtitle)
   );
   const side = make("div", "receivables-actions");
-  side.append(
-    make("span", "fx-network", `Arc Mainnet · ${MAINNET.caip2}`),
-    ...actions
-  );
+  side.append(...actions);
   h.append(copy, side);
   return h;
 }
@@ -147,50 +145,21 @@ function summary(rows: Array<[string, string]>) {
   });
   return box;
 }
-function paintReceivablesNetwork(state: WalletState) {
-  if (!mainnetSelected(state)) return;
-  const label = document.getElementById("arcfx-account-network");
-  if (label) label.textContent = "Arc Mainnet · receivables";
-}
-function workspaceReady(
-  container: HTMLElement,
-  state: WalletState = arcfxWallet.state
-) {
-  if (mainnetSelected(state)) {
-    paintReceivablesNetwork(state);
-    return true;
-  }
-  const wrongNetwork = state.connected;
-  container.replaceChildren(
-    empty(
-      wrongNetwork ? "Connected wallet is on the wrong network" : "Open your receivables workspace",
-      wrongNetwork
-        ? "ArcFX requires Arc Mainnet · Chain 5042."
-        : "Connect your selected wallet on Arc Mainnet (chain 5042) to view and manage your records.",
-      action(wrongNetwork ? "Switch to Arc Mainnet" : "Connect wallet", "fx-button--primary", async () => {
-        try {
-          if (wrongNetwork) {
-            const switched = await arcfxWallet.switchToArcMainnet();
-            if (!switched) throw new Error("Arc Mainnet was not selected. No workspace action was taken.");
-            return;
-          }
-          await arcfxApi.connectReceivablesOwner();
-          if (!mainnetSelected())
-            throw new Error(
-              "Switch the selected wallet to Arc Mainnet (chain 5042), then try again."
-            );
-        } catch (e) {
-          container.prepend(
-            message(
-              e instanceof Error ? e.message : "Could not connect wallet.",
-              "fx-notice--error"
-            )
-          );
-        }
+function blockedWorkspace(readiness: Exclude<Awaited<ReturnType<typeof arcfxApi.receivablesReadiness>>, "AUTHENTICATED">) {
+  if (!root) return;
+  const wrongNetwork = readiness === "WRONG_NETWORK";
+  const title = wrongNetwork ? "Switch to Arc Mainnet" : readiness === "API_ERROR" ? "Wallet state unavailable" : "Open your secure workspace";
+  const copy = wrongNetwork
+    ? "The selected wallet must be on Arc Mainnet (chain 5042). ArcFX will never switch it automatically."
+    : readiness === "API_ERROR" ? "Could not verify the selected wallet. Refresh or try secure entry again."
+    : "Connect and verify your selected wallet once to access private business records.";
+  const cta = wrongNetwork
+    ? action("Switch to Arc Mainnet", "fx-button--primary", async () => {
+        try { if (!await arcfxWallet.switchToArcMainnet()) throw new Error("Arc Mainnet was not selected."); }
+        catch (e) { root?.prepend(message(e instanceof Error ? e.message : "Could not switch network.", "fx-notice--error")); }
       })
-    )
-  );
-  return false;
+    : nav("Open secure entry", appPath("/entry"), "fx-button--primary");
+  root.replaceChildren(empty(title, copy, cta));
 }
 
 function invoiceRow(invoice: Invoice) {
@@ -258,9 +227,8 @@ async function overview() {
   );
   const content = make("div");
   root.append(content);
-  const render = async (state: WalletState) => {
+  const render = async () => {
     content.replaceChildren();
-    if (!workspaceReady(content, state)) return;
     try {
       const data = await arcfxApi.listReceivablesInvoices();
       const invoiceRecords: Invoice[] = data.invoices || [];
@@ -307,8 +275,7 @@ async function overview() {
       );
     }
   };
-  arcfxWallet.onChange((state) => void render(state));
-  await render(arcfxWallet.state);
+  await render();
 }
 
 async function invoices() {
@@ -329,7 +296,6 @@ async function invoices() {
   let totals: Record<string, string> = {};
   const render = () => {
     content.replaceChildren();
-    if (!workspaceReady(content)) return;
     const totalRows = Object.entries(totals).map(
       ([token, value]) =>
         [`${token} outstanding`, `${value} ${token}`] as [string, string]
@@ -434,10 +400,6 @@ async function invoices() {
   };
   const load = async () => {
     content.replaceChildren(message("Loading invoices…"));
-    if (!mainnetSelected()) {
-      workspaceReady(content);
-      return;
-    }
     try {
       const data = await arcfxApi.listReceivablesInvoices();
       records = data.invoices || [];
@@ -452,7 +414,6 @@ async function invoices() {
       );
     }
   };
-  arcfxWallet.onChange(() => void load());
   await load();
 }
 
@@ -837,7 +798,6 @@ async function invoicePage() {
   );
   const content = make("div");
   root.append(content);
-  if (!workspaceReady(content)) return;
   if (id) return invoiceDetail(content, id);
   return invoiceEditor(content);
 }
@@ -925,7 +885,6 @@ async function customersPage() {
   );
   const content = make("div");
   root.append(content);
-  if (!workspaceReady(content)) return;
   let records: Customer[] = [];
   let searchText = "";
   let includeArchived = false;
@@ -1054,13 +1013,28 @@ async function customersPage() {
       );
     }
   };
-  arcfxWallet.onChange(() => void load());
   await load();
 }
 
 export async function mountReceivables(page: Page) {
-  if (page === "overview") return overview();
-  if (page === "invoices") return invoices();
-  if (page === "invoice") return invoicePage();
-  return customersPage();
+  if (!root) return;
+  let version = 0;
+  const render = async () => {
+    const current = ++version;
+    // Invalidate visible private records immediately while provider identity is uncertain.
+    root.replaceChildren(message("Restoring secure workspace…"));
+    const readiness = await arcfxApi.receivablesReadiness();
+    if (current !== version) return;
+    if (readiness !== "AUTHENTICATED") {
+      blockedWorkspace(readiness);
+      return;
+    }
+    if (page === "overview") await overview();
+    else if (page === "invoices") await invoices();
+    else if (page === "invoice") await invoicePage();
+    else await customersPage();
+  };
+  // onChange emits the initial state and every selected-provider transition.
+  // The generation gate prevents an older restore from repainting a newer identity.
+  arcfxWallet.onChange(() => void render());
 }

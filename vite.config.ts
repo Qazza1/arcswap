@@ -20,6 +20,7 @@ export default defineConfig({
         app:       resolve(__dirname, "app.html"),
         entry:     resolve(__dirname, "entry.html"),
         dashboard: resolve(__dirname, "dashboard.html"),
+        workspace: resolve(__dirname, "workspace.html"),
         trade:     resolve(__dirname, "trade.html"),
         multisend: resolve(__dirname, "multisend.html"),
         pay:       resolve(__dirname, "pay.html"),

@@ -551,6 +551,7 @@ test("Mainnet receivables preserve a valid owner bearer through silent restore a
     // bearer before silent restore proves the same selected provider/account.
     const second = await document();
     assert.equal(await second.api.arcfxApi.hasReceivablesOwnerSession(), true, "same wallet and Arc Mainnet silently reuse the bearer");
+    assert.equal(await second.api.arcfxApi.receivablesReadiness(), "AUTHENTICATED", "all receivables pages see the same restored owner session");
     assert.ok(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), "pre-restore onChange did not clear the valid session");
     await second.api.arcfxApi.getReceivablesDashboard();
     assert.equal(prompts.filter((prompt) => /^ArcFX session create\n/.test(prompt.message)).length, 1, "dashboard navigation adds no second personal_sign");
@@ -569,6 +570,7 @@ test("Mainnet receivables preserve a valid owner bearer through silent restore a
     control.accounts = [other.address];
     await provider.emit("accountsChanged", [other.address]);
     assert.equal(await second.api.arcfxApi.hasReceivablesOwnerSession(), false, "a genuine accountsChanged after readiness invalidates the bearer");
+    assert.equal(await second.api.arcfxApi.receivablesReadiness(), "CONNECTED_NOT_AUTHENTICATED", "a different connected wallet is never treated as the prior owner");
     assert.equal(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), null, "account change clears the bearer");
     control.accounts = [owner.address];
     await provider.emit("accountsChanged", [owner.address]);
@@ -581,6 +583,7 @@ test("Mainnet receivables preserve a valid owner bearer through silent restore a
     dashboardStatus = 401;
     await assert.rejects(() => second.api.arcfxApi.getReceivablesDashboard(), /expired/);
     assert.equal(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), null, "401 clears the invalid bearer");
+    assert.equal(await second.api.arcfxApi.receivablesReadiness(), "CONNECTED_NOT_AUTHENTICATED", "a 401 leaves no reusable owner session");
     assert.equal(prompts.filter((prompt) => /^ArcFX session create\n/.test(prompt.message)).length, 1, "401 fails closed without an automatic signature");
     await second.server.close();
 
@@ -599,6 +602,7 @@ test("Mainnet receivables preserve a valid owner bearer through silent restore a
     const wrongChain = await document();
     const wrongChainSession = await wrongChain.api.arcfxApi.hasReceivablesOwnerSession();
     assert.equal(wrongChainSession, false);
+    assert.equal(await wrongChain.api.arcfxApi.receivablesReadiness(), "WRONG_NETWORK");
     assert.equal(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), null, "wrong restored chain clears the bearer");
     await wrongChain.server.close();
 
@@ -611,6 +615,7 @@ test("Mainnet receivables preserve a valid owner bearer through silent restore a
     storage.setItem("arcfx:mainnet-receivables-owner-session:v1", session(other.address));
     expired.walletModule.arcfxWallet.disconnect();
     assert.equal(await expired.api.arcfxApi.hasReceivablesOwnerSession(), false);
+    assert.equal(await expired.api.arcfxApi.receivablesReadiness(), "DISCONNECTED");
     assert.equal(storage.getItem("arcfx:mainnet-receivables-owner-session:v1"), null, "explicit Disconnect clears the bearer");
     await expired.server.close();
   } finally {
@@ -821,7 +826,7 @@ test("wallet freshness guards discard delayed dashboard and analytics results af
     const analyticsSource = fs.readFileSync(new URL("../src/analytics.ts", import.meta.url), "utf8");
     assert.match(dashboardSource, /arcfxWallet\.onChange\(\(\) => void render\(\)\)/);
     assert.match(dashboardSource, /arcfxApi\.getReceivablesDashboard\(\)/);
-    assert.match(dashboardSource, /await arcfxApi\.hasReceivablesOwnerSession\(\)/, "dashboard waits for owner-session restoration before deciding authentication");
+    assert.match(dashboardSource, /await arcfxApi\.receivablesReadiness\(\)/, "dashboard waits for owner-session restoration before deciding authentication");
     assert.match(dashboardSource, /Restoring secure workspace/, "dashboard removes prior financial data while the provider snapshot is untrusted");
     assert.match(dashboardSource, /version === renderVersion/);
     assert.match(analyticsSource, /breakdownLoads\.isCurrent\(ticket\)/);
@@ -1124,7 +1129,7 @@ test("Mainnet receivables clearly keeps Agent Evidence unavailable", () => {
   assert.match(invoicesSource, /data-receivables="invoices"/);
   assert.match(receivablesSource, /Agent Evidence is unavailable for Arc Mainnet/);
   assert.doesNotMatch(receivablesSource, /prepareAgentMandate|signAgentMandate|submitAgentMandate|createAgentRun/);
-  assert.match(receivablesSource, /connectReceivablesOwner/);
+  assert.match(receivablesSource, /receivablesReadiness/);
   assert.doesNotMatch(receivablesSource, /arcfxApi\.listInvoices\(|arcfxApi\.createInvoice\(|arcfxApi\.updateInvoice\(/);
   assert.match(apiSource, /ARCFX_MAINNET_CHAIN_ID_HEX = "0x13b2"/);
   assert.match(apiSource, /listReceivablesInvoices/);

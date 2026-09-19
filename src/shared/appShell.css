@@ -32,6 +32,45 @@ body.app-workspace a { color: inherit; text-decoration: none; }
 .app-mainnet::before { width: 6px; height: 6px; border-radius: 99px; background: var(--fx-ok); content: ""; }
 .app-content { min-width: 0; }
 .app-mobilebar { display: none; }
+.workspace-skip { position: fixed; z-index: 1000; top: 10px; left: 10px; padding: 8px 11px; border-radius: var(--fx-r-sm); background: var(--fx-ink); color: var(--fx-on-accent); transform: translateY(-160%); }
+.workspace-skip:focus { transform: translateY(0); }
+body.receivables-page a.workspace-skip, body.app-workspace a.app-skip { color: var(--fx-on-accent); }
+.app-sidebar { gap: 8px; }
+.app-sidebar-head { display: flex; align-items: center; justify-content: space-between; }
+.app-nav-scroll { min-height: 0; overflow-y: auto; padding: 2px 0 14px; scrollbar-width: thin; }
+.app-nav-group + .app-nav-group { margin-top: 16px; }
+.app-nav a { justify-content: space-between; gap: 8px; }
+body.receivables-page .app-nav a, body.receivables-page .app-account-popover a { color: var(--fx-muted); text-decoration: none; }
+body.receivables-page .app-nav a:hover, body.receivables-page .app-nav a[aria-current="page"] { color: var(--fx-ink); }
+.app-nav a span { min-width: 0; }
+.app-status { flex: none; color: var(--fx-muted); font: 600 9px var(--fx-mono); white-space: nowrap; }
+.app-status--live { color: var(--fx-ok); }
+.app-status--testnet { color: var(--fx-warn); }
+.app-account { flex: none; }
+.app-account-network::before { background: var(--fx-muted); }
+.app-menu-close, .app-menu-open { display: none; }
+.app-account-menu { position: relative; }
+.app-account-menu summary { max-width: 135px; overflow: hidden; padding: 7px 10px; border: 1px solid var(--fx-line); border-radius: 8px; color: var(--fx-muted); cursor: pointer; font: 600 11px var(--fx-mono); text-overflow: ellipsis; white-space: nowrap; }
+.app-account-popover { position: absolute; z-index: 35; top: calc(100% + 7px); right: 0; width: 240px; padding: 14px; border: 1px solid var(--fx-line); border-radius: 10px; background: var(--fx-elevated); box-shadow: var(--fx-shadow-md); }
+.app-account-popover strong { font: 600 12px var(--fx-mono); }
+.app-account-popover p { color: var(--fx-muted); font-size: 11px; }
+.app-account-popover a, .app-account-popover button { display: block; width: 100%; padding: 8px 0; border: 0; background: transparent; color: var(--fx-ink); cursor: pointer; font: 600 12px var(--fx-body); text-align: left; }
+.app-drawer-backdrop[hidden] { display: none; }
+.app-topbar-title { margin: 0; }
+.dashboard-head .dashboard-eyebrow { display: none; }
+:where(.app-workspace) :focus-visible { outline: 2px solid var(--fx-focus); outline-offset: 3px; }
+@media (max-width: 980px) {
+  .app-frame { display: block; }
+  .app-sidebar { position: fixed; z-index: 51; top: 0; bottom: 0; left: 0; width: min(320px, calc(100vw - 44px)); height: 100dvh; transform: translateX(-105%); transition: transform .18s ease; box-shadow: var(--fx-shadow-md); }
+  .app-sidebar--open { display: flex; transform: translateX(0); }
+  .app-drawer-backdrop:not([hidden]) { position: fixed; z-index: 50; inset: 0; background: rgba(25, 27, 25, .48); }
+  .app-menu-open, .app-menu-close { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--fx-line); border-radius: 7px; background: var(--fx-elevated); color: var(--fx-ink); cursor: pointer; }
+  .app-topbar { justify-content: flex-start; gap: 10px; padding: 0 16px; }
+  .app-mainnet { margin-left: auto; }
+  .app-mobilebar { display: none; }
+}
+@media (max-width: 760px) { .app-sidebar { display: flex; } }
+@media (max-width: 390px) { .app-topbar { gap: 6px; } .app-mainnet { font-size: 8px; } .app-account-menu summary { max-width: 88px; font-size: 9px; } }
 
 /* The entry surface is intentionally part of the app system, but has no
    sidebar before the wallet is connected. Never let the logo's source pixels
@@ -52,3 +91,4 @@ body.app-workspace a { color: inherit; text-decoration: none; }
 .entry-back:hover { color: var(--fx-ink); }
 @media (max-width: 760px) { .app-frame { display: block; } .app-sidebar { display: none; } .app-topbar { min-height: 58px; padding: 0 16px; } .app-topbar-title { font-size: 15px; } .app-mobilebar { position: sticky; z-index: 20; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--fx-line); background: color-mix(in srgb, var(--fx-elevated) 96%, transparent); } .app-mobilebar a { display: grid; min-height: 60px; place-content: center; gap: 3px; color: var(--fx-muted); font-size: 10px; text-align: center; } .app-mobilebar a[aria-current="page"] { color: var(--fx-accent); font-weight: 700; } .app-mainnet { padding: 5px 7px; font-size: 9px; } }
 @media (max-width: 420px) { .entry-page { padding: 18px 14px; } .entry-card { padding: 28px 21px; } .entry-logo { margin-bottom: 27px; } }
+@media (max-width: 760px) { .app-sidebar { display: flex; } .app-mobilebar { display: none; } }

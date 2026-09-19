@@ -13,6 +13,18 @@
       "permanent": false
     },
     {
+      "source": "/workspace",
+      "has": [{ "type": "host", "value": "www.arcfx.app" }],
+      "destination": "https://app.arcfx.app/workspace",
+      "permanent": false
+    },
+    {
+      "source": "/workspace/",
+      "has": [{ "type": "host", "value": "www.arcfx.app" }],
+      "destination": "https://app.arcfx.app/workspace",
+      "permanent": false
+    },
+    {
       "source": "/customers",
       "has": [{ "type": "host", "value": "www.arcfx.app" }],
       "destination": "https://app.arcfx.app/customers",
@@ -77,6 +89,14 @@
     {
       "source": "/dashboard/",
       "destination": "/dashboard.html"
+    },
+    {
+      "source": "/workspace",
+      "destination": "/workspace.html"
+    },
+    {
+      "source": "/workspace/",
+      "destination": "/workspace.html"
     },
     {
       "source": "/trade",

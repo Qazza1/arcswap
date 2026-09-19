@@ -97,12 +97,12 @@ async function render(): Promise<void> {
   // page is unauthenticated. Remove prior private metrics immediately while
   // the selected-provider snapshot is untrusted.
   root.innerHTML = `<section class="dashboard-empty" aria-live="polite"><p class="dashboard-eyebrow">Arc Mainnet workspace</p><h1>Restoring secure workspace…</h1><p>Verifying the selected wallet before loading financial data.</p></section>`;
-  const hasSession = await arcfxApi.hasReceivablesOwnerSession();
+  const readiness = await arcfxApi.receivablesReadiness();
   if (version !== renderVersion) return;
   const wallet = arcfxWallet.address?.toLowerCase();
-  const ready = arcfxWallet.connected && arcfxWallet.chainId?.toLowerCase() === "0x13b2" && hasSession;
+  const ready = readiness === "AUTHENTICATED";
   if (!ready || !wallet) {
-    root.innerHTML = `<section class="dashboard-empty"><p class="dashboard-eyebrow">Arc Mainnet workspace</p><h1>Connect to see your workspace.</h1><p>Verify wallet ownership to view your private financial data.</p><a class="dashboard-primary" href="${appPath("/entry")}">Open secure entry</a></section>`;
+    root.innerHTML = `<section class="dashboard-empty"><h1>${readiness === "WRONG_NETWORK" ? "Switch to Arc Mainnet." : "Open your secure workspace."}</h1><p>Verify wallet ownership to view your private financial data.</p><a class="dashboard-primary" href="${appPath("/entry")}">Open secure entry</a></section>`;
     return;
   }
 
@@ -141,4 +141,3 @@ async function render(): Promise<void> {
 }
 
 arcfxWallet.onChange(() => void render());
-void render();
