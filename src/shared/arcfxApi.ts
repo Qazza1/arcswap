@@ -103,18 +103,29 @@ async function signMandate(message: string): Promise<string> {
 /** Drop the opaque owner session on account, chain, expiry, or authentication failure. */
 export function clearAuthCache(): void { arcfxAuth.clearAuthCache(); }
 
-async function signedPost(path: string, action: string, payload: unknown): Promise<any> {
+async function signedPost(path: string, action: string, payload: unknown, timeoutMs = 0): Promise<any> {
   const wallet = arcfxWallet.address;
   if (!wallet) throw new Error("Connect your wallet first.");
   const ts = Date.now();
   const clean = stripUndefined(payload ?? null);
   const digest = await digestOf(clean);
   const signature = await sign(messageFor(action, wallet, digest, ts));
-  return parse(await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ wallet, ts, signature, payload: clean }),
-  }));
+  // Only the network round-trip is bounded; the wallet prompt above is not.
+  const controller = timeoutMs > 0 ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    return await parse(await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ wallet, ts, signature, payload: clean }),
+      signal: controller?.signal,
+    }));
+  } catch (error) {
+    if (controller?.signal.aborted) throw Object.assign(new Error("The ArcFX server did not respond in time."), { timedOut: true });
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 async function bootstrapOwnerSession(): Promise<OwnerSession> {
@@ -139,8 +150,8 @@ type ReceivablesOwnerSession = OwnerSession & { chainId: string };
 let receivablesBootstrapPending: Promise<ReceivablesOwnerSession> | null = null;
 const receivablesReads = new Set<AbortController>();
 let receivablesWalletKey: string | null = null;
-// A read that has not answered by then is reported as an explicit failure
-// instead of leaving the page in a loading state.
+// A read (or a signed write's network round-trip) that has not answered by
+// then is reported as an explicit failure instead of leaving the page stuck.
 const RECEIVABLES_READ_TIMEOUT_MS = 20_000;
 
 function mainnetReceivablesWallet(): { wallet: string; chainId: string } {
@@ -275,7 +286,7 @@ async function receivablesGet(path: string, params: Record<string, string> = {})
 
 async function receivablesPost(path: string, action: string, payload: unknown): Promise<any> {
   const expected = mainnetReceivablesWallet();
-  const result = await signedPost(path, action, payload);
+  const result = await signedPost(path, action, payload, RECEIVABLES_READ_TIMEOUT_MS);
   assertSameReceivablesWallet(expected);
   return result;
 }

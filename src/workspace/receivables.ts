@@ -2,6 +2,7 @@ import "./receivables.css";
 import { arcfxApi } from "../shared/arcfxApi";
 import { arcfxWallet } from "../shared/wallet";
 import { appPath } from "../shared/appOrigin";
+import { createDraftSubmitter, describeWriteError, issueBlocker, missingSummary, validateDraft, type DraftErrors } from "./invoiceDraft";
 
 type Invoice = {
   id: string;
@@ -78,6 +79,12 @@ function action(
   const b = make("button", `fx-button ${className}`.trim(), label);
   b.type = "button";
   if (run) b.addEventListener("click", () => void run());
+  return b;
+}
+/** A form's submit control. action() buttons are type="button" and never submit. */
+function submitButton(label: string, className = "fx-button--primary"): HTMLButtonElement {
+  const b = make("button", `fx-button ${className}`.trim(), label);
+  b.type = "submit";
   return b;
 }
 function nav(label: string, href: string, className = "") {
@@ -426,8 +433,22 @@ function field(label: string, id: string, type = "text", required = false) {
   input.id = id;
   input.type = type;
   input.required = required;
-  wrap.append(labelEl, input);
-  return { wrap, input };
+  const error = make("p", "fx-field-error");
+  error.id = `${id}-error`;
+  error.hidden = true;
+  wrap.append(labelEl, input, error);
+  const setError = (text = "") => {
+    error.textContent = text;
+    error.hidden = !text;
+    if (text) {
+      input.setAttribute("aria-invalid", "true");
+      input.setAttribute("aria-describedby", error.id);
+    } else {
+      input.removeAttribute("aria-invalid");
+      input.removeAttribute("aria-describedby");
+    }
+  };
+  return { wrap, input, setError };
 }
 async function customerList(): Promise<Customer[]> {
   const data = await arcfxApi.listReceivablesCustomers();
@@ -501,41 +522,78 @@ async function invoiceEditor(content: HTMLElement) {
   const grid = make("div", "fx-field-grid");
   grid.append(number.wrap, amount.wrap, tokenField, due.wrap, customerField);
   const feedback = make("div");
-  const save = action("Save draft", "fx-button--primary");
-  form.append(grid, noteField, save, feedback);
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (!mainnetSelected()) {
-      feedback.replaceChildren(
-        message(
-          "Switch the selected wallet to Arc Mainnet before saving.",
-          "fx-notice--warning"
-        )
-      );
-      return;
-    }
-    busy(save, true, "Saving");
-    try {
-      const result = await arcfxApi.createReceivablesInvoice({
-        number: number.input.value.trim(),
-        amount: amount.input.value.trim(),
-        token: token.value,
-        dueDate: due.input.value || undefined,
-        customerId: customer.value || undefined,
-        note: note.value.trim() || undefined,
+  const save = submitButton("Save draft");
+  const hint = make("p", "fx-form-hint");
+  hint.id = "invoice-save-hint";
+  hint.setAttribute("aria-live", "polite");
+  save.setAttribute("aria-describedby", hint.id);
+  const actions = make("div", "fx-form-actions");
+  actions.append(save, hint);
+  number.input.required = false;
+  amount.input.required = false;
+  form.noValidate = true;
+  form.append(grid, noteField, actions, feedback);
+
+  const values = () => ({
+    number: number.input.value,
+    amount: amount.input.value,
+    token: token.value,
+    dueDate: due.input.value,
+    customerId: customer.value,
+    note: note.value,
+  });
+  let attempted = false;
+  const showErrors = (errors: DraftErrors) => {
+    number.setError(errors.number);
+    amount.setError(errors.amount);
+  };
+  const refreshHint = () => {
+    const errors = validateDraft(values());
+    hint.textContent = missingSummary(errors) || "Saving asks your wallet for one signature. It is not a transaction.";
+    // Inline field errors appear after the first save attempt, then track edits.
+    if (attempted) showErrors(errors);
+  };
+  number.input.addEventListener("input", refreshHint);
+  amount.input.addEventListener("input", refreshHint);
+  refreshHint();
+
+  const submit = createDraftSubmitter<ReturnType<typeof values>>(
+    async (v) => {
+      if (!mainnetSelected()) throw new Error("Switch the selected wallet to Arc Mainnet (chain 5042) before saving.");
+      return arcfxApi.createReceivablesInvoice({
+        number: v.number.trim(),
+        amount: v.amount.trim(),
+        token: v.token,
+        dueDate: v.dueDate || undefined,
+        customerId: v.customerId || undefined,
+        note: v.note.trim() || undefined,
         send: false,
       });
-      location.assign(invoiceHref(result.invoice.id));
-    } catch (e) {
-      feedback.replaceChildren(
-        message(
-          e instanceof Error ? e.message : "Could not save invoice.",
-          "fx-notice--error"
-        )
-      );
-    } finally {
-      busy(save, false, "Save draft");
+    },
+    (state) => {
+      if (state.phase === "invalid") {
+        attempted = true;
+        showErrors(state.errors);
+        feedback.replaceChildren();
+        (state.errors.number ? number.input : amount.input).focus();
+      } else if (state.phase === "saving") {
+        feedback.replaceChildren(message("Confirm the signature in your wallet to save this draft. No funds move."));
+        busy(save, true, "Saving");
+      } else if (state.phase === "saved") {
+        save.disabled = true;
+        save.textContent = "Draft saved";
+        save.classList.add("fx-button--done");
+        feedback.replaceChildren(message("Draft saved. Opening the invoice…", "fx-notice--success"));
+        location.assign(`${invoiceHref(state.id)}&saved=draft`);
+      } else {
+        busy(save, false, "Save draft");
+        feedback.replaceChildren(message(state.message, "fx-notice--error"));
+      }
     }
+  );
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void submit(values());
   });
   card.append(form);
   content.append(card);
@@ -559,6 +617,13 @@ function invoiceDetails(invoice: Invoice) {
   ];
   values.forEach(([label, value]) => {
     const cell = make("div", "fx-detail");
+    if (label === "Status") {
+      const pill = make("div", "fx-detail-value");
+      pill.append(status(value));
+      cell.append(make("div", "fx-detail-label", label), pill);
+      grid.append(cell);
+      return;
+    }
     cell.append(
       make("div", "fx-detail-label", label),
       make(
@@ -603,6 +668,13 @@ async function invoiceDetail(content: HTMLElement, id: string) {
     );
     return;
   }
+  const params = new URLSearchParams(location.search);
+  const justSaved = params.get("saved") === "draft";
+  if (justSaved) {
+    params.delete("saved");
+    history.replaceState(history.state, "", `${location.pathname}?${params}`);
+  }
+  let firstRender = true;
   const render = () => {
     if (!invoice) return;
     content.replaceChildren(
@@ -610,6 +682,10 @@ async function invoiceDetail(content: HTMLElement, id: string) {
         "Settlement state is calculated on the backend from Mainnet payment records that match this invoice's network and token."
       )
     );
+    if (justSaved && firstRender) {
+      content.prepend(message(`Draft saved. ${invoice.number} is stored as a DRAFT and is not visible to payers until issued.`, "fx-notice--success"));
+    }
+    firstRender = false;
     const layout = make("div", "fx-detail-grid");
     const info = make("section", "fx-card");
     info.append(cardHeading("Invoice information"));
@@ -672,7 +748,9 @@ async function invoiceDetail(content: HTMLElement, id: string) {
     );
     settleBody.append(reconcile);
     if (invoice.status === "draft") {
+      const blocked = issueBlocker(invoice);
       const issue = action("Mark issued", "", async () => {
+        if (issueBlocker(invoice!)) return;
         busy(issue, true, "Marking issued");
         try {
           const result = await arcfxApi.updateReceivablesInvoice({
@@ -682,17 +760,20 @@ async function invoiceDetail(content: HTMLElement, id: string) {
           invoice = result.invoice;
           render();
         } catch (e) {
-          content.prepend(
-            message(
-              e instanceof Error ? e.message : "Could not issue invoice.",
-              "fx-notice--error"
-            )
-          );
+          content.prepend(message(describeWriteError(e, "the invoice"), "fx-notice--error"));
         } finally {
           busy(issue, false, "Mark issued");
         }
       });
       settleBody.append(issue);
+      if (blocked) {
+        issue.disabled = true;
+        issue.classList.add("fx-button--blocked");
+        const why = make("p", "fx-field-help", blocked);
+        why.id = "issue-blocked-reason";
+        issue.setAttribute("aria-describedby", why.id);
+        settleBody.append(why);
+      }
     }
     if (["draft", "sent"].includes(invoice.status)) {
       const cancel = action("Cancel invoice", "fx-button--danger", async () => {
@@ -746,7 +827,7 @@ async function invoiceDetail(content: HTMLElement, id: string) {
     noteField.append(make("label", "", "Note"), note);
     const grid = make("div", "fx-field-grid");
     grid.append(due.wrap, customerField);
-    const save = action("Save changes", "fx-button--primary");
+    const save = submitButton("Save changes");
     form.append(grid, noteField, save);
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -762,12 +843,7 @@ async function invoiceDetail(content: HTMLElement, id: string) {
         invoice = result.invoice;
         render();
       } catch (e) {
-        content.prepend(
-          message(
-            e instanceof Error ? e.message : "Could not save changes.",
-            "fx-notice--error"
-          )
-        );
+        content.prepend(message(describeWriteError(e, "the changes"), "fx-notice--error"));
       } finally {
         busy(save, false, "Save changes");
       }
@@ -825,10 +901,7 @@ function customerEditor(
   const grid = make("div", "fx-field-grid");
   grid.append(name.wrap, email.wrap, address.wrap, label.wrap);
   const feedback = make("div");
-  const save = action(
-    customer ? "Save customer" : "Create customer",
-    "fx-button--primary"
-  );
+  const save = submitButton(customer ? "Save customer" : "Create customer");
   form.append(grid, notesField, save, feedback);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -862,10 +935,7 @@ function customerEditor(
       await completed();
     } catch (e) {
       feedback.replaceChildren(
-        message(
-          e instanceof Error ? e.message : "Could not save customer.",
-          "fx-notice--error"
-        )
+        message(describeWriteError(e, "the customer"), "fx-notice--error")
       );
     } finally {
       busy(save, false, customer ? "Save customer" : "Create customer");
