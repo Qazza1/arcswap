@@ -60,9 +60,11 @@ test("Mainnet payer uses exact allowance and fee math", async (t) => {
   const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, appType: "custom" });
   try {
     const payer = await server.ssrLoadModule("/src/payer/mainnetInvoice.ts");
-    assert.equal(payer.grossForNet(1_000_000n, 15n), 1_001_503n);
-    assert.equal(payer.allowanceAction(1_001_503n, 1_001_503n), "pay", "sufficient allowance skips approval");
-    assert.equal(payer.allowanceAction(1_001_502n, 1_001_503n), "approve", "insufficient allowance requests only the exact gross amount");
+    // Contract-exact: 1_001_503 would net 1_000_001 (one unit overpaid).
+    assert.equal(payer.grossForNet(1_000_000n, 15n), 1_001_502n);
+    assert.equal(payer.contractNet(1_001_502n, 15n), 1_000_000n);
+    assert.equal(payer.allowanceAction(1_001_502n, 1_001_502n), "pay", "sufficient allowance skips approval");
+    assert.equal(payer.allowanceAction(1_001_501n, 1_001_502n), "approve", "insufficient allowance requests only the exact gross amount");
     assert.throws(() => payer.allowanceAction(-1n, 1n));
   } finally { await server.close(); }
 });
@@ -76,11 +78,14 @@ test("payer path keeps approval, payment, and status authority separate", () => 
   assert.match(switchPath, /arcfxWallet\.switchToArcMainnet\(\)/, "a user-selected wrong-network action uses the pinned wallet helper");
   assert.doesNotMatch(switchPath, /\.approve\(|\.pay\(/, "network switching cannot request an approval or payment");
   const approval = payerSource.slice(payerSource.indexOf("async function approveExact"), payerSource.indexOf("async function submitPayment"));
-  assert.match(approval, /await loadAuthoritativeInvoice\(\)/, "approval rechecks authoritative fields before the wallet prompt");
-  assert.match(approval, /token\.approve\(ARC_MAINNET_PAYER\.paymentsAddress, grossAtomic\)/);
+  const recheck = payerSource.slice(payerSource.indexOf("async function recheckReviewed"), payerSource.indexOf("const sleep"));
+  assert.match(recheck, /await loadAuthoritativeInvoice\(\)/, "rechecks re-read the authoritative invoice");
+  assert.match(approval, /await recheckReviewed\(reviewed\)/, "approval rechecks authoritative fields before the wallet prompt");
+  assert.match(approval, /token\.approve\(ARC_MAINNET_PAYER\.paymentsAddress, reviewed\.grossAtomic\)/);
   assert.doesNotMatch(approval, /payments\.pay\(/, "approval rejection cannot reach payment");
   const payment = payerSource.slice(payerSource.indexOf("async function submitPayment"));
-  assert.match(payment, /await loadAuthoritativeInvoice\(\)/, "payment rechecks the server record before submit and refreshes it after receipt");
+  assert.match(payment, /await recheckReviewed\(reviewed\)/, "payment rechecks the server record before submit");
+  assert.match(payment, /arcfxApi\.publicInvoice\(invoiceId\)/, "and refreshes it after receipt");
   assert.match(payment, /paymentIncluded = true/, "a receipt disables repeated payment attempts in this page");
   assert.doesNotMatch(payment, /status\s*=\s*["']paid/, "the browser never marks an invoice paid");
 });

@@ -21,6 +21,7 @@
     "test:workspace-loop": "node --test script/workspace-loop.test.mjs",
     "test:invoice-draft": "node --test script/invoice-draft.test.mjs",
     "test:payer-mainnet": "node --test script/payer-mainnet.test.mjs",
+    "test:payer-precision": "node --test script/payer-precision.test.mjs",
     "test:public-shell": "node --test script/public-shell.test.mjs",
     "verify": "node script/preflight.mjs && tsc --noEmit && node --test script/session-auth.test.mjs script/workspace-loop.test.mjs script/invoice-draft.test.mjs && vite build && node script/csp-guard.mjs && hardhat compile --config hardhat.config.cjs && node --test script/mainnet-release.test.mjs && node script/release-config.mjs && node script/deployments.mjs check",
     "preflight": "node script/preflight.mjs",

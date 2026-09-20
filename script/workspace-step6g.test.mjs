@@ -97,3 +97,8 @@ test("app links stay on this project's Vercel previews and never on foreign host
     assert.equal(pattern.test(host), false, host);
   }
 });
+
+test("the dashboard states which amount 'Received this month' is", () => {
+  assert.match(dashboard, /Net received after the ArcFX fee · UTC month/);
+  assert.doesNotMatch(dashboard, /Confirmed payments · UTC month/);
+});

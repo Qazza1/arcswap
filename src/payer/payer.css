@@ -29,6 +29,7 @@ a { color: inherit; }
 .payer-notice { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--fx-line); border-radius: 9px; color: var(--fx-muted); font-size: 13px; line-height: 1.5; }
 .payer-notice.error { border-color: var(--fx-bad); color: #6E1717; background: var(--fx-bad-bg); }
 .payer-notice.success { border-color: var(--fx-ok); color: #14532D; background: var(--fx-ok-bg); }
+.payer-notice.warning { border-color: var(--fx-warn); color: var(--fx-ink); background: var(--fx-warn-bg); }
 .payer-fine { margin: 14px 0 0; color: var(--fx-muted); font-size: 12px; line-height: 1.5; }
 .payer-link { color: var(--fx-accent); font-weight: 600; }
 .payer-loading { padding: 36px 0; color: var(--fx-muted); text-align: center; }

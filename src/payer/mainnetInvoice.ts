@@ -82,11 +82,40 @@ export function authoritativeMainnetPayment(invoice: PublicInvoice): Authoritati
   return { invoiceId: invoice.id, invoiceNumber: invoice.number, network: ARC_MAINNET_PAYER.network, tokenAddress, recipient, paymentId: invoice.paymentId, netAtomic: outstandingAtomic, status: invoice.status };
 }
 
-/** Gross up a recipient net amount using integer ceiling division. */
+export const BPS_DENOM = 10_000n;
+
+/** ArcFXPayments.pay(): `fee = (gross * FEE_BPS) / BPS_DENOM` (Solidity floor). */
+export function contractFee(grossAtomic: bigint, feeBps: bigint): bigint {
+  return (grossAtomic * feeBps) / BPS_DENOM;
+}
+
+/** ArcFXPayments.pay(): `net = gross - fee`, the amount the recipient receives. */
+export function contractNet(grossAtomic: bigint, feeBps: bigint): bigint {
+  return grossAtomic - contractFee(grossAtomic, feeBps);
+}
+
+/**
+ * The smallest gross whose contract net is exactly `netAtomic`.
+ *
+ * A continuous ceiling (net * 10000 / (10000 - bps)) can land one unit past a
+ * fee-floor step and overpay the recipient (0.01 USDC: 10016 → net 10001).
+ * contractNet() rises by 0 or 1 per unit of gross (bps < 10000), so an exact
+ * gross always exists; start from the floor estimate, step to the first gross
+ * reaching the net, then prove equality. Anything else fails closed.
+ */
 export function grossForNet(netAtomic: bigint, feeBps: bigint): bigint {
-  const denominator = 10_000n - feeBps;
-  if (netAtomic <= 0n || feeBps < 0n || denominator <= 0n) throw new Error("Invalid payment fee configuration.");
-  return (netAtomic * 10_000n + denominator - 1n) / denominator;
+  if (netAtomic <= 0n || feeBps < 0n || feeBps >= BPS_DENOM) throw new Error("Invalid payment fee configuration.");
+  let gross = (netAtomic * BPS_DENOM) / (BPS_DENOM - feeBps);
+  for (let i = 0; contractNet(gross, feeBps) < netAtomic; i++) {
+    if (i > 8) throw new Error("Could not compute an exact contract payment amount.");
+    gross++;
+  }
+  for (let i = 0; gross > 1n && contractNet(gross - 1n, feeBps) >= netAtomic; i++) {
+    if (i > 8) throw new Error("Could not compute an exact contract payment amount.");
+    gross--;
+  }
+  if (contractNet(gross, feeBps) !== netAtomic) throw new Error("Could not compute an exact contract payment amount.");
+  return gross;
 }
 
 export function allowanceAction(allowance: bigint, grossAtomic: bigint): "approve" | "pay" {
@@ -100,4 +129,45 @@ export function sameAuthoritativePayment(a: AuthoritativePayment, b: Authoritati
     && a.recipient.toLowerCase() === b.recipient.toLowerCase()
     && a.paymentId.toLowerCase() === b.paymentId.toLowerCase()
     && a.netAtomic === b.netAtomic;
+}
+
+/** Everything the payer reviewed before a wallet prompt. */
+export type PaymentReview = {
+  intent: AuthoritativePayment;
+  grossAtomic: bigint;
+  feeAtomic: bigint;
+  account: string;
+  chainIdHex: string;
+};
+
+/**
+ * Why a re-read no longer matches what the payer reviewed, or null. Allowance
+ * is deliberately not part of this: it changes because ArcFX asked for an
+ * approval, and is handled by allowanceTransition().
+ */
+export function reviewChange(reviewed: PaymentReview, latest: PaymentReview): string | null {
+  if (reviewed.account.toLowerCase() !== latest.account.toLowerCase()) return "The selected wallet account changed.";
+  if (reviewed.chainIdHex.toLowerCase() !== latest.chainIdHex.toLowerCase()) return "The wallet network changed.";
+  const a = reviewed.intent, b = latest.intent;
+  if (a.invoiceId !== b.invoiceId || a.network !== b.network) return "The invoice changed.";
+  if (a.tokenAddress.toLowerCase() !== b.tokenAddress.toLowerCase()) return "The invoice token changed.";
+  if (a.recipient.toLowerCase() !== b.recipient.toLowerCase()) return "The invoice recipient changed.";
+  if (a.paymentId.toLowerCase() !== b.paymentId.toLowerCase()) return "The invoice payment ID changed.";
+  if (a.netAtomic !== b.netAtomic) return "The outstanding amount changed.";
+  if (reviewed.grossAtomic !== latest.grossAtomic || reviewed.feeAtomic !== latest.feeAtomic) return "The payment amount or fee changed.";
+  return null;
+}
+
+/**
+ * Classify an allowance re-read. Sufficient allowance that follows a confirmed
+ * ArcFX approval for exactly this gross is the expected transition; sufficient
+ * allowance that appeared any other way is surfaced for review.
+ */
+export function allowanceTransition(
+  allowance: bigint,
+  grossAtomic: bigint,
+  approvedGross: bigint | null,
+): "needs-approval" | "approval-confirmed" | "already-sufficient" {
+  if (allowanceAction(allowance, grossAtomic) === "approve") return "needs-approval";
+  return approvedGross === grossAtomic ? "approval-confirmed" : "already-sufficient";
 }

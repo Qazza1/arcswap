@@ -4,10 +4,14 @@ import { arcfxWallet } from "../shared/wallet";
 import {
   ARC_MAINNET_PAYER,
   allowanceAction,
+  allowanceTransition,
   authoritativeMainnetPayment,
+  contractFee,
+  contractNet,
   grossForNet,
-  sameAuthoritativePayment,
+  reviewChange,
   type AuthoritativePayment,
+  type PaymentReview,
   type PublicInvoice,
 } from "./mainnetInvoice";
 import "./payer.css";
@@ -32,6 +36,8 @@ let signerAddress: string | null = null;
 let grossAtomic: bigint | null = null;
 let feeAtomic: bigint | null = null;
 let allowance: bigint | null = null;
+// Gross amount of an approval this page requested and saw confirmed.
+let approvedGross: bigint | null = null;
 let busy = false;
 let paymentIncluded = false;
 let notice: { text: string; type?: string; transactionHash?: string } | undefined;
@@ -65,18 +71,58 @@ async function loadAuthoritativeInvoice(): Promise<AuthoritativePayment> {
   return next;
 }
 
-async function refreshQuoteAndAllowance(): Promise<void> {
-  if (!intent || !provider || !signerAddress) return;
+/** Contract-exact quote for the current intent, cross-checked against quoteFee(). */
+async function readQuote(): Promise<{ gross: bigint; fee: bigint }> {
+  if (!intent || !provider) throw new Error("Connect a wallet on Arc Mainnet first.");
   const payments = new Contract(ARC_MAINNET_PAYER.paymentsAddress, PAYMENTS_ABI, provider);
   const feeBps = BigInt(await payments.FEE_BPS());
   const gross = grossForNet(intent.netAtomic, feeBps);
   const quote = await payments.quoteFee(gross);
-  if (BigInt(quote.net) < intent.netAtomic) throw new Error("The payment contract quote would underpay this invoice.");
-  grossAtomic = gross;
-  feeAtomic = BigInt(quote.fee);
-  const token = new Contract(intent.tokenAddress, ERC20_ABI, provider);
-  allowance = BigInt(await token.allowance(signerAddress, ARC_MAINNET_PAYER.paymentsAddress));
+  // The recipient must receive exactly the outstanding amount: never less, and
+  // never a rounding overpayment.
+  if (BigInt(quote.net) !== intent.netAtomic || BigInt(quote.fee) !== contractFee(gross, feeBps) || contractNet(gross, feeBps) !== intent.netAtomic) {
+    throw new Error("The payment contract quote does not match the invoice exactly. No transaction was requested.");
+  }
+  return { gross, fee: BigInt(quote.fee) };
 }
+
+async function readAllowance(): Promise<bigint> {
+  if (!intent || !provider || !signerAddress) throw new Error("Connect a wallet on Arc Mainnet first.");
+  const token = new Contract(intent.tokenAddress, ERC20_ABI, provider);
+  return BigInt(await token.allowance(signerAddress, ARC_MAINNET_PAYER.paymentsAddress));
+}
+
+async function refreshQuoteAndAllowance(): Promise<void> {
+  if (!intent || !provider || !signerAddress) return;
+  const quote = await readQuote();
+  grossAtomic = quote.gross;
+  feeAtomic = quote.fee;
+  allowance = await readAllowance();
+}
+
+function currentReview(): PaymentReview {
+  if (!intent || grossAtomic === null || feeAtomic === null || !signerAddress || !arcfxWallet.chainId) {
+    throw new Error("Payment details are incomplete. No transaction was requested.");
+  }
+  return { intent, grossAtomic, feeAtomic, account: signerAddress, chainIdHex: arcfxWallet.chainId };
+}
+
+/**
+ * Re-read every authoritative input and compare it with what the payer
+ * reviewed. Any difference stops the flow and shows the new values for review.
+ */
+async function recheckReviewed(reviewed: PaymentReview): Promise<void> {
+  if (!walletReady()) throw new Error("Wallet account or network changed. No transaction was requested.");
+  const latestIntent = await loadAuthoritativeInvoice();
+  intent = latestIntent;
+  const quote = await readQuote();
+  grossAtomic = quote.gross;
+  feeAtomic = quote.fee;
+  const changed = reviewChange(reviewed, currentReview());
+  if (changed) throw new Error(`${changed} Review the updated payment before continuing. No transaction was requested.`);
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function render(message?: { text: string; type?: string; transactionHash?: string }) {
   if (message) notice = message;
@@ -162,6 +208,7 @@ async function connectWallet() {
   try {
     const state = await arcfxWallet.connectCurrentNetwork();
     await establishWallet(state);
+    notice = undefined;
     render();
   } catch (error) {
     render({ text: failureMessage(error), type: "error" });
@@ -186,6 +233,7 @@ async function switchWalletToMainnet() {
     const switched = await arcfxWallet.switchToArcMainnet();
     if (!switched) throw new Error("Arc Mainnet was not selected. No payment action was requested.");
     await establishWallet(arcfxWallet.state);
+    notice = undefined;
     render();
   } catch (error) {
     render({ text: failureMessage(error), type: "error" });
@@ -194,20 +242,43 @@ async function switchWalletToMainnet() {
 
 async function approveExact() {
   if (busy || !intent || !provider || !signerAddress || grossAtomic === null || allowanceAction(allowance || 0n, grossAtomic) !== "approve") return;
-  busy = true; render({ text: "Requesting the exact USDC approval in your wallet…" });
+  busy = true; render({ text: "Rechecking the authoritative invoice before requesting approval…" });
   try {
     if (signerAddress.toLowerCase() === intent.recipient.toLowerCase()) throw new Error("You cannot pay your own invoice.");
-    const latest = await loadAuthoritativeInvoice();
-    if (!sameAuthoritativePayment(intent, latest)) throw new Error("Invoice payment details changed. Reloaded data must be reviewed before approval.");
-    await refreshQuoteAndAllowance();
-    if (allowanceAction(allowance || 0n, grossAtomic!) !== "approve") throw new Error("USDC allowance changed. Reloaded data must be reviewed.");
+    const reviewed = currentReview();
+    await recheckReviewed(reviewed);
+    allowance = await readAllowance();
+    const before = allowanceTransition(allowance, reviewed.grossAtomic, approvedGross);
+    if (before !== "needs-approval") {
+      // Allowance already covers this payment; nothing to approve. The payer
+      // still reviews and confirms the payment separately.
+      render(before === "approval-confirmed"
+        ? { text: "Approval confirmed. Review the payment and click Pay.", type: "success" }
+        : { text: "Your USDC allowance already covers this payment. Review the payment and click Pay.", type: "warning" });
+      return;
+    }
+    render({ text: `Confirm the approval of exactly ${usdc(reviewed.grossAtomic)} in your wallet. This is not the payment.` });
     const signer = await provider.getSigner();
     const token = new Contract(intent.tokenAddress, ERC20_ABI, signer);
-    const tx = await token.approve(ARC_MAINNET_PAYER.paymentsAddress, grossAtomic);
+    const tx = await token.approve(ARC_MAINNET_PAYER.paymentsAddress, reviewed.grossAtomic);
+    render({ text: "Waiting for the approval to be included…" });
     const receipt = await tx.wait();
     if (!receipt || receipt.status !== 1) throw new Error("The approval transaction did not succeed. No payment was sent.");
-    await refreshQuoteAndAllowance();
-    render({ text: "Exact USDC approval confirmed. You may now confirm the separate payment transaction.", type: "success" });
+    approvedGross = reviewed.grossAtomic;
+    // A wallet RPC can briefly serve the pre-approval allowance after the
+    // receipt. Re-read a bounded number of times instead of asking the payer
+    // to approve again.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      allowance = await readAllowance();
+      if (allowanceAction(allowance, reviewed.grossAtomic) === "pay") break;
+      await sleep(1500);
+    }
+    await recheckReviewed(reviewed);
+    if (allowanceTransition(allowance, reviewed.grossAtomic, approvedGross) !== "approval-confirmed") {
+      render({ text: "The approval is confirmed on chain, but your wallet has not reported the new allowance yet. Wait a moment and reload this page; do not approve again.", type: "warning", transactionHash: receipt.hash });
+      return;
+    }
+    render({ text: "Approval confirmed. Review the payment and click Pay.", type: "success", transactionHash: receipt.hash });
   } catch (error) {
     render({ text: failureMessage(error), type: "error" });
   } finally { busy = false; render(); }
@@ -215,18 +286,19 @@ async function approveExact() {
 
 async function submitPayment() {
   if (busy || !intent || !provider || !signerAddress || grossAtomic === null) return;
+  if (paymentIncluded) return;
   busy = true; render({ text: "Rechecking the authoritative invoice before requesting payment…" });
   try {
     if (!walletReady()) throw new Error("Wallet account or network changed. No payment was sent.");
     if (signerAddress.toLowerCase() === intent.recipient.toLowerCase()) throw new Error("You cannot pay your own invoice.");
-    const latest = await loadAuthoritativeInvoice();
-    if (!sameAuthoritativePayment(intent, latest)) throw new Error("Invoice payment details changed. Reloaded data must be reviewed before paying.");
-    await refreshQuoteAndAllowance();
-    if (allowanceAction(allowance || 0n, grossAtomic!) !== "pay") throw new Error("USDC allowance is no longer sufficient. No payment was sent.");
+    const reviewed = currentReview();
+    await recheckReviewed(reviewed);
+    allowance = await readAllowance();
+    if (allowanceAction(allowance, reviewed.grossAtomic) !== "pay") throw new Error("USDC allowance is no longer sufficient. No payment was sent.");
     const signer = await provider.getSigner();
     const payments = new Contract(ARC_MAINNET_PAYER.paymentsAddress, PAYMENTS_ABI, signer);
     render({ text: "Confirm the ArcFX payment in your wallet. This is a separate transaction." });
-    const tx = await payments.pay(intent.tokenAddress, intent.recipient, grossAtomic, intent.paymentId);
+    const tx = await payments.pay(reviewed.intent.tokenAddress, reviewed.intent.recipient, reviewed.grossAtomic, reviewed.intent.paymentId);
     const receipt = await tx.wait();
     if (!receipt || receipt.status !== 1) throw new Error("The payment transaction did not succeed.");
     paymentIncluded = true;
@@ -245,8 +317,11 @@ async function submitPayment() {
 }
 
 arcfxWallet.onChange((state) => {
-  if (!state.connected || state.chainId?.toLowerCase() !== ARC_MAINNET_PAYER.chainIdHex || signerAddress?.toLowerCase() !== state.address?.toLowerCase()) {
-    provider = null; signerAddress = null; grossAtomic = null; feeAtomic = null; allowance = null;
+  // Nothing has been prepared until the payer connects: a wallet that merely
+  // finishes its silent restore is not a change to a reviewed payment.
+  if (!signerAddress) return;
+  if (!state.connected || state.chainId?.toLowerCase() !== ARC_MAINNET_PAYER.chainIdHex || signerAddress.toLowerCase() !== state.address?.toLowerCase()) {
+    provider = null; signerAddress = null; grossAtomic = null; feeAtomic = null; allowance = null; approvedGross = null;
     if (intent) render({ text: "Wallet network changed. Mainnet payment is disabled until Arc Mainnet is selected again.", type: "error" });
   }
 });
