@@ -3,7 +3,7 @@ import { arcfxWallet } from "./wallet";
 import { appPath } from "./appOrigin";
 
 export type AppPage = "dashboard" | "invoices" | "customers" | "invoice" | "entry" | "workspace";
-type Status = "LIVE" | "TESTNET" | "NOT ENABLED";
+type Status = "LIVE" | "TESTNET" | "NOT ENABLED" | "MAINNET READY";
 type Link = { label: string; href: string; status: Status; external?: boolean };
 const group: Array<{ title: string; links: Link[] }> = [
   { title: "Overview", links: [{ label: "Dashboard", href: "/dashboard", status: "LIVE" }] },
@@ -13,8 +13,8 @@ const group: Array<{ title: string; links: Link[] }> = [
     { label: "Payment Links", href: "/workspace?view=payment-links", status: "TESTNET" },
   ] },
   { title: "Payments", links: [
-    { label: "Send", href: "/workspace?view=send", status: "NOT ENABLED" },
-    { label: "Multisend / Payouts", href: "/workspace?view=multisend", status: "TESTNET" },
+    { label: "Send", href: "/workspace?view=send", status: "LIVE" },
+    { label: "Multisend / Payouts", href: "/workspace?view=multisend", status: "LIVE" },
   ] },
   { title: "Treasury", links: [
     { label: "Activity", href: "/workspace?view=activity", status: "LIVE" },

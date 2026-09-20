@@ -27,13 +27,15 @@ test("all Mainnet business pages wait for the shared restored owner session", ()
 });
 
 test("status navigation does not represent Testnet tools as Mainnet execution", () => {
-  for (const label of ["Payment Links", "Multisend / Payouts", "Swap & Bridge", "Agent Payments"]) {
+  for (const label of ["Payment Links", "Swap & Bridge", "Agent Payments"]) {
     assert.match(shell, new RegExp(`label: "${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^\\n]*status: "TESTNET"`));
   }
-  assert.match(shell, /label: "Send"[^\n]*status: "NOT ENABLED"/);
+  // Step 7A.1: Send and Multisend / Payouts are LIVE after controlled Mainnet execution was verified on chain.
+  assert.match(shell, /label: "Send"[^\n]*status: "LIVE"/);
+  assert.match(shell, /label: "Multisend \/ Payouts"[^\n]*status: "LIVE"/);
   assert.match(shell, /label: "Activity"[^\n]*status: "LIVE"/);
   assert.match(shell, /label: "Analytics"[^\n]*status: "LIVE"/);
-  assert.match(tools, /Mainnet Payouts execution is not enabled/);
+  assert.doesNotMatch(tools, /Mainnet Payouts execution is not enabled/);
   assert.match(tools, /Arc Mainnet swap, bridge, and CCTP execution are not enabled/);
   assert.match(tools, /Mainnet automation is not enabled/);
 });
@@ -64,7 +66,7 @@ test("legacy transaction tools remain deliberately Testnet-scoped", () => {
     assert.match(read(path), /Arc Testnet|Arc Network Testnet/, `${path} must retain its Testnet identification`);
   }
   assert.match(tools, /href: "\/pay"/);
-  assert.match(tools, /href: "\/multisend"/);
+  assert.doesNotMatch(tools, /href: "\/multisend"/, "the authenticated app no longer links out to the legacy Testnet multisend page");
   assert.match(tools, /href: "\/trade"/);
   assert.match(tools, /href: "\/agent"/);
 });

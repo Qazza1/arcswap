@@ -3,6 +3,7 @@ import { mountAppShell } from "../shared/appShell";
 import { arcfxApi } from "../shared/arcfxApi";
 import { arcfxWallet } from "../shared/wallet";
 import { appPath } from "../shared/appOrigin";
+import { mountMultisend, mountSend } from "./payments";
 
 type View = "payment-links" | "send" | "multisend" | "activity" | "analytics" | "trade" | "agent" | "contacts" | "settings";
 const requested = new URLSearchParams(location.search).get("view");
@@ -17,14 +18,15 @@ const shell = (intro: string, state: "LIVE" | "TESTNET" | "NOT ENABLED") => { co
 const card = (target: HTMLElement, heading: string, copy: string) => { const c = node("section", undefined, "tool-card"); c.append(node("h2", heading), node("p", copy)); target.append(c); return c; };
 const legacy: Partial<Record<View, { intro: string; heading: string; copy: string; href: string; action: string }>> = {
   "payment-links": { intro: "A legacy Arc Testnet payment-link generator, distinct from managed Mainnet invoices and the public invoice payer.", heading: "Generic Testnet payment links", copy: "This tool creates a reference-based payment URL and uses the legacy Arc Testnet payment contract. It does not create a server-backed customer or managed invoice. Do not use it for Mainnet receivables.", href: "/pay", action: "Open Testnet Payment Links ↗" },
-  multisend: { intro: "Batch transfers are available only in the legacy Arc Testnet tool. Mainnet Payouts execution is not enabled.", heading: "Testnet batch transfers", copy: "The existing manual and CSV recipient entry, amount validation, review, fees, and wallet safeguards remain in the legacy tool. ArcFX does not enable its Mainnet contract from this workspace.", href: "/multisend", action: "Open Testnet Multisend ↗" },
   trade: { intro: "The legacy Swap & Bridge surface is Arc Testnet-scoped. Arc Mainnet swap, bridge, and CCTP execution are not enabled.", heading: "Testnet Swap & Bridge", copy: "Open the existing Circle/App Kit experimental surface only when you deliberately intend to use Arc Testnet. It is not a Mainnet treasury action.", href: "/trade", action: "Open Testnet Swap & Bridge ↗" },
   agent: { intro: "x402 Agent Payments and Agent Evidence remain Arc Testnet-only. Mainnet automation is not enabled.", heading: "Testnet Agent Payments", copy: "The existing x402/EIP-3009 demonstration remains separate from Mainnet receivables and cannot submit a Mainnet payment from this destination.", href: "/agent", action: "Open Testnet Agent Payments ↗" },
 };
 if (view in legacy) {
   const item = legacy[view]!; const p = shell(item.intro, "TESTNET"); const c = card(p, item.heading, item.copy); c.append(link(item.action, item.href, true));
 } else if (view === "send") {
-  const p = shell("Direct Mainnet sending is not available in the ArcFX workspace.", "NOT ENABLED"); card(p, "No transaction path", "This destination does not request an approval, sign a transaction, or move funds. Mainnet sending requires a separate implementation and release review.");
+  mountSend(root);
+} else if (view === "multisend") {
+  mountMultisend(root);
 } else if (view === "contacts") {
   const p = shell("A local wallet address book in this browser. Customers are separate server-backed business records.", "LIVE");
   const KEY = "arcfx_address_book";

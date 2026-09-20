@@ -225,10 +225,13 @@ function reconcileReceivablesSessionAfterWalletChange(): void {
   void arcfxWallet.settled().then(() => { storedReceivablesOwnerSession(); });
 }
 
-async function receivablesOwnerSession(): Promise<ReceivablesOwnerSession> {
+async function receivablesOwnerSession(allowBootstrap = true): Promise<ReceivablesOwnerSession> {
   await receivablesSessionReady();
   const existing = storedReceivablesOwnerSession();
   if (existing) return existing;
+  // Quiet reads (page-load conveniences) may only use a session that already
+  // exists; they must never open a wallet signature prompt.
+  if (!allowBootstrap) throw new Error("No owner session is available for a quiet read.");
   if (!receivablesBootstrapPending) {
     const expected = mainnetReceivablesWallet();
     const pending = bootstrapOwnerSession().then((session) => {
@@ -253,8 +256,8 @@ function assertSameReceivablesWallet(expected: { wallet: string; chainId: string
   }
 }
 
-async function receivablesGet(path: string, params: Record<string, string> = {}): Promise<any> {
-  const session = await receivablesOwnerSession();
+async function receivablesGet(path: string, params: Record<string, string> = {}, allowBootstrap = true): Promise<any> {
+  const session = await receivablesOwnerSession(allowBootstrap);
   const expected = { wallet: session.wallet, chainId: session.chainId };
   const qs = new URLSearchParams(params);
   const controller = new AbortController();
@@ -457,6 +460,8 @@ export const arcfxApi = {
   // every mutation remains an individual EIP-191 personal_sign authorization.
   listReceivablesCustomers: (opts: { archived?: boolean } = {}) =>
     receivablesGet("/v1/customers", opts.archived ? { archived: "true" } : {}),
+  /** Existing-session-only read: throws instead of ever requesting a signature. */
+  listReceivablesCustomersQuiet: () => receivablesGet("/v1/customers", {}, false),
   saveReceivablesCustomer: (customer: unknown) => receivablesPost("/v1/customers", "customer write", customer),
   archiveReceivablesCustomer: (id: string, archived = true) =>
     receivablesPost("/v1/customers/archive", "customer archive", { id, archived }),

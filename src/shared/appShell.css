@@ -42,6 +42,7 @@ body.receivables-page .app-nav a:hover, body.receivables-page .app-nav a[aria-cu
 .app-status { flex: none; color: var(--fx-muted); font: 600 9px var(--fx-mono); white-space: nowrap; }
 .app-status--live { color: var(--fx-ok); }
 .app-status--testnet { color: var(--fx-warn); }
+.app-status--mainnet-ready { color: var(--fx-accent); }
 .app-account { flex: none; }
 .app-account-network::before { background: var(--fx-muted); }
 .app-menu-close, .app-menu-open { display: none; }
