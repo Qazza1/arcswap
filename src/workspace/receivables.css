@@ -92,3 +92,8 @@ body.receivables-page { margin: 0; min-width: 0; background: var(--fx-bg); color
 .fx-button--primary:hover:not(:disabled) { border-color:var(--fx-accent); background:var(--fx-accent); filter:brightness(1.08); }
 .fx-button--done:disabled, .fx-button--blocked:disabled { cursor:not-allowed; }
 .fx-button--done:disabled { opacity:1; color:var(--fx-ok); background:var(--fx-ok-bg); border-color:var(--fx-ok); }
+.fx-settled { display:grid; gap:4px; padding:13px 15px; border:1px solid var(--fx-ok); border-radius:var(--fx-r-sm); background:var(--fx-ok-bg); color:var(--fx-ink); }
+.fx-settled-title { color:var(--fx-ok); font-size:14px; }
+.fx-settled-detail { font-size:13px; line-height:1.5; }
+.fx-settled--excess { border-color:var(--fx-warn); background:var(--fx-warn-bg); }
+.fx-settled--excess .fx-settled-title { color:var(--fx-ok); }

@@ -3,6 +3,7 @@ import { arcfxApi } from "../shared/arcfxApi";
 import { arcfxWallet } from "../shared/wallet";
 import { appPath } from "../shared/appOrigin";
 import { createDraftSubmitter, describeWriteError, issueBlocker, missingSummary, validateDraft, type DraftErrors } from "./invoiceDraft";
+import { createReconcileRunner, settledCopy, settlementView } from "./settlementState";
 
 type Invoice = {
   id: string;
@@ -675,6 +676,35 @@ async function invoiceDetail(content: HTMLElement, id: string) {
     history.replaceState(history.state, "", `${location.pathname}?${params}`);
   }
   let firstRender = true;
+  let reconcileButton: HTMLButtonElement | null = null;
+  let pendingNotice: { text: string; tone: string } | null = null;
+  const runReconcile = createReconcileRunner<Invoice>({
+    current: () => invoice!,
+    reconcile: () => arcfxApi.reconcileReceivables(invoice!.id),
+    refresh: async () => {
+      const all = await arcfxApi.listReceivablesInvoices();
+      const fresh = (all.invoices || []).find((x: Invoice) => x.id === id);
+      if (!fresh) throw new Error("The invoice could not be reloaded after reconciliation.");
+      return fresh;
+    },
+    onState: (state) => {
+      if (state.phase === "running") {
+        if (reconcileButton) busy(reconcileButton, true, "Reconciling");
+      } else if (state.phase === "done") {
+        const before = invoice!;
+        invoice = state.invoice;
+        pendingNotice = state.allocated
+          ? { text: `Reconciled ${state.allocated} payment allocation${state.allocated === 1 ? "" : "s"}.`, tone: "fx-notice--success" }
+          : state.view.kind === "reconcilable" && state.invoice.paid === before.paid
+            ? { text: "No unreconciled payments found for this invoice yet. If a payment was just sent, wait for it to be indexed and try again.", tone: "" }
+            : null;
+        render();
+      } else {
+        if (reconcileButton) busy(reconcileButton, false, "Reconcile invoice");
+        content.prepend(message(state.message, "fx-notice--error"));
+      }
+    },
+  });
   const render = () => {
     if (!invoice) return;
     content.replaceChildren(
@@ -686,6 +716,11 @@ async function invoiceDetail(content: HTMLElement, id: string) {
       content.prepend(message(`Draft saved. ${invoice.number} is stored as a DRAFT and is not visible to payers until issued.`, "fx-notice--success"));
     }
     firstRender = false;
+    if (pendingNotice) {
+      content.prepend(message(pendingNotice.text, pendingNotice.tone));
+      pendingNotice = null;
+    }
+    reconcileButton = null;
     const layout = make("div", "fx-detail-grid");
     const info = make("section", "fx-card");
     info.append(cardHeading("Invoice information"));
@@ -714,39 +749,21 @@ async function invoiceDetail(content: HTMLElement, id: string) {
       payerLink.rel = "noopener noreferrer";
       settleBody.append(payerLink);
     }
-    const reconcile = action(
-      "Reconcile invoice",
-      "fx-button--primary",
-      async () => {
-        busy(reconcile, true, "Reconciling");
-        try {
-          const r = await arcfxApi.reconcileReceivables(invoice!.id);
-          content.prepend(
-            message(
-              r.results?.[0]?.allocated
-                ? `Reconciled ${r.results[0].allocated} payment allocation${
-                    r.results[0].allocated === 1 ? "" : "s"
-                  }.`
-                : "No new eligible payments found.",
-              "fx-notice--success"
-            )
-          );
-          const all = await arcfxApi.listReceivablesInvoices();
-          invoice = all.invoices.find((x: Invoice) => x.id === id);
-          render();
-        } catch (e) {
-          content.prepend(
-            message(
-              e instanceof Error ? e.message : "Reconciliation failed.",
-              "fx-notice--error"
-            )
-          );
-        } finally {
-          busy(reconcile, false, "Reconcile invoice");
-        }
-      }
-    );
-    settleBody.append(reconcile);
+    const view = settlementView(invoice);
+    if (view.kind === "settled") {
+      const copy = settledCopy(invoice, view);
+      const settled = make("div", `fx-settled${view.excess ? " fx-settled--excess" : ""}`);
+      settled.setAttribute("role", "status");
+      settled.append(make("strong", "fx-settled-title", copy.title), make("span", "fx-settled-detail", copy.detail));
+      settleBody.append(settled);
+    } else if (view.kind === "reconcilable") {
+      const reconcile = action("Reconcile invoice", "fx-button--primary", () => runReconcile());
+      reconcileButton = reconcile;
+      settleBody.append(reconcile);
+      settleBody.append(
+        make("p", "fx-field-help", "Records eligible payments already indexed for this invoice. Nothing is sent on chain, and running it again never double-counts.")
+      );
+    }
     if (invoice.status === "draft") {
       const blocked = issueBlocker(invoice);
       const issue = action("Mark issued", "", async () => {
