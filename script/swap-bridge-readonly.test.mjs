@@ -5,7 +5,8 @@ import { createServer } from "vite";
 
 const ARC_USDC = "0x3600000000000000000000000000000000000000";
 const OWNER = "0x4F81E3939232815e3C98B124A17BaC75304C82D8";
-const arc = (patch = {}) => ({ type: "evm", chain: "Arc", name: "Arc", title: "Arc Mainnet", chainId: 5042, isTestnet: false, explorerUrl: "https://explorer.arc.io/tx/{hash}", rpcEndpoints: ["https://rpc.mainnet.arc.io/"], usdcAddress: ARC_USDC, eurcAddress: "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1", cctp: { domain: 26 }, ...patch });
+const ARC_SWAP_ADAPTER = "0x7FB8c7260b63934d8da38aF902f87ae6e284a845";
+const arc = (patch = {}) => ({ type: "evm", chain: "Arc", name: "Arc", title: "Arc Mainnet", chainId: 5042, isTestnet: false, explorerUrl: "https://explorer.arc.io/tx/{hash}", rpcEndpoints: ["https://rpc.mainnet.arc.io/"], usdcAddress: ARC_USDC, eurcAddress: "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1", cctp: { domain: 26 }, kitContracts: { adapter: ARC_SWAP_ADAPTER }, ...patch });
 const arcTestnet = () => arc({ chain: "Arc_Testnet", title: "Arc Testnet", chainId: 5042002, isTestnet: true, usdcAddress: "0x3600000000000000000000000000000000000000" });
 const source = ({ all = [arc()], swap = [arc()], bridge = [arc()] } = {}) => ({ getSupportedChains: operation => operation === "swap" ? swap : operation === "bridge" ? bridge : all });
 
@@ -55,6 +56,7 @@ test("swap and bridge capabilities are independent and dynamic SDK data wins", (
   assert.equal(swapOnly.swap, true); assert.equal(swapOnly.bridge, false);
   const wrongUsdc = arc({ usdcAddress: "0x1111111111111111111111111111111111111111" });
   assert.throws(() => circle.discoverArcMainnetCapabilities(source({ all: [wrongUsdc], swap: [arc()], bridge: [arc()] })), /does not expose/);
+  assert.throws(() => circle.discoverArcMainnetCapabilities(source({ all: [arc({ kitContracts: null })] })), /swap adapter address/);
 });
 
 function readOnlyHarness() {
@@ -133,17 +135,24 @@ test("bridge route, amount, recipient, provider, account, network and expiry inv
   assert.equal(bridge.bridgeSnapshotIsCurrent(q, bridgeForm(), q.binding, 61_001), false);
 });
 
-test("Step 8B paths have no fallback provider, secret, float, unlimited approval or mutation RPC", () => {
+test("read-only Circle paths remain isolated from the local-only mutation seam", () => {
   const joined = circleSource + swapSource + bridgeSource + tradeSource;
   for (const forbidden of [/window\.ethereum/, /PRIVATE_KEY/, /VITE_KIT_KEY/, /MaxUint256/, /eth_sendTransaction/, /wallet_sendCalls/, /personal_sign/, /eth_sign(?:TypedData)?/]) assert.doesNotMatch(joined, forbidden);
-  assert.doesNotMatch(circleSource, /\.swap\(|\.bridge\(|retryBridge/);
+  assert.doesNotMatch(circleSource, /retryBridge|resumeBridge|reAttest/);
   assert.doesNotMatch(circleSource, /result\.quote|opaqueQuote/, "opaque reusable quote payloads are not read or exposed as display IDs");
   assert.match(circleSource, /createViemAdapterFromProvider\(\{ provider: provider as any \}\)/);
+  assert.match(circleSource, /createLocalSwapProofClient/);
+  assert.match(circleSource, /createLocalBridgeProofClient/);
+  assert.match(circleSource, /allowanceStrategy: "approve", batchTransactions: false/);
+  assert.match(circleSource, /config: \{ batchTransactions: false \}/);
+  assert.match(circleSource, /allowance !== 0n/);
 });
 
-test("review and rerender are request-free and UI has no execution action", () => {
+test("review and rerender are request-free and execution controls remain local-proof gated", () => {
   assert.doesNotMatch(tradeSource, />\s*(Approve|Swap now|Bridge now|Execute swap|Execute bridge)\s*</i);
   assert.match(tradeSource, /Review swap/); assert.match(tradeSource, /Review bridge/); assert.match(tradeSource, /execution is not enabled/);
+  assert.match(tradeSource, /LOCAL_BRIDGE_PROOF_ENABLED/);
+  assert.match(tradeSource, /bridgeProofSourceStarted/);
   assert.match(tradeSource, /swapSnapshotIsCurrent/); assert.match(tradeSource, /bridgeSnapshotIsCurrent/);
   assert.doesNotMatch(tradeSource.slice(tradeSource.indexOf('"#swap-review"'), tradeSource.indexOf('"#bridge-quote"')), /\.request\(/);
 });
