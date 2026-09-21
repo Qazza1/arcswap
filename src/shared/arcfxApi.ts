@@ -294,6 +294,26 @@ async function receivablesPost(path: string, action: string, payload: unknown): 
   return result;
 }
 
+/** A narrow existing-session POST for explicitly session-authorized Mainnet metadata. */
+async function receivablesSessionPost(path: string, payload: unknown, retry = true): Promise<any> {
+  const expected = mainnetReceivablesWallet();
+  const session = await receivablesOwnerSession();
+  try {
+    const result = await parse(await fetch(`${API_BASE}${path}`, {
+      method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${session.sessionToken}` },
+      body: JSON.stringify({ payload: stripUndefined(payload ?? null) }),
+    }));
+    assertSameReceivablesWallet(expected);
+    return result;
+  } catch (error) {
+    if (retry && error instanceof ApiError && error.status === 401) {
+      clearReceivablesAuthCache();
+      return receivablesSessionPost(path, payload, false);
+    }
+    throw error;
+  }
+}
+
 async function connectReceivablesOwner(): Promise<void> {
   await arcfxWallet.connectCurrentNetwork();
   await receivablesOwnerSession();
@@ -474,6 +494,15 @@ export const arcfxApi = {
     receivablesPost("/v1/invoice-records/update", "invoice update", payload),
   reconcileReceivables: (id?: string) =>
     receivablesPost("/v1/invoice-records/reconcile", "invoice reconcile", id ? { id } : {}),
+
+  // Step 8C journal endpoints deliberately use the existing owner session.
+  // They store a reviewed intent or independently observed receipt only; they
+  // do not sign, prepare, relay, or submit a wallet transaction.
+  listWalletOperations: () => receivablesGet("/v1/wallet-operations"),
+  createWalletOperation: (intent: unknown) => receivablesSessionPost("/v1/wallet-operations", intent),
+  readWalletOperation: (id: string) => receivablesGet(`/v1/wallet-operations/${encodeURIComponent(id)}`),
+  appendWalletOperationStep: (id: string, step: unknown) => receivablesSessionPost(`/v1/wallet-operations/${encodeURIComponent(id)}/steps`, step),
+  reconcileWalletOperationApproval: (id: string, evidence: unknown) => receivablesSessionPost(`/v1/wallet-operations/${encodeURIComponent(id)}/reconcile-approval`, evidence),
 };
 
 if (typeof window !== "undefined") (window as any).arcfxApi = arcfxApi;

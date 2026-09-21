@@ -6,6 +6,7 @@ import { formatUsdc, MAINNET, NATIVE_PER_ATOMIC } from "./mainnetPayments";
 import { CIRCLE_SDK_ID, createReadonlyCircleClient, probeInstalledCircleCapabilities, type ArcCapability, type ReadonlyCircleClient } from "./circleAppKit";
 import { createSwapSnapshot, swapSnapshotIsCurrent, validateSwapForm, type SwapForm, type SwapQuoteSnapshot, type WalletBinding } from "./swapCore";
 import { BRIDGE_CHAINS, bridgeSnapshotIsCurrent, createBridgeSnapshot, validateBridgeForm, type BridgeChain, type BridgeForm, type BridgeQuoteSnapshot } from "./bridgeCore";
+import { TRADE_EXECUTION_DISABLED_REASON } from "./tradeExecutionGate";
 
 const ERC20_BALANCE_ABI = ["function balanceOf(address) view returns (uint256)"];
 const $ = (root: ParentNode, selector: string): any => root.querySelector(selector) as HTMLElement;
@@ -48,8 +49,8 @@ export function mountTrade(root: HTMLElement): void {
 
   const page = document.createElement("div");
   page.className = "trade-page";
-  page.innerHTML = `<header class="trade-heading"><div><p class="trade-kicker">Treasury · development surface</p><div class="trade-title-row"><h1>Swap &amp; Bridge</h1><span class="trade-badge">TESTNET</span></div><p>Inspect Mainnet treasury routes, exact estimates, and fees before execution support is enabled.</p></div><div class="trade-capability" id="trade-capability" role="status">Checking installed Circle capabilities…</div></header>
-    <aside class="trade-safety"><strong>Read-only in Step 8B</strong><span>Quotes and reviews cannot approve tokens, sign messages, switch networks, burn, mint, swap, or bridge.</span></aside>
+  page.innerHTML = `<header class="trade-heading"><div><p class="trade-kicker">Treasury · development surface</p><div class="trade-title-row"><h1>Swap &amp; Bridge</h1><span class="trade-badge">TESTNET</span></div><p>Inspect Mainnet treasury routes, exact estimates, and fees before execution support is separately enabled.</p></div><div class="trade-capability" id="trade-capability" role="status">Checking installed Circle capabilities…</div></header>
+    <aside class="trade-safety"><strong>Execution gated off</strong><span>${TRADE_EXECUTION_DISABLED_REASON} Quotes and reviews cannot approve tokens, sign messages, switch networks, burn, mint, swap, or bridge.</span></aside>
     <div class="trade-tabs" role="tablist" aria-label="Treasury movement"><button type="button" role="tab" aria-selected="true" data-tab="swap">Swap</button><button type="button" role="tab" aria-selected="false" data-tab="bridge">Bridge</button></div>
     <section class="trade-panel" id="trade-swap" role="tabpanel"><div class="trade-form-card"><div class="trade-section-head"><div><p class="trade-eyebrow">Treasury conversion</p><h2>Swap on Arc Mainnet</h2></div><span class="trade-network">Arc · 5042</span></div>
       <div class="trade-grid"><label>From token<select id="swap-from"><option>USDC</option><option>EURC</option></select></label><label>To token<select id="swap-to"><option>EURC</option><option>USDC</option></select></label><label class="trade-wide">Amount<input id="swap-amount" inputmode="decimal" autocomplete="off" placeholder="0.00"/><small id="swap-balance">Available balance: connect a wallet to read</small></label><label>Slippage<select id="swap-slippage"><option value="50">0.50%</option><option value="100">1.00%</option><option value="300">3.00%</option></select></label></div>
