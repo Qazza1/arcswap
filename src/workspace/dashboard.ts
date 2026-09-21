@@ -3,10 +3,11 @@ import { mountAppShell } from "../shared/appShell";
 import { appPath } from "../shared/appOrigin";
 import { arcfxApi } from "../shared/arcfxApi";
 import { arcfxWallet } from "../shared/wallet";
+import { describeOutbound, type ActivityItem, type OutboundView } from "./activityModel";
 
 interface Activity {
   id: string;
-  type: "invoice_created" | "invoice_issued" | "invoice_cancelled" | "payment_received" | "payment_partial" | "invoice_paid" | "reconciliation";
+  type: "invoice_created" | "invoice_issued" | "invoice_cancelled" | "payment_received" | "payment_partial" | "invoice_paid" | "reconciliation" | "payment_sent" | "payout_batch";
   timestamp: string;
   invoiceId: string | null;
   invoiceNumber: string | null;
@@ -16,6 +17,11 @@ interface Activity {
   token: "USDC" | null;
   status: string | null;
   transactionHash: string | null;
+  // Outbound activity only (payout_batch); see activityModel.ts.
+  recipientCount?: number | null;
+  feeAtomic?: string | null;
+  recipients?: Array<{ recipient: string; amountAtomic: string }> | null;
+  recipientsTruncated?: boolean;
 }
 
 interface DashboardData {
@@ -76,9 +82,23 @@ const names: Record<Activity["type"], string> = {
   payment_partial: "Partial payment received",
   invoice_paid: "Invoice paid",
   reconciliation: "Payment reconciled",
+  payment_sent: "Sent",
+  payout_batch: "Payout batch",
 };
 
+/** Outbound Send / payout-batch rows. Every interpolated value is escaped; amounts are never part of a receivables metric. */
+function outboundRow(item: Activity, view: OutboundView): string {
+  const recipients = view.recipients.length
+    ? `<details class="dashboard-recipients"><summary>View recipients</summary><ol>${view.recipients.map((r) => `<li><code>${escape(r.address)}</code><span>${escape(r.amountText)}</span></li>`).join("")}</ol>${view.recipientsNote ? `<p>${escape(view.recipientsNote)}</p>` : ""}</details>`
+    : "";
+  const link = view.explorerHref ? `<a href="${escape(view.explorerHref)}" target="_blank" rel="noopener noreferrer">Explorer ↗</a>` : "";
+  const fee = view.feeText ? ` · ${escape(view.feeText)}` : "";
+  return `<li class="dashboard-row dashboard-row--outbound"><div class="dashboard-row-main"><span class="dashboard-event">${escape(view.label)}</span><strong>${escape(view.title)}</strong><span>${escape(view.detail)}${fee} · ${escape(time(item.timestamp))}</span>${recipients}</div><div class="dashboard-row-end"><strong class="dashboard-amount">${escape(view.amountText)}</strong><span>${escape(view.statusText)}</span><div class="dashboard-row-links">${link}</div></div></li>`;
+}
+
 function activityRow(item: Activity): string {
+  const outbound = describeOutbound(item as ActivityItem);
+  if (outbound) return outboundRow(item, outbound);
   const detail = item.invoiceId ? appPath(`/invoice?id=${encodeURIComponent(item.invoiceId)}`) : null;
   const label = escape(names[item.type] || item.type);
   const counterparty = item.counterparty && /^0x[a-fA-F0-9]{40}$/.test(item.counterparty)
@@ -107,7 +127,7 @@ async function render(): Promise<void> {
     return;
   }
 
-  root.innerHTML = `<section class="dashboard-head"><div><p class="dashboard-eyebrow">Arc Mainnet · eip155:5042</p><h1>Overview</h1><p>Receivables, settlement, and the connected wallet.</p></div><div class="dashboard-actions"><a class="dashboard-primary" href="${appPath("/invoice")}">New invoice</a><a class="dashboard-secondary" href="${appPath("/customers")}">New customer</a><button class="dashboard-send" type="button" disabled>Send <span>Not enabled</span></button></div></section><section class="dashboard-grid" aria-label="Workspace metrics">${card("wallet-balance", "Available USDC", "Onchain wallet balance")}${card("outstanding", "Outstanding receivables", "Issued invoices with an unpaid amount")}${card("overdue", "Overdue receivables", "Past due date · UTC")}${card("received", "Received this month", "Net received after the ArcFX fee · UTC month")}</section><p class="dashboard-freshness">Invoice totals reflect reconciled payments. Confirmed receipts appear when indexed.</p><section class="dashboard-panel"><div class="dashboard-panel-head"><div><p class="dashboard-eyebrow">Recent activity</p><h2>Business activity</h2></div><a href="${appPath("/invoices")}">View invoices →</a></div><div id="dashboard-activity" class="dashboard-activity" aria-live="polite"><p class="dashboard-loading">Loading recent activity…</p></div></section>`;
+  root.innerHTML = `<section class="dashboard-head"><div><p class="dashboard-eyebrow">Arc Mainnet · eip155:5042</p><h1>Overview</h1><p>Receivables, settlement, and the connected wallet.</p></div><div class="dashboard-actions"><a class="dashboard-primary" href="${appPath("/invoice")}">New invoice</a><a class="dashboard-secondary" href="${appPath("/customers")}">New customer</a><a class="dashboard-secondary" href="${appPath("/workspace?view=send")}">Send</a></div></section><section class="dashboard-grid" aria-label="Workspace metrics">${card("wallet-balance", "Available USDC", "Onchain wallet balance")}${card("outstanding", "Outstanding receivables", "Issued invoices with an unpaid amount")}${card("overdue", "Overdue receivables", "Past due date · UTC")}${card("received", "Received this month", "Net received after the ArcFX fee · UTC month")}</section><p class="dashboard-freshness">Invoice totals reflect reconciled payments. Confirmed receipts appear when indexed.</p><section class="dashboard-panel"><div class="dashboard-panel-head"><div><p class="dashboard-eyebrow">Recent activity</p><h2>Business activity</h2></div><a href="${appPath("/invoices")}">View invoices →</a></div><div id="dashboard-activity" class="dashboard-activity" aria-live="polite"><p class="dashboard-loading">Loading recent activity…</p></div></section>`;
 
   const current = () => version === renderVersion && arcfxWallet.address?.toLowerCase() === wallet && arcfxWallet.chainId?.toLowerCase() === "0x13b2";
   const [balance, dashboard] = await Promise.allSettled([usdcBalance(), arcfxApi.getReceivablesDashboard() as Promise<DashboardData>]);

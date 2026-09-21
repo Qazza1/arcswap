@@ -4,6 +4,7 @@ import { arcfxApi } from "../shared/arcfxApi";
 import { arcfxWallet } from "../shared/wallet";
 import { appPath } from "../shared/appOrigin";
 import { mountMultisend, mountSend } from "./payments";
+import { describeOutbound, type ActivityItem } from "./activityModel";
 
 type View = "payment-links" | "send" | "multisend" | "activity" | "analytics" | "trade" | "agent" | "contacts" | "settings";
 const requested = new URLSearchParams(location.search).get("view");
@@ -93,9 +94,22 @@ if (view in legacy) {
       if (data.network !== "arc-mainnet" || data.token !== "USDC" || data.tokenAddress?.toLowerCase() !== "0x3600000000000000000000000000000000000000" || !Array.isArray(data.recentActivity)) throw new Error("Dashboard response does not match Arc Mainnet USDC.");
       c.replaceChildren(node("h2", view === "activity" ? "Recent business activity" : "Business analytics"));
       if (view === "analytics") { c.append(node("p", `${data.openInvoiceCount} open invoices · ${data.overdueInvoiceCount} overdue · ${data.paidInvoiceCount} paid. Amounts are shown on the Dashboard.`), link("View business dashboard", "/dashboard")); const protocol = card(p, "Protocol analytics", "Public/global figures include all wallets and must never be treated as this business’s totals."); protocol.append(link("Open public protocol analytics ↗", "https://www.arcfx.app/analytics", true)); }
-      else { const items = data.recentActivity as Array<{ type: string; timestamp: string; invoiceNumber: string | null; invoiceId: string | null }>;
-        if (!items.length) c.append(node("p", "No business activity yet. Create an invoice to begin the record."));
-        else { const list = node("ul", undefined, "tool-list"); for (const item of items) { const row = node("li"); row.append(node("span", `${item.type.replaceAll("_", " ")} · ${item.invoiceNumber || "Direct payment"}`), node("small", new Date(item.timestamp).toLocaleString())); if (item.invoiceId) row.append(link("Invoice", `/invoice?id=${encodeURIComponent(item.invoiceId)}`)); list.append(row); } c.append(list); }
+      else { const items = data.recentActivity as ActivityItem[];
+        if (!items.length) c.append(node("p", "No business activity yet. Create an invoice or send a payment to begin the record."));
+        else { const list = node("ul", undefined, "tool-list"); for (const item of items) { const outbound = describeOutbound(item);
+          if (outbound) {
+            const row = node("li", undefined, "tool-activity-outbound"); const main = node("div", undefined, "tool-activity-main");
+            main.append(node("strong", `${outbound.label} · ${outbound.title}`), node("small", `${outbound.detail}${outbound.feeText ? ` · ${outbound.feeText}` : ""} · ${new Date(item.timestamp).toLocaleString()}`));
+            if (outbound.recipients.length) {
+              const details = node("details", undefined, "tool-recipients"); details.append(node("summary", "View recipients"));
+              const rl = node("ol"); for (const r of outbound.recipients) { const li = node("li"); li.append(node("code", r.address), node("span", r.amountText)); rl.append(li); }
+              details.append(rl); if (outbound.recipientsNote) details.append(node("p", outbound.recipientsNote, "tool-note")); main.append(details);
+            }
+            const end = node("div", undefined, "tool-activity-end"); end.append(node("strong", outbound.amountText), node("small", outbound.statusText));
+            if (outbound.explorerHref) end.append(link("Explorer ↗", outbound.explorerHref, true));
+            row.append(main, end); list.append(row); continue;
+          }
+          const row = node("li"); row.append(node("span", `${item.type.replaceAll("_", " ")} · ${item.invoiceNumber || "Direct payment"}`), node("small", new Date(item.timestamp).toLocaleString())); if (item.invoiceId) row.append(link("Invoice", `/invoice?id=${encodeURIComponent(item.invoiceId)}`)); list.append(row); } c.append(list); }
       }
     } catch { if (current === version) c.replaceChildren(node("h2", "Business data unavailable"), node("p", "The owner-authenticated read failed. Refresh or verify the wallet session before retrying.")); }
   };

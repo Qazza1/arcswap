@@ -214,7 +214,8 @@ function sessionList(kind: SessionPayment["kind"]) {
   const paint = () => {
     box.replaceChildren(h("h2", "", "Sent from this browser tab"));
     const items = sessionPayments().filter((p) => p.kind === kind);
-    box.append(h("p", "pay-help", "Kept only in this tab. ArcFX does not yet record outbound payments in Activity."));
+    box.append(h("p", "pay-help", "This list is kept only in this tab. Confirmed transactions appear in Activity once ArcFX has indexed them."));
+    box.append(h("a", "pay-link", "View Activity", { href: appPath("/workspace?view=activity") }));
     if (!items.length) { box.append(h("p", "pay-muted", "Nothing sent from this tab yet.")); return; }
     const list = h("ul", "pay-history");
     for (const item of items) {
@@ -441,7 +442,7 @@ export function mountSend(root: HTMLElement) {
         result.hidden = false; reviewPanel.hidden = true;
         rememberPayment({ kind: "send", hash: state.hash, at: state.at, summary: `${formatUsdc(r.amountAtomic)} USDC → ${shortAddress(r.recipient)}${reference.value.trim() ? ` · ${reference.value.trim()}` : ""}` });
         history.paint();
-        status.set("Confirmed on Arc Mainnet.", "ok");
+        status.set("Confirmed on Arc Mainnet. It will appear in Activity after ArcFX indexes it.", "ok");
         break;
       }
     }
@@ -755,7 +756,7 @@ export function mountMultisend(root: HTMLElement) {
         result.hidden = false; reviewPanel.hidden = true;
         rememberPayment({ kind: "multisend", hash: state.hash, at: state.at, summary: `${r.count} recipients · ${formatUsdc(r.totalAtomic)} USDC (+${formatUsdc(r.feeAtomic)} fee)` });
         history.paint();
-        status.set("Confirmed on Arc Mainnet.", "ok");
+        status.set("Confirmed on Arc Mainnet. The batch will appear in Activity after ArcFX indexes it.", "ok");
         break;
       }
     }
