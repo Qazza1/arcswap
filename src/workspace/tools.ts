@@ -19,7 +19,6 @@ const shell = (intro: string, state: "LIVE" | "TESTNET" | "NOT ENABLED") => { co
 const card = (target: HTMLElement, heading: string, copy: string) => { const c = node("section", undefined, "tool-card"); c.append(node("h2", heading), node("p", copy)); target.append(c); return c; };
 const legacy: Partial<Record<View, { intro: string; heading: string; copy: string; href: string; action: string }>> = {
   "payment-links": { intro: "A legacy Arc Testnet payment-link generator, distinct from managed Mainnet invoices and the public invoice payer.", heading: "Generic Testnet payment links", copy: "This tool creates a reference-based payment URL and uses the legacy Arc Testnet payment contract. It does not create a server-backed customer or managed invoice. Do not use it for Mainnet receivables.", href: "/pay", action: "Open Testnet Payment Links ↗" },
-  trade: { intro: "The legacy Swap & Bridge surface is Arc Testnet-scoped. Arc Mainnet swap, bridge, and CCTP execution are not enabled.", heading: "Testnet Swap & Bridge", copy: "Open the existing Circle/App Kit experimental surface only when you deliberately intend to use Arc Testnet. It is not a Mainnet treasury action.", href: "/trade", action: "Open Testnet Swap & Bridge ↗" },
   agent: { intro: "x402 Agent Payments and Agent Evidence remain Arc Testnet-only. Mainnet automation is not enabled.", heading: "Testnet Agent Payments", copy: "The existing x402/EIP-3009 demonstration remains separate from Mainnet receivables and cannot submit a Mainnet payment from this destination.", href: "/agent", action: "Open Testnet Agent Payments ↗" },
 };
 if (view in legacy) {
@@ -28,6 +27,11 @@ if (view in legacy) {
   mountSend(root);
 } else if (view === "multisend") {
   mountMultisend(root);
+} else if (view === "trade") {
+  void import("./trade").then(({ mountTrade }) => mountTrade(root)).catch(() => {
+    const p = shell("The read-only Circle capability surface could not be loaded.", "TESTNET");
+    card(p, "Swap & Bridge unavailable", "Refresh the workspace. No transaction was started.");
+  });
 } else if (view === "contacts") {
   const p = shell("A local wallet address book in this browser. Customers are separate server-backed business records.", "LIVE");
   const KEY = "arcfx_address_book";

@@ -25,6 +25,7 @@
     "test:multisend": "node --test script/multisend.test.mjs",
     "test:gas-semantics": "node --test script/gas-semantics.test.mjs",
     "test:activity": "node --test script/activity.test.mjs",
+    "test:swap-bridge-readonly": "node --test script/swap-bridge-readonly.test.mjs",
     "test:payer-mainnet": "node --test script/payer-mainnet.test.mjs",
     "test:payer-precision": "node --test script/payer-precision.test.mjs",
     "test:public-shell": "node --test script/public-shell.test.mjs",
@@ -33,12 +34,12 @@
     "fix:lock": "node script/fixlock.mjs"
   },
   "dependencies": {
-    "@circle-fin/adapter-viem-v2": "^1.0.0",
-    "@circle-fin/app-kit": "^1.0.0",
+    "@circle-fin/adapter-viem-v2": "1.18.0",
+    "@circle-fin/app-kit": "1.15.2",
     "ethers": "^6.17.0",
     "jspdf": "^4.2.1",
     "preline": "^4.2.0",
-    "viem": "^2.55.19"
+    "viem": "2.55.19"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
