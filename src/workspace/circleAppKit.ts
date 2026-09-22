@@ -250,11 +250,14 @@ export type LocalBridgeProofReview = Readonly<{
   fees: readonly NormalizedFee[]; gasFees: readonly NormalizedFee[]; warnings: readonly string[];
 }>;
 export type LocalBridgeProofStep = Readonly<{
-  name: string; state: string; txHash: string | null; explorerUrl: string | null; forwarded: boolean | null;
+  name: string; state: string; attempted: boolean; txHash: string | null; explorerUrl: string | null; forwarded: boolean | null;
+  errorCategory: string | null; errorCode: string | null; errorMessage: string | null;
 }>;
 export type LocalBridgeProofObservation = Readonly<{
   state: string; sourceTxHashes: readonly string[]; destinationTxHashes: readonly string[];
-  attestationState: string; destinationState: string; errorState: string | null; steps: readonly LocalBridgeProofStep[];
+  provider: string; sourceChain: string; destinationChain: string;
+  attestationState: string; destinationState: string; errorState: string | null; errorCode: string | null; errorMessage: string | null;
+  steps: readonly LocalBridgeProofStep[];
 }>;
 export type LocalBridgeProofResult = LocalBridgeProofObservation;
 
@@ -305,24 +308,51 @@ export function bridgeReviewEquals(left: LocalBridgeProofReview, right: LocalBri
     && JSON.stringify(left.warnings) === JSON.stringify(right.warnings);
 }
 
-function bridgeObservation(value: any): LocalBridgeProofObservation {
+function safeDiagnosticMessage(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  return value.replace(/https?:\/\/\S+/gi, "[redacted-url]")
+    .replace(/0x[0-9a-f]{16,}/gi, "[redacted-hex]")
+    .replace(/[A-Za-z0-9+/_=-]{96,}/g, "[redacted-payload]")
+    .slice(0, 240);
+}
+
+function safeChainIdentifier(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    const chain = value as { chain?: unknown; name?: unknown; title?: unknown };
+    if (typeof chain.chain === "string") return chain.chain;
+    if (typeof chain.name === "string") return chain.name;
+    if (typeof chain.title === "string") return chain.title;
+  }
+  return "not returned";
+}
+
+export function localBridgeProofDiagnostic(value: any, fallbackError?: any): LocalBridgeProofObservation {
   const steps: LocalBridgeProofStep[] = Array.isArray(value?.steps) ? value.steps.map((step: any) => Object.freeze({
     name: String(step?.name || "unknown"), state: String(step?.state || "unknown"),
+    attempted: step?.state !== "noop" && step?.state !== undefined,
     txHash: /^0x[0-9a-fA-F]{64}$/.test(String(step?.txHash || "")) ? String(step.txHash) : null,
     explorerUrl: typeof step?.explorerUrl === "string" ? step.explorerUrl : null,
     forwarded: typeof step?.forwarded === "boolean" ? step.forwarded : null,
+    errorCategory: typeof step?.errorCategory === "string" ? step.errorCategory : null,
+    errorCode: typeof step?.errorCode === "string" || typeof step?.code === "number" ? String(step.errorCode ?? step.code) : null,
+    errorMessage: safeDiagnosticMessage(step?.errorMessage),
   })) : [];
   const sourceTxHashes = steps.filter(step => /approve|fee|transfer|burn/i.test(step.name) && step.txHash).map(step => step.txHash!);
   const destinationTxHashes = steps.filter(step => /forward|mint|destination/i.test(step.name) && step.txHash).map(step => step.txHash!);
   const attestation = steps.find(step => /attestation/i.test(step.name));
   const destination = steps.find(step => /forward|mint|destination/i.test(step.name));
   return Object.freeze({
-    state: String(value?.state || "uncertain"), sourceTxHashes: Object.freeze(sourceTxHashes), destinationTxHashes: Object.freeze(destinationTxHashes),
+    state: String(value?.state || fallbackError?.state || "uncertain"), sourceTxHashes: Object.freeze(sourceTxHashes), destinationTxHashes: Object.freeze(destinationTxHashes),
+    provider: typeof value?.provider === "string" ? value.provider : "not returned",
+    sourceChain: safeChainIdentifier(value?.source?.chain), destinationChain: safeChainIdentifier(value?.destination?.chain),
     // Preserve status only: attestation bytes and provider payloads are never
     // displayed, logged, persisted, or sent anywhere by this local proof.
     attestationState: String(value?.steps?.find((step: any) => /attestation/i.test(String(step?.name || "")))?.data?.status || attestation?.state || "not returned"),
     destinationState: String(value?.steps?.find((step: any) => /forward|mint|destination/i.test(String(step?.name || "")))?.data?.forwardState || destination?.state || "not returned"),
     errorState: typeof value?.errorCategory === "string" ? value.errorCategory : typeof value?.steps?.find((step: any) => step?.state === "error")?.errorCategory === "string" ? value.steps.find((step: any) => step?.state === "error").errorCategory : null,
+    errorCode: typeof value?.code === "string" || typeof value?.code === "number" ? String(value.code) : typeof fallbackError?.code === "string" || typeof fallbackError?.code === "number" ? String(fallbackError.code) : null,
+    errorMessage: safeDiagnosticMessage(value?.errorMessage ?? fallbackError?.message),
     steps: Object.freeze(steps),
   });
 }
@@ -381,7 +411,7 @@ export async function createLocalBridgeProofClient(
       await assertProofProviderBinding(provider, input.account);
       input.onSourceSubmissionStart?.();
       try {
-        const observation = bridgeObservation(await kit.bridge(params));
+        const observation = localBridgeProofDiagnostic(await kit.bridge(params));
         if (!/^(success|complete)$/i.test(observation.state) && observation.sourceTxHashes.length === 0) {
           const stopped = new Error(`Bridge stopped before source submission: ${observation.state}${observation.errorState ? ` (${observation.errorState})` : ""}.`);
           Object.assign(stopped, { bridgeProofObservation: observation });
@@ -389,7 +419,7 @@ export async function createLocalBridgeProofClient(
         }
         return observation;
       } catch (error: any) {
-        const observation = bridgeObservation(error?.result || error?.bridgeResult || error?.data?.result);
+        const observation = localBridgeProofDiagnostic(error?.result || error?.bridgeResult || error?.data?.result, error);
         const stopped = new Error(observation.sourceTxHashes.length
           ? "Bridge stopped after source activity. Verify the displayed source transaction(s); ArcFX will not retry or resume it."
           : "Bridge stopped before Circle returned a source transaction. ArcFX will not retry it.");

@@ -90,6 +90,15 @@ test("bridge comparison accepts fresh sub-cap service fees and blocks unsafe fre
   assert.equal(circle.bridgeReviewEquals(review, { ...review, recipient: "0x0000000000000000000000000000000000000000" }), false);
 });
 
+test("local bridge diagnostics retain safe result states but redact payload-shaped data", () => {
+  const payload = "a".repeat(120);
+  const diagnostic = circle.localBridgeProofDiagnostic({ state: "error", provider: "CCTPV2BridgingProvider", source: { chain: "Arc" }, destination: { chain: "Base" }, steps: [{ name: "approve", state: "error", errorCategory: "user_rejected", errorCode: 4001, errorMessage: `provider failed ${payload}` }] });
+  assert.equal(diagnostic.state, "error"); assert.equal(diagnostic.provider, "CCTPV2BridgingProvider");
+  assert.equal(diagnostic.sourceChain, "Arc"); assert.equal(diagnostic.destinationChain, "Base");
+  assert.equal(diagnostic.steps[0].attempted, true); assert.equal(diagnostic.steps[0].errorCategory, "user_rejected");
+  assert.doesNotMatch(diagnostic.steps[0].errorMessage || "", new RegExp(payload));
+});
+
 test("reviewed intent is exact, bound to the pinned provider/account/chain, and persists before any mutation seam", async () => {
   const value = intent();
   assert.equal(core.reviewIsExecutable(value, binding), true);
