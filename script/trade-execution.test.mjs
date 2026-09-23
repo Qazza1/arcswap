@@ -62,7 +62,11 @@ test("the local proof seam is strictly pinned, capped, freshly quoted, and never
 test("the local bridge seam allows one Arc-to-Base attempt only and fails closed on uncertainty", () => {
   const proof = source["circleAppKit.ts"];
   const ui = source["trade.ts"];
-  assert.match(proof, /PROOF_MAX_BRIDGE_USDC_ATOMIC = 10_000n/);
+  assert.equal(circle.PROOF_MAX_BRIDGE_USDC_ATOMIC, 500_000n);
+  assert.match(ui, /Run local ≤0\.5 USDC bridge proof/);
+  assert.match(ui, /`Bridge amount \$\{result\.amount\} USDC`/);
+  assert.match(ui, /bridgeQuote!\.amountAtomic <= PROOF_MAX_BRIDGE_USDC_ATOMIC/);
+  assert.match(ui, /bridgeQuote\.amountAtomic > PROOF_MAX_BRIDGE_USDC_ATOMIC/);
   assert.match(proof, /to: \{ chain: "Base", recipientAddress: input\.account, useForwarder: true \}/);
   assert.match(proof, /\{ chain: "Base", recipientAddress: input\.recipient, useForwarder: true \}/);
   assert.match(proof, /token: "USDC", config: \{ batchTransactions: false \}/);
@@ -98,13 +102,32 @@ test("Circle's Arc preflight is acknowledged only as a verified no-op", async ()
 });
 
 test("bridge comparison accepts fresh sub-cap service fees and blocks unsafe fresh estimates", () => {
-  const review = { route: "Arc → Base", amount: "0.01", sourceChain: "Arc", destinationChain: "Base", recipient: binding.account, maxFee: "0.001", fees: [{ type: "forwarder", token: "USDC", amount: "0.056537", error: false }], gasFees: [{ type: "network", token: "USDC", amount: "0.0001" }], warnings: ["finality"] };
+  const fees = [{ type: "forwarder", token: "USDC", amount: "0.056537", error: false }];
+  const review = { route: "Arc → Base", amount: "0.5", sourceChain: "Arc", destinationChain: "Base", recipient: binding.account, maxFee: circle.bridgeQuotedMaxFee(fees), fees, gasFees: [{ type: "network", token: "USDC", amount: "0.0001" }], warnings: ["finality"] };
   assert.equal(circle.bridgeReviewEquals(review, { ...review, gasFees: [{ type: "network", token: "USDC", amount: "0.0002" }] }), true);
-  assert.equal(circle.bridgeReviewEquals(review, { ...review, fees: [{ type: "forwarder", token: "USDC", amount: "0.056281", error: false }] }), true);
-  assert.equal(circle.bridgeReviewEquals(review, { ...review, fees: [{ type: "forwarder", token: "USDC", amount: "0.100001", error: false }] }), false, "more than 0.10 USDC is blocked");
+  const changedFees = [{ type: "forwarder", token: "USDC", amount: "0.056281", error: false }];
+  assert.equal(circle.bridgeReviewEquals(review, { ...review, fees: changedFees, maxFee: circle.bridgeQuotedMaxFee(changedFees) }), true);
+  const highFees = [{ type: "forwarder", token: "USDC", amount: "0.100001", error: false }];
+  assert.equal(circle.bridgeReviewEquals(review, { ...review, fees: highFees, maxFee: circle.bridgeQuotedMaxFee(highFees) }), false, "more than 0.10 USDC is blocked");
   assert.equal(circle.bridgeReviewEquals(review, { ...review, route: "Arc → Ethereum" }), false);
-  assert.equal(circle.bridgeReviewEquals(review, { ...review, amount: "0.009" }), false);
+  assert.equal(circle.bridgeReviewEquals(review, { ...review, amount: "0.49" }), false);
   assert.equal(circle.bridgeReviewEquals(review, { ...review, recipient: "0x0000000000000000000000000000000000000000" }), false);
+});
+
+test("Circle runtime bridge estimate fees become the exact six-decimal CCTP maxFee", async () => {
+  const runtimeFees = [{ type: "provider", token: "USDC", amount: "0.000227" }, { type: "forwarder", token: "USDC", amount: "0.054774" }];
+  assert.equal(circle.bridgeQuotedMaxFee(runtimeFees), "0.055001");
+  assert.equal(circle.bridgeQuotedMaxFee(runtimeFees.slice(1)), "0.054774", "the provider entry is absent when its fee is zero");
+  assert.equal(circle.bridgeAmountMaxFeeIssue("0.5", circle.bridgeQuotedMaxFee(runtimeFees)), null);
+  assert.match(circle.bridgeAmountMaxFeeIssue("0.01", circle.bridgeQuotedMaxFee(runtimeFees)) || "", /greater than/);
+  assert.equal(circle.bridgeQuotedMaxFee([{ type: "provider", token: "USDC", amount: null, error: true }]), null);
+  assert.equal(circle.bridgeQuotedMaxFee([{ type: "forwarder", token: "USDC", amount: "not-a-fee" }]), null);
+  assert.equal(circle.bridgeQuotedMaxFee([{ type: "forwarder", token: "EURC", amount: "0.05" }]), null);
+  const arc = { type: "evm", chain: "Arc", name: "Arc", title: "Arc Mainnet", chainId: 5042, isTestnet: false, usdcAddress: circle.ARC_MAINNET_USDC, kitContracts: { adapter: "0x7FB8c7260b63934d8da38aF902f87ae6e284a845", bridge: "0xB3FA262d0fB521cc93bE83d87b322b8A23DAf3F0" } };
+  const kit = { getSupportedChains: () => [arc], estimateBridge: async () => ({ token: "USDC", amount: "0.5", source: { address: binding.account, chain: "Arc" }, destination: { address: binding.account, chain: "Base" }, fees: runtimeFees, gasFees: [] }) };
+  const client = await circle.createReadonlyCircleClient({ request: async () => { throw new Error("wallet request is forbidden in this test"); } }, { kit, createAdapter: async () => ({}) });
+  const estimate = await client.estimateBridge({ sourceChain: "Arc", destinationChain: "Base", recipient: binding.account, amount: "0.5" });
+  assert.equal(estimate.maxFee, "0.055001", "installed SDK result has no top-level maxFee");
 });
 
 test("local bridge proof blocks unsafe maximum fees and existing allowances before a wallet write", () => {

@@ -111,6 +111,22 @@ export function probeInstalledCircleCapabilities(): ArcCapability {
 }
 
 export type NormalizedFee = { type: string; token: string; amount: string | null; network?: string; error?: boolean };
+
+// CCTPv2 puts the burn's maxFee in its provider + forwarder fee entries.
+// estimateBridge has no top-level maxFee field; these amounts are decimal USDC.
+export function bridgeQuotedMaxFee(fees: readonly NormalizedFee[]): string | null {
+  let total = 0n;
+  let found = false;
+  for (const fee of fees) {
+    if (fee.type !== "provider" && fee.type !== "forwarder") continue;
+    found = true;
+    if (fee.error || fee.token !== "USDC") return null;
+    const amount = parseNonNegativeUsdc(fee.amount);
+    if (amount == null) return null;
+    total += amount;
+  }
+  return found ? formatAtomicUsdc(total) : null;
+}
 export type SwapEstimateView = {
   route: string;
   amountIn: string;
@@ -195,18 +211,19 @@ export async function createReadonlyCircleClient(
         amount: input.amount,
         token: "USDC",
       });
+      const fees: NormalizedFee[] = Array.isArray(result.fees) ? result.fees.map((fee: any) => ({ type: String(fee.type || "provider"), token: String(fee.token || ""), amount: fee.amount == null ? null : String(fee.amount), error: Boolean(fee.error) })) : [];
       return {
         route: `${String(result.source?.chain || input.sourceChain)} → ${String(result.destination?.chain || input.destinationChain)}`,
         amount: String(result.amount || input.amount),
         sourceAddress: String(result.source?.address || ""),
         destinationAddress: String(result.destination?.recipientAddress || result.destination?.address || input.recipient),
-        fees: Array.isArray(result.fees) ? result.fees.map((fee: any) => ({ type: String(fee.type || "provider"), token: String(fee.token || ""), amount: fee.amount == null ? null : String(fee.amount), error: Boolean(fee.error) })) : [],
+        fees,
         gasFees: Array.isArray(result.gasFees) ? result.gasFees.map((fee: any) => ({ type: String(fee.name || "network"), token: String(fee.token || ""), amount: (fee.fees?.fee ?? fee.fees?.fees) == null ? null : String(fee.fees?.fee ?? fee.fees?.fees), network: String(fee.blockchain || ""), error: Boolean(fee.error) })) : [],
         warnings: Array.isArray(result.warnings) ? result.warnings.map((warning: any) => String(warning?.message || warning?.code || warning)) : [],
         // The SDK's optional `quote` is an opaque reusable payload, not a safe
         // display identifier. Step 8B neither reads, logs, persists nor exposes it.
         quoteId: null,
-        maxFee: result.maxFee == null ? null : String(result.maxFee),
+        maxFee: bridgeQuotedMaxFee(fees),
       };
     },
   });
@@ -250,7 +267,7 @@ export type LocalSwapProofClient = Readonly<{
   }): Promise<LocalSwapProofResult>;
 }>;
 
-const PROOF_MAX_BRIDGE_USDC_ATOMIC = 10_000n;
+export const PROOF_MAX_BRIDGE_USDC_ATOMIC = 500_000n;
 export type LocalBridgeProofReview = Readonly<{
   route: string; amount: string; sourceChain: string; destinationChain: string; recipient: string;
   maxFee: string | null; fees: readonly NormalizedFee[]; gasFees: readonly NormalizedFee[]; warnings: readonly string[];
@@ -272,12 +289,13 @@ export type LocalBridgeProofObservation = Readonly<{
 export type LocalBridgeProofResult = LocalBridgeProofObservation;
 
 function bridgeReview(result: any, fallbackAmount: string, sourceChain: string, destinationChain: string, recipient: string): LocalBridgeProofReview {
+  const fees: NormalizedFee[] = Array.isArray(result.fees) ? result.fees.map((fee: any) => ({ type: String(fee.type || "provider"), token: String(fee.token || ""), amount: fee.amount == null ? null : String(fee.amount), error: Boolean(fee.error) })) : [];
   return {
     route: `${String(result.source?.chain || "Arc")} → ${String(result.destination?.chain || "Base")}`,
     amount: String(result.amount || fallbackAmount),
     sourceChain, destinationChain, recipient: recipient.toLowerCase(),
-    maxFee: result.maxFee == null ? null : String(result.maxFee),
-    fees: Array.isArray(result.fees) ? result.fees.map((fee: any) => ({ type: String(fee.type || "provider"), token: String(fee.token || ""), amount: fee.amount == null ? null : String(fee.amount), error: Boolean(fee.error) })) : [],
+    maxFee: bridgeQuotedMaxFee(fees),
+    fees,
     gasFees: Array.isArray(result.gasFees) ? result.gasFees.map((fee: any) => ({ type: String(fee.name || "network"), token: String(fee.token || ""), amount: (fee.fees?.fee ?? fee.fees?.fees) == null ? null : String(fee.fees?.fee ?? fee.fees?.fees), network: String(fee.blockchain || ""), error: Boolean(fee.error) })) : [],
     warnings: Array.isArray(result.warnings) ? result.warnings.map((warning: any) => String(warning?.message || warning?.code || warning)) : [],
   };
@@ -479,7 +497,7 @@ export async function createLocalBridgeProofClient(
     capability,
     async executeArcToBaseUsdc(input) {
       const parsed = parseUsdcAmount(input.amount);
-      if (!parsed.ok || parsed.value > PROOF_MAX_BRIDGE_USDC_ATOMIC) throw new Error("Local bridge proof amount must be greater than zero and no more than 0.01 USDC.");
+      if (!parsed.ok || parsed.value > PROOF_MAX_BRIDGE_USDC_ATOMIC) throw new Error("Local bridge proof amount must be greater than zero and no more than 0.5 USDC.");
       await assertProofProviderBinding(provider, input.account);
       const params = {
         from: { adapter, chain: capability.chainIdentifier },
