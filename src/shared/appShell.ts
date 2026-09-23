@@ -19,7 +19,7 @@ const group: Array<{ title: string; links: Link[] }> = [
   { title: "Treasury", links: [
     { label: "Activity", href: "/workspace?view=activity", status: "LIVE" },
     { label: "Analytics", href: "/workspace?view=analytics", status: "LIVE" },
-    { label: "Swap & Bridge", href: "/workspace?view=trade", status: "TESTNET" },
+    { label: "Swap & Bridge", href: "/workspace?view=trade", status: "MAINNET" },
   ] },
   { title: "Automation / Labs", links: [{ label: "Agent Payments", href: "/workspace?view=agent", status: "MAINNET" }] },
   { title: "Developers", links: [
