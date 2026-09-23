@@ -4,6 +4,8 @@ import { arcfxWallet } from "../shared/wallet";
 import { appPath } from "../shared/appOrigin";
 import { createDraftSubmitter, describeWriteError, issueBlocker, missingSummary, validateDraft, type DraftErrors } from "./invoiceDraft";
 import { createReconcileRunner, settledCopy, settlementView } from "./settlementState";
+import { assertMainnetAnalysisResult, assertMainnetMandatePreparation, AGENT_MAINNET } from "./agentMainnet";
+import { downloadSealedAgentEvidenceBundle, openOcdVerifierHandoff, type SealedAgentEvidenceBundle } from "../shared/ocdVerifierHandoff";
 
 type Invoice = {
   id: string;
@@ -14,6 +16,8 @@ type Invoice = {
   customer: { id: string; name: string | null } | null;
   token: string | null;
   tokenAddress: string | null;
+  amountAtomic: string | null;
+  authorizationDigest: string | null;
   amount: string | null;
   paid: string;
   outstanding: string | null;
@@ -866,14 +870,67 @@ async function invoiceDetail(content: HTMLElement, id: string) {
       }
     });
     edit.append(form);
-    content.append(
-      edit,
-      make(
-        "section",
-        "fx-agent-boundary",
-        "Agent Evidence is unavailable for Arc Mainnet in this release. The existing Testnet-only backend guard remains in effect."
-      )
-    );
+    content.append(edit);
+    const agentCard = make("section", "fx-card");
+    agentCard.append(cardHeading("Agent Evidence · Arc Mainnet"));
+    const agentBody = make("div", "fx-card-body fx-list");
+    agentBody.append(make("p", "fx-field-help", "Create a narrowly scoped Agent Mandate and sealed analysis proof for this invoice. This never submits a payment; Agent Payments and x402 execution remain off."));
+    const agentFeedback = make("div");
+    agentFeedback.setAttribute("role", "status");
+    const eligible = invoice.network === AGENT_MAINNET.network
+      && invoice.tokenAddress?.toLowerCase() === AGENT_MAINNET.usdc
+      && !!invoice.amountAtomic && /^[1-9][0-9]*$/.test(invoice.amountAtomic)
+      && !!invoice.authorizationDigest;
+    const generate = action("Generate Agent Evidence", "fx-button--primary", async () => {
+      if (!invoice || !mainnetSelected() || !arcfxWallet.address) {
+        agentFeedback.replaceChildren(message("Select and verify your owner wallet on Arc Mainnet first.", "fx-notice--error"));
+        return;
+      }
+      const owner = arcfxWallet.address.toLowerCase();
+      busy(generate, true, "Generating evidence");
+      agentFeedback.replaceChildren();
+      try {
+        const prepared = await arcfxApi.prepareMainnetAgentMandate(invoice.id);
+        assertMainnetMandatePreparation(invoice, owner, prepared);
+        if (!mainnetSelected() || arcfxWallet.address?.toLowerCase() !== owner) throw new Error("Selected wallet or network changed before mandate signing.");
+        const mandateSignature = await arcfxApi.signAgentMandate(prepared.signingMessage);
+        if (!mainnetSelected() || arcfxWallet.address?.toLowerCase() !== owner) throw new Error("Selected wallet or network changed before mandate submission.");
+        const result = await arcfxApi.submitMainnetAgentMandate(prepared.preparationToken, mandateSignature);
+        assertMainnetAnalysisResult(invoice, owner, result);
+        const sealed = await arcfxApi.sealedMainnetAgentEvidenceBundle(result.run.runId);
+        if (!mainnetSelected() || arcfxWallet.address?.toLowerCase() !== owner
+            || sealed?.bundle?.bundleId !== result.run.bundle.bundleId
+            || sealed?.bundle?.verificationState !== "VALID"
+            || !sealed.sealedBundle || typeof sealed.sealedBundle !== "object" || Array.isArray(sealed.sealedBundle)) {
+          throw new Error("Sealed Agent Evidence could not be verified for the selected owner wallet.");
+        }
+        const proof = sealed.sealedBundle as SealedAgentEvidenceBundle;
+        const summary = make("div", "fx-agent-boundary");
+        summary.append(
+          make("strong", "Decision: " + result.run.decision.outcome),
+          make("p", "", "Execution: NOT_SUBMITTED · Payment and x402 execution: disabled"),
+          make("p", "fx-mono", `Bundle: ${result.run.bundle.bundleId}`),
+          make("p", "", "Verification: VALID"),
+        );
+        const actions = make("div", "receivables-actions");
+        actions.append(
+          action("Verify on OnChainDiligence", "", () => { openOcdVerifierHandoff(proof); }),
+          action("Download proof", "", () => { downloadSealedAgentEvidenceBundle(proof, result.run.bundle.bundleId); }),
+        );
+        agentFeedback.replaceChildren(summary, actions);
+      } catch (error) {
+        agentFeedback.replaceChildren(message(error instanceof Error ? error.message : "Agent Evidence could not be generated.", "fx-notice--error"));
+      } finally {
+        busy(generate, false, "Generate Agent Evidence");
+      }
+    });
+    if (!eligible) {
+      generate.disabled = true;
+      agentBody.append(make("p", "fx-field-help", "A current Arc Mainnet USDC invoice authorization digest and positive amount are required."));
+    }
+    agentBody.append(generate, agentFeedback);
+    agentCard.append(agentBody);
+    content.append(agentCard);
   };
   render();
 }

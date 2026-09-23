@@ -278,7 +278,7 @@ test("tab-scoped owner session survives navigation and leaves Generate Agent Evi
 
     const invoicePage = fs.readFileSync(new URL("../invoices.html", import.meta.url), "utf8");
     assert.match(invoicePage, /data-receivables="invoices"/);
-    assert.match(receivablesSource, /Agent Evidence is unavailable for Arc Mainnet/);
+    assert.match(receivablesSource, /Generate Agent Evidence/);
   } finally {
     await server.close();
     globalThis.window = originalWindow;
@@ -1125,14 +1125,20 @@ test("OCD proof handoff is pinned to the opened verifier and downloads the same 
   }
 });
 
-test("Mainnet receivables clearly keeps Agent Evidence unavailable", () => {
+test("Mainnet receivables uses one mandate signature and owner-scoped sealed evidence", () => {
   assert.match(invoicesSource, /data-receivables="invoices"/);
-  assert.match(receivablesSource, /Agent Evidence is unavailable for Arc Mainnet/);
-  assert.doesNotMatch(receivablesSource, /prepareAgentMandate|signAgentMandate|submitAgentMandate|createAgentRun/);
+  assert.match(receivablesSource, /Generate Agent Evidence/);
+  assert.match(receivablesSource, /prepareMainnetAgentMandate/);
+  assert.match(receivablesSource, /signAgentMandate/);
+  assert.match(receivablesSource, /submitMainnetAgentMandate/);
+  assert.match(receivablesSource, /sealedMainnetAgentEvidenceBundle/);
+  assert.doesNotMatch(receivablesSource, /createAgentRun\(/);
   assert.match(receivablesSource, /receivablesReadiness/);
   assert.doesNotMatch(receivablesSource, /arcfxApi\.listInvoices\(|arcfxApi\.createInvoice\(|arcfxApi\.updateInvoice\(/);
   assert.match(apiSource, /ARCFX_MAINNET_CHAIN_ID_HEX = "0x13b2"/);
   assert.match(apiSource, /listReceivablesInvoices/);
+  assert.match(apiSource, /receivablesSessionPost\("\/v1\/agent-mandates\/prepare"/);
+  assert.match(apiSource, /receivablesGet\(`\/v1\/agent-evidence\/\$\{encodeURIComponent\(runId\)\}\/bundle\/sealed`\)/);
   assert.match(walletSource, /connectCurrentNetwork/);
 });
 

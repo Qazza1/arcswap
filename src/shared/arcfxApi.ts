@@ -465,6 +465,19 @@ export const arcfxApi = {
     get(`/v1/agent-evidence/${encodeURIComponent(runId)}/bundle/sealed`, "agent evidence read"),
   signAgentMandate: signMandate,
 
+  // Mainnet Agent Evidence uses the existing exact-chain owner session for
+  // preparation/read. The mandate personal_sign remains its only authorization.
+  prepareMainnetAgentMandate: (invoiceId: string) =>
+    receivablesSessionPost("/v1/agent-mandates/prepare", { invoiceId }),
+  submitMainnetAgentMandate: async (preparationToken: string, mandateSignature: string) => {
+    const expected = mainnetReceivablesWallet();
+    const result = await mandatePost("/v1/agent-mandates", { preparationToken, mandateSignature });
+    assertSameReceivablesWallet(expected);
+    return result;
+  },
+  sealedMainnetAgentEvidenceBundle: (runId: string) =>
+    receivablesGet(`/v1/agent-evidence/${encodeURIComponent(runId)}/bundle/sealed`),
+
   /**
    * Every settlement against an invoice number, with transaction hashes.
    * The record endpoints report totals; this one lists the individual payments,
