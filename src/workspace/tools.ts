@@ -15,14 +15,16 @@ const root = document.getElementById("workspace-root")!;
 mountAppShell("workspace", title[view]);
 const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string): HTMLElementTagNameMap[K] => { const n = document.createElement(tag); if (text) n.textContent = text; if (className) n.className = className; return n; };
 const link = (text: string, href: string, external = false) => { const n = node("a", text, "tool-link"); n.href = external ? href : appPath(href); if (external) { n.target = "_blank"; n.rel = "noopener noreferrer"; } return n; };
-const shell = (intro: string, state: "LIVE" | "TESTNET" | "NOT ENABLED") => { const p = node("div", undefined, "tool-page"); p.append(node("p", "ArcFX workspace", "tool-kicker"), node("h1", title[view]), node("p", intro, "tool-intro"), node("span", state, `tool-status tool-status--${state.toLowerCase().replace(" ", "-")}`)); root.replaceChildren(p); return p; };
+const shell = (intro: string, state?: "LIVE" | "TESTNET" | "NOT ENABLED") => { const p = node("div", undefined, "tool-page"); p.append(node("p", "ArcFX workspace", "tool-kicker"), node("h1", title[view]), node("p", intro, "tool-intro")); if (state) p.append(node("span", state, `tool-status tool-status--${state.toLowerCase().replace(" ", "-")}`)); root.replaceChildren(p); return p; };
 const card = (target: HTMLElement, heading: string, copy: string) => { const c = node("section", undefined, "tool-card"); c.append(node("h2", heading), node("p", copy)); target.append(c); return c; };
 const legacy: Partial<Record<View, { intro: string; heading: string; copy: string; href: string; action: string }>> = {
   "payment-links": { intro: "A legacy Arc Testnet payment-link generator, distinct from managed Mainnet invoices and the public invoice payer.", heading: "Generic Testnet payment links", copy: "This tool creates a reference-based payment URL and uses the legacy Arc Testnet payment contract. It does not create a server-backed customer or managed invoice. Do not use it for Mainnet receivables.", href: "/pay", action: "Open Testnet Payment Links ↗" },
-  agent: { intro: "Arc Mainnet Agent Evidence analysis is available from an owned invoice. Mainnet Agent Payments and x402 execution remain disabled.", heading: "Testnet Agent Payments", copy: "This legacy x402/EIP-3009 demonstration remains Testnet-only. For a Mainnet analysis-only sealed proof, open an owned Mainnet invoice and choose Generate Agent Evidence. Neither path enables Mainnet autonomous payment execution.", href: "/agent", action: "Open Testnet Agent Payments ↗" },
+  agent: { intro: "Arc Mainnet Agent Evidence is available. Agent payment and x402 execution remain gated.", heading: "Legacy x402 Testnet Demo", copy: "This legacy x402/EIP-3009 demonstration remains Testnet-only. For a Mainnet analysis-only sealed proof, open an owned Mainnet invoice and choose Generate Agent Evidence. Mainnet payment execution is not enabled.", href: "/agent", action: "Open legacy Testnet demo ↗" },
 };
 if (view in legacy) {
-  const item = legacy[view]!; const p = shell(item.intro, "TESTNET"); const c = card(p, item.heading, item.copy); c.append(link(item.action, item.href, true));
+  const item = legacy[view]!; const p = shell(item.intro, view === "agent" ? undefined : "TESTNET"); const c = card(p, item.heading, item.copy);
+  if (view === "agent") { const heading = c.querySelector("h2")!; const row = node("div", undefined, "tool-card-heading"); row.append(heading, node("span", "TESTNET", "tool-status tool-status--testnet tool-legacy-status")); c.prepend(row); }
+  c.append(link(item.action, item.href, true));
 } else if (view === "send") {
   mountSend(root);
 } else if (view === "multisend") {

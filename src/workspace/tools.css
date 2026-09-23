@@ -6,6 +6,9 @@
 .tool-card { padding: 22px; border: 1px solid var(--fx-line); border-radius: var(--fx-r-lg); background: var(--fx-elevated); box-shadow: var(--fx-shadow-sm); }
 .tool-card + .tool-card { margin-top: 12px; }
 .tool-card h2 { margin: 0 0 9px; font-size: 17px; }
+.tool-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tool-card-heading h2 { margin-bottom: 9px; }
+.tool-legacy-status { flex: none; margin: 0 0 9px; padding: 3px 6px; font-size: 9px; }
 .tool-card p { margin: 0 0 15px; color: var(--fx-muted); font-size: 13px; line-height: 1.6; }
 .tool-status { display: inline-block; margin-bottom: 16px; padding: 5px 8px; border: 1px solid var(--fx-line); border-radius: 99px; color: var(--fx-muted); font: 600 10px var(--fx-mono); }
 .tool-status--testnet { color: var(--fx-warn); background: var(--fx-warn-bg); }
