@@ -3,7 +3,7 @@ import { BrowserProvider, Contract } from "ethers";
 import { arcfxWallet, ARC_MAINNET_CHAIN_ID_HEX, type Eip1193Provider } from "../shared/wallet";
 import { appPath } from "../shared/appOrigin";
 import { formatUsdc, MAINNET, NATIVE_PER_ATOMIC } from "./mainnetPayments";
-import { CIRCLE_SDK_ID, createLocalBridgeProofClient, createLocalSwapProofClient, createReadonlyCircleClient, probeInstalledCircleCapabilities, type ArcCapability, type ReadonlyCircleClient } from "./circleAppKit";
+import { bridgeAmountMaxFeeIssue, CIRCLE_SDK_ID, createLocalBridgeProofClient, createLocalSwapProofClient, createReadonlyCircleClient, probeInstalledCircleCapabilities, type ArcCapability, type ReadonlyCircleClient } from "./circleAppKit";
 import { createSwapSnapshot, swapSnapshotIsCurrent, validateSwapForm, type SwapForm, type SwapQuoteSnapshot, type WalletBinding } from "./swapCore";
 import { BRIDGE_CHAINS, bridgeSnapshotIsCurrent, createBridgeSnapshot, validateBridgeForm, type BridgeChain, type BridgeForm, type BridgeQuoteSnapshot } from "./bridgeCore";
 import { LOCAL_BRIDGE_PROOF_ENABLED, LOCAL_SWAP_PROOF_ENABLED, TRADE_EXECUTION_DISABLED_REASON } from "./tradeExecutionGate";
@@ -152,7 +152,8 @@ export function mountTrade(root: HTMLElement): void {
       if (currentBinding()?.provider !== gate.binding.provider) throw new Error("The selected wallet provider changed. Request a fresh estimate.");
       const allFees = [...result.fees, ...result.gasFees];
       bridgeQuote = createBridgeSnapshot({ binding: gate.binding, form, amountAtomic: valid.amountAtomic!, route: result.route, quoteId: result.quoteId, estimatedReceive: result.amount, fees: allFees, warnings: result.warnings, sdk: CIRCLE_SDK_ID });
-      $(page, "#bridge-output").hidden = false; text($(page, "#bridge-receive"), `Estimated destination amount ${result.amount} USDC`); text($(page, "#bridge-route"), result.route); text($(page, "#bridge-fees"), feeText(result.fees)); text($(page, "#bridge-gas-fees"), feeText(result.gasFees)); text($(page, "#bridge-quote-id"), result.quoteId || "Not returned"); text($(page, "#bridge-time"), `${time(bridgeQuote.createdAt)} · refresh after ${time(bridgeQuote.validUntil)}`); $(page, "#bridge-review").disabled = false; text(message, result.warnings.length ? `Estimate ready with provider warning: ${result.warnings.join(" · ")}` : "Read-only route estimate ready. It expires locally after 60 seconds.");
+      const maxFeeIssue = bridgeAmountMaxFeeIssue(result.amount, result.maxFee);
+      $(page, "#bridge-output").hidden = false; text($(page, "#bridge-receive"), `Estimated destination amount ${result.amount} USDC`); text($(page, "#bridge-route"), result.route); text($(page, "#bridge-fees"), feeText(result.fees)); text($(page, "#bridge-gas-fees"), feeText(result.gasFees)); text($(page, "#bridge-quote-id"), result.quoteId || "Not returned"); text($(page, "#bridge-time"), `${time(bridgeQuote.createdAt)} · refresh after ${time(bridgeQuote.validUntil)}`); $(page, "#bridge-review").disabled = Boolean(maxFeeIssue); text(message, maxFeeIssue || (result.warnings.length ? `Estimate ready with provider warning: ${result.warnings.join(" · ")}` : "Read-only route estimate ready. It expires locally after 60 seconds."));
     } catch (error: any) { text(message, `Route unavailable: ${String(error?.message || error)}`); }
   });
   $(page, "#bridge-review").addEventListener("click", () => {
@@ -177,26 +178,27 @@ export function mountTrade(root: HTMLElement): void {
     }
     localBridgeProofBusy = true; localBridgeProof.disabled = true;
     text($(page, "#bridge-message"), "Checking a fresh Arc → Base estimate, selected wallet, and native gas reserve before any wallet prompt…");
-    const showObservation = (observation: any) => {
+    const showObservation = (observation: any, originalBridgeErrorDiagnostic?: any) => {
       if (!observation) return;
       $(page, "#bridge-proof-result").hidden = false;
       text($(page, "#bridge-proof-source"), observation.sourceTxHashes?.length ? `Source: ${observation.sourceTxHashes.join(", ")}` : `Source: ${observation.state || "stopped"}${observation.errorState ? ` (${observation.errorState})` : ""}; Circle returned no source transaction hash.`);
       text($(page, "#bridge-proof-attestation"), `Attestation: ${observation.attestationState || "not returned"}`);
       text($(page, "#bridge-proof-destination"), observation.destinationTxHashes?.length ? `Destination (${observation.destinationState}): ${observation.destinationTxHashes.join(", ")}` : `Destination: ${observation.destinationState || "not returned"}`);
-      text($(page, "#bridge-proof-diagnostic"), `Diagnostic: state ${observation.state}; provider ${observation.provider}; ${observation.sourceChain} → ${observation.destinationChain}; steps ${observation.steps.map((step: any) => `${step.name}:${step.state}:${step.attempted ? "attempted" : "not-attempted"}${step.errorCategory ? `:${step.errorCategory}` : ""}${step.errorCode ? `:${step.errorCode}` : ""}${step.errorMessage ? `:${step.errorMessage}` : ""}`).join(" · ") || "none"}${observation.errorState ? `; error ${observation.errorState}` : ""}${observation.errorCode ? `:${observation.errorCode}` : ""}${observation.errorMessage ? `:${observation.errorMessage}` : ""}`);
+      const original = originalBridgeErrorDiagnostic || observation.originalError;
+      text($(page, "#bridge-proof-diagnostic"), `Diagnostic: state ${observation.state}; provider ${observation.provider}; ${observation.sourceChain} → ${observation.destinationChain}; steps ${observation.steps.map((step: any) => `${step.name}:${step.state}:${step.attempted ? "attempted" : "not-attempted"}${step.errorCategory ? `:${step.errorCategory}` : ""}${step.errorCode ? `:${step.errorCode}` : ""}${step.errorMessage ? `:${step.errorMessage}` : ""}`).join(" · ") || "none"}${observation.errorState ? `; error ${observation.errorState}` : ""}${observation.errorCode ? `:${observation.errorCode}` : ""}${observation.errorMessage ? `:${observation.errorMessage}` : ""}${original ? `; Original Circle error: name ${original.name || "not returned"}; code ${original.code || "not returned"}; message ${original.message || "not returned"}; shortMessage ${original.shortMessage || "not returned"}; reason ${original.reason || "not returned"}; details ${original.details || "not returned"}; cause ${original.cause.join(" | ") || "not returned"}; keys ${original.keys.join(", ") || "none"}` : ""}`);
     };
     try {
       const proof = await createLocalBridgeProofClient(binding.provider as Eip1193Provider);
       const result = await proof.executeArcToBaseUsdc({
         account: binding.account, amount: form.amount.trim(),
-        reviewed: { route: bridgeQuote.route, amount: bridgeQuote.estimatedReceive, sourceChain: form.source, destinationChain: form.destination, recipient: form.recipient.trim(), fees: bridgeQuote.fees.filter(fee => !fee.network), gasFees: bridgeQuote.fees.filter(fee => Boolean(fee.network)), warnings: bridgeQuote.warnings },
+        reviewed: { route: bridgeQuote.route, amount: bridgeQuote.estimatedReceive, sourceChain: form.source, destinationChain: form.destination, recipient: form.recipient.trim(), maxFee: null, fees: bridgeQuote.fees.filter(fee => !fee.network), gasFees: bridgeQuote.fees.filter(fee => Boolean(fee.network)), warnings: bridgeQuote.warnings },
         onSourceSubmissionStart: () => { bridgeProofSourceStarted = true; },
       });
       showObservation(result);
       console.info("ArcFX local bridge proof result", { state: result.state, provider: result.provider, sourceChain: result.sourceChain, destinationChain: result.destinationChain, errorState: result.errorState, errorCode: result.errorCode, errorMessage: result.errorMessage, steps: result.steps, sourceTxHashes: result.sourceTxHashes, destinationTxHashes: result.destinationTxHashes, attestationState: result.attestationState, destinationState: result.destinationState });
       text($(page, "#bridge-message"), /^(success|complete)$/i.test(result.state) ? "Local bridge proof completed. Record the displayed source and destination state; no automatic retry or recovery will occur." : "Local bridge proof stopped after source activity. Verify the displayed source state; ArcFX will not retry or resume it.");
     } catch (error: any) {
-      showObservation(error?.bridgeProofObservation);
+      showObservation(error?.bridgeProofObservation, error?.originalBridgeErrorDiagnostic);
       text($(page, "#bridge-message"), `Local bridge proof stopped: ${String(error?.message || error)}`);
     } finally {
       localBridgeProofBusy = false;

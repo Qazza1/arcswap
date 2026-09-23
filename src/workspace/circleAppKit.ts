@@ -21,7 +21,7 @@ export type CircleChain = {
   usdcAddress?: string | null;
   eurcAddress?: string | null;
   cctp?: { domain?: number } | null;
-  kitContracts?: { adapter?: string } | null;
+  kitContracts?: { adapter?: string; bridge?: string } | null;
 };
 
 export type CapabilitySource = {
@@ -40,6 +40,7 @@ export type ArcCapability = {
   usdcAddress: string;
   eurcAddress: string | null;
   cctpDomain: number | null;
+  bridgeSpenderAddress: string;
   /** Chain-defined Circle adapter approved by the local proof only after validation. */
   swapAdapterAddress: string;
   swap: boolean;
@@ -83,6 +84,8 @@ export function discoverArcMainnetCapabilities(source: CapabilitySource): ArcCap
   if (!chainIdentifier) throw new Error("Circle Arc Mainnet capability is missing its chain identifier.");
   const swapAdapterAddress = validAddress(all.kitContracts?.adapter);
   if (!swapAdapterAddress) throw new Error("Circle Arc Mainnet capability is missing its swap adapter address.");
+  const bridgeSpenderAddress = validAddress(all.kitContracts?.bridge);
+  if (lower(bridgeSpenderAddress) !== "0xb3fa262d0fb521cc93be83d87b322b8a23daf3f0") throw new Error("Circle Arc Mainnet bridge spender is missing or does not match the expected Mainnet bridge contract.");
   return {
     sdk: CIRCLE_SDK_ID,
     chainIdentifier,
@@ -95,6 +98,7 @@ export function discoverArcMainnetCapabilities(source: CapabilitySource): ArcCap
     usdcAddress: String(all.usdcAddress),
     eurcAddress: all.eurcAddress ? String(all.eurcAddress) : null,
     cctpDomain: Number.isInteger(all.cctp?.domain) ? Number(all.cctp?.domain) : null,
+    bridgeSpenderAddress,
     swapAdapterAddress,
     swap: Boolean(swap),
     bridge: Boolean(bridge),
@@ -126,6 +130,7 @@ export type BridgeEstimateView = {
   gasFees: NormalizedFee[];
   warnings: string[];
   quoteId: string | null;
+  maxFee: string | null;
 };
 
 export type ReadonlyCircleClient = {
@@ -201,6 +206,7 @@ export async function createReadonlyCircleClient(
         // The SDK's optional `quote` is an opaque reusable payload, not a safe
         // display identifier. Step 8B neither reads, logs, persists nor exposes it.
         quoteId: null,
+        maxFee: result.maxFee == null ? null : String(result.maxFee),
       };
     },
   });
@@ -247,7 +253,7 @@ export type LocalSwapProofClient = Readonly<{
 const PROOF_MAX_BRIDGE_USDC_ATOMIC = 10_000n;
 export type LocalBridgeProofReview = Readonly<{
   route: string; amount: string; sourceChain: string; destinationChain: string; recipient: string;
-  fees: readonly NormalizedFee[]; gasFees: readonly NormalizedFee[]; warnings: readonly string[];
+  maxFee: string | null; fees: readonly NormalizedFee[]; gasFees: readonly NormalizedFee[]; warnings: readonly string[];
 }>;
 export type LocalBridgeProofStep = Readonly<{
   name: string; state: string; attempted: boolean; txHash: string | null; explorerUrl: string | null; forwarded: boolean | null;
@@ -257,6 +263,10 @@ export type LocalBridgeProofObservation = Readonly<{
   state: string; sourceTxHashes: readonly string[]; destinationTxHashes: readonly string[];
   provider: string; sourceChain: string; destinationChain: string;
   attestationState: string; destinationState: string; errorState: string | null; errorCode: string | null; errorMessage: string | null;
+  originalError: Readonly<{
+    name: string | null; code: string | null; message: string | null; shortMessage: string | null;
+    reason: string | null; details: string | null; cause: readonly string[]; keys: readonly string[];
+  }> | null;
   steps: readonly LocalBridgeProofStep[];
 }>;
 export type LocalBridgeProofResult = LocalBridgeProofObservation;
@@ -266,6 +276,7 @@ function bridgeReview(result: any, fallbackAmount: string, sourceChain: string, 
     route: `${String(result.source?.chain || "Arc")} → ${String(result.destination?.chain || "Base")}`,
     amount: String(result.amount || fallbackAmount),
     sourceChain, destinationChain, recipient: recipient.toLowerCase(),
+    maxFee: result.maxFee == null ? null : String(result.maxFee),
     fees: Array.isArray(result.fees) ? result.fees.map((fee: any) => ({ type: String(fee.type || "provider"), token: String(fee.token || ""), amount: fee.amount == null ? null : String(fee.amount), error: Boolean(fee.error) })) : [],
     gasFees: Array.isArray(result.gasFees) ? result.gasFees.map((fee: any) => ({ type: String(fee.name || "network"), token: String(fee.token || ""), amount: (fee.fees?.fee ?? fee.fees?.fees) == null ? null : String(fee.fees?.fee ?? fee.fees?.fees), network: String(fee.blockchain || ""), error: Boolean(fee.error) })) : [],
     warnings: Array.isArray(result.warnings) ? result.warnings.map((warning: any) => String(warning?.message || warning?.code || warning)) : [],
@@ -292,7 +303,29 @@ function formatAtomicUsdc(value: bigint): string {
   return `${whole}${fraction ? `.${fraction}` : ""}`;
 }
 
+function parseNonNegativeUsdc(value: string | null): bigint | null {
+  if (value == null) return null;
+  const text = value.trim();
+  if (/^0(?:\.0{1,6})?$/.test(text)) return 0n;
+  const parsed = parseUsdcAmount(text);
+  return parsed.ok && parsed.value !== undefined ? parsed.value : null;
+}
+
+export function bridgeAmountMaxFeeIssue(amount: string, maxFee: string | null): string | null {
+  const parsedAmount = parseUsdcAmount(amount);
+  const parsedMaxFee = parseNonNegativeUsdc(maxFee);
+  if (!parsedAmount.ok || parsedAmount.value === undefined || parsedMaxFee == null) return "Bridge amount must be greater than the current maximum bridge fee. Current maximum bridge fee is unavailable or invalid.";
+  if (parsedAmount.value <= parsedMaxFee) return `Bridge amount must be greater than the current maximum bridge fee. Bridge amount: ${formatAtomicUsdc(parsedAmount.value)} USDC. Current maximum bridge fee: ${formatAtomicUsdc(parsedMaxFee)} USDC.`;
+  return null;
+}
+
+export function bridgeExistingAllowanceIssue(allowance: bigint): string | null {
+  return allowance === 0n ? null : `Existing Circle bridge allowance must be cleared before starting a new bridge proof. Current allowance: ${formatAtomicUsdc(allowance)} USDC.`;
+}
+
 export function bridgeProofFreshEstimateIssue(fresh: LocalBridgeProofReview): string | null {
+  const maxFeeIssue = bridgeAmountMaxFeeIssue(fresh.amount, fresh.maxFee);
+  if (maxFeeIssue) return maxFeeIssue;
   const feeTotal = freshBridgeServiceFeeTotal(fresh.fees);
   if (feeTotal == null) return "Fresh provider/service/forwarder fee data is invalid.";
   if (feeTotal > MAX_LOCAL_BRIDGE_SERVICE_FEE_ATOMIC) return `Fresh provider/service/forwarder fees are ${formatAtomicUsdc(feeTotal)} USDC, above the 0.10 USDC local-proof cap.`;
@@ -327,6 +360,38 @@ function safeChainIdentifier(value: unknown): string {
   return "not returned";
 }
 
+function safeErrorPrimitive(value: unknown): string | null {
+  if (typeof value === "string") return safeDiagnosticMessage(value);
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return null;
+}
+
+function safeOriginalError(error: any): LocalBridgeProofObservation["originalError"] {
+  if (!error || (typeof error !== "object" && typeof error !== "function")) return null;
+  const fromData = error.data && typeof error.data === "object" ? error.data : null;
+  const cause: string[] = [];
+  let current = error.cause;
+  for (let depth = 0; depth < 2 && current && typeof current === "object"; depth += 1) {
+    const parts = ["name", "code", "message", "shortMessage", "reason", "details"]
+      .map(key => {
+        const safe = safeErrorPrimitive(current[key]);
+        return safe == null ? null : `${key}: ${safe}`;
+      }).filter((part): part is string => part != null);
+    if (parts.length) cause.push(parts.join("; "));
+    current = current.cause;
+  }
+  const keys = Object.keys(error).slice(0, 32).filter(key => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(key));
+  return Object.freeze({
+    name: safeErrorPrimitive(error.name) ?? safeErrorPrimitive(fromData?.name),
+    code: safeErrorPrimitive(error.code) ?? safeErrorPrimitive(fromData?.code),
+    message: safeErrorPrimitive(error.message) ?? safeErrorPrimitive(fromData?.message),
+    shortMessage: safeErrorPrimitive(error.shortMessage),
+    reason: safeErrorPrimitive(error.reason) ?? safeErrorPrimitive(fromData?.reason),
+    details: safeErrorPrimitive(error.details),
+    cause: Object.freeze(cause), keys: Object.freeze(keys),
+  });
+}
+
 export function localBridgeProofDiagnostic(value: any, fallbackError?: any): LocalBridgeProofObservation {
   const steps: LocalBridgeProofStep[] = Array.isArray(value?.steps) ? value.steps.map((step: any) => Object.freeze({
     name: String(step?.name || "unknown"), state: String(step?.state || "unknown"),
@@ -353,15 +418,33 @@ export function localBridgeProofDiagnostic(value: any, fallbackError?: any): Loc
     errorState: typeof value?.errorCategory === "string" ? value.errorCategory : typeof value?.steps?.find((step: any) => step?.state === "error")?.errorCategory === "string" ? value.steps.find((step: any) => step?.state === "error").errorCategory : null,
     errorCode: typeof value?.code === "string" || typeof value?.code === "number" ? String(value.code) : typeof fallbackError?.code === "string" || typeof fallbackError?.code === "number" ? String(fallbackError.code) : null,
     errorMessage: safeDiagnosticMessage(value?.errorMessage ?? fallbackError?.message),
+    originalError: fallbackError ? safeOriginalError(fallbackError) : null,
     steps: Object.freeze(steps),
   });
 }
 
-function noAutoNetworkSwitchProvider(provider: Eip1193Provider): Eip1193Provider {
+const ARC_MAINNET_CHAIN_ID_HEX = "0x13b2";
+
+function canonicalChainId(value: unknown): string | null {
+  if (typeof value !== "string" || !/^0x[0-9a-f]+$/i.test(value)) return null;
+  try { return `0x${BigInt(value).toString(16)}`; } catch { return null; }
+}
+
+/**
+ * Circle's browser adapter calls switchChain before every write. For this proof
+ * we acknowledge only its Arc-5042 preflight when the pinned raw provider is
+ * already on Arc-5042. The wallet never receives a switch request; every other
+ * switch and every add-chain request remains fail-closed.
+ */
+export function arcMainnetNoSwitchProvider(provider: Eip1193Provider): Eip1193Provider {
   return Object.freeze({ request: async (request: { method: string; params?: unknown[] }) => {
-    if (request.method === "wallet_switchEthereumChain" || request.method === "wallet_addEthereumChain") {
+    if (request.method === "wallet_switchEthereumChain") {
+      const target = canonicalChainId((request.params?.[0] as { chainId?: unknown } | undefined)?.chainId);
+      const current = canonicalChainId(await provider.request({ method: "eth_chainId" }));
+      if (target === ARC_MAINNET_CHAIN_ID_HEX && current === ARC_MAINNET_CHAIN_ID_HEX) return null;
       throw new Error("ArcFX local bridge proof never switches the wallet network automatically.");
     }
+    if (request.method === "wallet_addEthereumChain") throw new Error("ArcFX local bridge proof never adds or switches the wallet network automatically.");
     return provider.request(request);
   } });
 }
@@ -388,7 +471,7 @@ export async function createLocalBridgeProofClient(
   const kit = dependencies.kit || new AppKit() as AppKitLocalBridgeSurface;
   const capability = discoverArcMainnetCapabilities(kit);
   if (!capability.bridge) throw new Error("Circle SDK does not currently advertise bridging from Arc Mainnet.");
-  const sourceOnlyProvider = noAutoNetworkSwitchProvider(provider);
+  const sourceOnlyProvider = arcMainnetNoSwitchProvider(provider);
   const adapter = dependencies.createAdapter
     ? await dependencies.createAdapter({ provider: sourceOnlyProvider })
     : await createViemAdapterFromProvider({ provider: sourceOnlyProvider as any });
@@ -406,7 +489,13 @@ export async function createLocalBridgeProofClient(
       const freshReview = bridgeReview(await kit.estimateBridge(params), input.amount, capability.chainIdentifier, "Base", input.account);
       const freshIssue = bridgeProofFreshEstimateIssue(freshReview);
       if (!bridgeReviewEquals(input.reviewed, freshReview)) throw new Error(freshIssue || "The local bridge route, amount, recipient, or warnings changed. Review the fresh estimate and explicitly confirm again.");
-      const nativeBalance = await new BrowserProvider(provider as any).getBalance(input.account);
+      const browser = new BrowserProvider(provider as any);
+      const [nativeBalance, existingAllowance] = await Promise.all([
+        browser.getBalance(input.account),
+        new Contract(ARC_MAINNET_USDC, ERC20_ALLOWANCE_ABI, browser).allowance(input.account, capability.bridgeSpenderAddress) as Promise<bigint>,
+      ]);
+      const allowanceIssue = bridgeExistingAllowanceIssue(existingAllowance);
+      if (allowanceIssue) throw new Error(allowanceIssue);
       if (nativeBalance < LOCAL_SWAP_PROOF_NATIVE_GAS_RESERVE) throw new Error("Native Arc gas reserve is below the local bridge proof minimum.");
       await assertProofProviderBinding(provider, input.account);
       input.onSourceSubmissionStart?.();
@@ -419,11 +508,16 @@ export async function createLocalBridgeProofClient(
         }
         return observation;
       } catch (error: any) {
+        // A soft BridgeResult is deliberately converted above into an ArcFX
+        // stop error. It was not an exception from Circle, so do not relabel
+        // that wrapper as the original Circle error.
+        if (error?.bridgeProofObservation) throw error;
+        const originalBridgeErrorDiagnostic = safeOriginalError(error);
         const observation = localBridgeProofDiagnostic(error?.result || error?.bridgeResult || error?.data?.result, error);
         const stopped = new Error(observation.sourceTxHashes.length
           ? "Bridge stopped after source activity. Verify the displayed source transaction(s); ArcFX will not retry or resume it."
           : "Bridge stopped before Circle returned a source transaction. ArcFX will not retry it.");
-        Object.assign(stopped, { bridgeProofObservation: observation });
+        Object.assign(stopped, { bridgeProofObservation: observation, originalBridgeErrorDiagnostic });
         throw stopped;
       }
     },

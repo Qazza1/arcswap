@@ -66,10 +66,13 @@ test("the local bridge seam allows one Arc-to-Base attempt only and fails closed
   assert.match(proof, /to: \{ chain: "Base", recipientAddress: input\.account, useForwarder: true \}/);
   assert.match(proof, /\{ chain: "Base", recipientAddress: input\.recipient, useForwarder: true \}/);
   assert.match(proof, /token: "USDC", config: \{ batchTransactions: false \}/);
-  assert.match(proof, /noAutoNetworkSwitchProvider/);
+  assert.match(proof, /arcMainnetNoSwitchProvider/);
   assert.match(proof, /wallet_switchEthereumChain/);
   assert.match(proof, /wallet_addEthereumChain/);
   assert.match(proof, /bridgeReviewEquals\(input\.reviewed, freshReview\)/);
+  assert.match(proof, /bridgeAmountMaxFeeIssue\(fresh\.amount, fresh\.maxFee\)/);
+  assert.match(proof, /bridgeExistingAllowanceIssue\(existingAllowance\)/);
+  assert.match(proof, /bridgeSpenderAddress/);
   assert.match(proof, /onSourceSubmissionStart/);
   assert.match(proof, /bridgeProofObservation/);
   assert.match(proof, /Bridge stopped before source submission/);
@@ -80,14 +83,46 @@ test("the local bridge seam allows one Arc-to-Base attempt only and fails closed
   assert.match(ui, /destinationTxHashes/);
 });
 
+test("Circle's Arc preflight is acknowledged only as a verified no-op", async () => {
+  const calls = [];
+  const raw = { request: async (request) => {
+    calls.push(request.method);
+    if (request.method === "eth_chainId") return "0x13b2";
+    throw new Error(`unexpected raw request: ${request.method}`);
+  } };
+  const guarded = circle.arcMainnetNoSwitchProvider(raw);
+  assert.equal(await guarded.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x13b2" }] }), null);
+  assert.deepEqual(calls, ["eth_chainId"], "the raw wallet never receives a switch request");
+  await assert.rejects(() => guarded.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x2105" }] }), /never switches/);
+  await assert.rejects(() => guarded.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0x13b2" }] }), /never adds/);
+});
+
 test("bridge comparison accepts fresh sub-cap service fees and blocks unsafe fresh estimates", () => {
-  const review = { route: "Arc → Base", amount: "0.01", sourceChain: "Arc", destinationChain: "Base", recipient: binding.account, fees: [{ type: "forwarder", token: "USDC", amount: "0.056537", error: false }], gasFees: [{ type: "network", token: "USDC", amount: "0.0001" }], warnings: ["finality"] };
+  const review = { route: "Arc → Base", amount: "0.01", sourceChain: "Arc", destinationChain: "Base", recipient: binding.account, maxFee: "0.001", fees: [{ type: "forwarder", token: "USDC", amount: "0.056537", error: false }], gasFees: [{ type: "network", token: "USDC", amount: "0.0001" }], warnings: ["finality"] };
   assert.equal(circle.bridgeReviewEquals(review, { ...review, gasFees: [{ type: "network", token: "USDC", amount: "0.0002" }] }), true);
   assert.equal(circle.bridgeReviewEquals(review, { ...review, fees: [{ type: "forwarder", token: "USDC", amount: "0.056281", error: false }] }), true);
   assert.equal(circle.bridgeReviewEquals(review, { ...review, fees: [{ type: "forwarder", token: "USDC", amount: "0.100001", error: false }] }), false, "more than 0.10 USDC is blocked");
   assert.equal(circle.bridgeReviewEquals(review, { ...review, route: "Arc → Ethereum" }), false);
   assert.equal(circle.bridgeReviewEquals(review, { ...review, amount: "0.009" }), false);
   assert.equal(circle.bridgeReviewEquals(review, { ...review, recipient: "0x0000000000000000000000000000000000000000" }), false);
+});
+
+test("local bridge proof blocks unsafe maximum fees and existing allowances before a wallet write", () => {
+  assert.match(circle.bridgeAmountMaxFeeIssue("0.01", null) || "", /maximum bridge fee/);
+  assert.match(circle.bridgeAmountMaxFeeIssue("0.01", "not-a-number") || "", /maximum bridge fee/);
+  assert.match(circle.bridgeAmountMaxFeeIssue("0.01", "0.01") || "", /greater than/);
+  assert.match(circle.bridgeAmountMaxFeeIssue("0.01", "0.02") || "", /greater than/);
+  assert.equal(circle.bridgeAmountMaxFeeIssue("0.01", "0"), null);
+  assert.match(circle.bridgeExistingAllowanceIssue(10_000n) || "", /Existing Circle bridge allowance must be cleared/);
+  assert.equal(circle.bridgeExistingAllowanceIssue(0n), null);
+  const proof = source["circleAppKit.ts"];
+  assert.ok(proof.indexOf("bridgeAmountMaxFeeIssue(fresh.amount, fresh.maxFee)") < proof.indexOf("input.onSourceSubmissionStart?.()"));
+  assert.ok(proof.indexOf("bridgeExistingAllowanceIssue(existingAllowance)") < proof.indexOf("input.onSourceSubmissionStart?.()"));
+});
+
+test("Arc capability fails closed if Circle returns a bridge spender other than the approved Mainnet contract", () => {
+  const wrong = { type: "evm", chain: "Arc", name: "Arc", title: "Arc Mainnet", chainId: 5042, isTestnet: false, usdcAddress: circle.ARC_MAINNET_USDC, kitContracts: { adapter: "0x7FB8c7260b63934d8da38aF902f87ae6e284a845", bridge: "0x0000000000000000000000000000000000000001" } };
+  assert.throws(() => circle.discoverArcMainnetCapabilities({ getSupportedChains: () => [wrong] }), /bridge spender/);
 });
 
 test("local bridge diagnostics retain safe result states but redact payload-shaped data", () => {
@@ -97,6 +132,33 @@ test("local bridge diagnostics retain safe result states but redact payload-shap
   assert.equal(diagnostic.sourceChain, "Arc"); assert.equal(diagnostic.destinationChain, "Base");
   assert.equal(diagnostic.steps[0].attempted, true); assert.equal(diagnostic.steps[0].errorCategory, "user_rejected");
   assert.doesNotMatch(diagnostic.steps[0].errorMessage || "", new RegExp(payload));
+});
+
+test("local bridge diagnostics preserve only safe original Circle error primitives", () => {
+  const payload = "a".repeat(120);
+  const diagnostic = circle.localBridgeProofDiagnostic(undefined, {
+    name: "CircleBridgeError", code: "FORWARDER_UNAVAILABLE", message: `bridge failed ${payload}`,
+    shortMessage: "Forwarder unavailable", reason: "No route", details: "Retry later",
+    data: { code: 42, message: "safe data message", nested: { calldata: "0x" + "12".repeat(300) } },
+    cause: { name: "ProviderError", code: 4001, message: "safe cause", adapter: { request: () => {} }, cause: { reason: "second cause", data: "ignored" } },
+  });
+  assert.equal(diagnostic.originalError.name, "CircleBridgeError");
+  assert.equal(diagnostic.originalError.code, "FORWARDER_UNAVAILABLE");
+  assert.equal(diagnostic.originalError.shortMessage, "Forwarder unavailable");
+  assert.match(diagnostic.originalError.cause.join(" "), /ProviderError/);
+  assert.match(diagnostic.originalError.cause.join(" "), /second cause/);
+  assert.doesNotMatch(JSON.stringify(diagnostic.originalError), new RegExp(payload));
+  assert.doesNotMatch(JSON.stringify(diagnostic.originalError), /calldata|adapter|nested/);
+});
+
+test("a wrapped local bridge stop keeps the original SDK error separately", () => {
+  const proof = source["circleAppKit.ts"];
+  const ui = source["trade.ts"];
+  assert.match(proof, /if \(error\?\.bridgeProofObservation\) throw error/);
+  assert.match(proof, /const originalBridgeErrorDiagnostic = safeOriginalError\(error\)/);
+  assert.match(proof, /bridgeProofObservation: observation, originalBridgeErrorDiagnostic/);
+  assert.match(ui, /error\?\.originalBridgeErrorDiagnostic/);
+  assert.doesNotMatch(proof, /JSON\.stringify\(error\)|error\.stack/);
 });
 
 test("reviewed intent is exact, bound to the pinned provider/account/chain, and persists before any mutation seam", async () => {
