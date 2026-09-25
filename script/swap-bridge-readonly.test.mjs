@@ -174,6 +174,14 @@ test("production CSP permits Circle Mainnet swap and bridge estimate requests", 
   assert.ok(connect?.includes("https://iris-api.circle.com"), "CCTP fee endpoint must be reachable");
 });
 
+test("workspace Circle client installs the existing same-origin swap proxy without changing bridge hosts", () => {
+  assert.match(circleSource, /^import "\.\.\/shared\/circle-proxy";/m);
+  const proxy = fs.readFileSync(new URL("../src/shared/circle-proxy.ts", import.meta.url), "utf8");
+  assert.match(proxy, /https:\/\/api\.circle\.com/, "the Stablecoin Service endpoint must use the existing proxy");
+  assert.match(proxy, /\/circle-proxy/, "the rewrite target must remain same-origin");
+  assert.doesNotMatch(proxy, /iris-api\.circle\.com/, "Bridge estimate endpoints keep their own read-only host");
+});
+
 test("mobile layout is explicit and existing Send, Multisend and Invoices routes remain wired", () => {
   assert.match(tradeCss, /@media\(max-width:520px\)/); assert.match(tradeCss, /grid-template-columns:1fr/);
   assert.match(tradeCss, /\.trade-panel\[hidden\][^{]*\{display:none!important\}/, "inactive tabs stay hidden despite the grid display rule");

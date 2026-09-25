@@ -12,15 +12,17 @@
  * line: ES module imports are evaluated in source order, so this patch is
  * installed before @circle-fin/app-kit is even initialised.
  */
-const original = window.fetch.bind(window);
+if (typeof window !== "undefined") {
+  const original = window.fetch.bind(window);
 
-window.fetch = function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  if (typeof input === "string" && input.includes("api.circle.com")) {
-    input = input.replace("https://api.circle.com", "/circle-proxy");
-  } else if (input instanceof Request && input.url.includes("api.circle.com")) {
-    input = new Request(input.url.replace("https://api.circle.com", "/circle-proxy"), input);
-  }
-  return original(input as RequestInfo, init);
-};
+  window.fetch = function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    if (typeof input === "string" && input.includes("api.circle.com")) {
+      input = input.replace("https://api.circle.com", "/circle-proxy");
+    } else if (input instanceof Request && input.url.includes("api.circle.com")) {
+      input = new Request(input.url.replace("https://api.circle.com", "/circle-proxy"), input);
+    }
+    return original(input as RequestInfo, init);
+  };
+}
 
 export {};

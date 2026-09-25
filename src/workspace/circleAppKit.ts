@@ -1,3 +1,6 @@
+// The workspace uses the existing first-party Circle proxy for swap quotes.
+// It keeps the browser request same-origin; the proxy does not add authority.
+import "../shared/circle-proxy";
 import { AppKit } from "@circle-fin/app-kit";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 import { BrowserProvider, Contract } from "ethers";
