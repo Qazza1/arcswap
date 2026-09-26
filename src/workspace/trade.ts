@@ -7,6 +7,7 @@ import { bridgeAmountMaxFeeIssue, CIRCLE_SDK_ID, createControlledBridgeClient, c
 import { createSwapSnapshot, swapSnapshotIsCurrent, validateSwapForm, type SwapForm, type SwapQuoteSnapshot, type WalletBinding } from "./swapCore";
 import { BRIDGE_CHAINS, bridgeSnapshotIsCurrent, createBridgeSnapshot, validateBridgeForm, type BridgeChain, type BridgeForm, type BridgeQuoteSnapshot } from "./bridgeCore";
 import { ARCFX_MAINNET_TRADE_EXECUTION_ENABLED, LOCAL_BRIDGE_PROOF_ENABLED, LOCAL_SWAP_PROOF_ENABLED } from "./tradeExecutionGate";
+import { BRIDGE_NETWORKS, bridgeRoute, destinationMintText, destinationsFor, minimumDelivered, routeExecutionIssue, sourcesOffered, switchWalletMessage, type BridgeNetwork } from "./bridgeRoutes";
 
 const ERC20_BALANCE_ABI = ["function balanceOf(address) view returns (uint256)"];
 const $ = (root: ParentNode, selector: string): any => root.querySelector(selector) as HTMLElement;
@@ -16,14 +17,23 @@ const slippageText = (bps: number) => `${Math.floor(bps / 100)}.${String(bps % 1
 const feeText = (fees: readonly { type: string; token: string; amount: string | null; network?: string }[]) => fees.length
   ? fees.map(fee => `${fee.type}${fee.network ? ` · ${fee.network}` : ""}: ${fee.amount ?? "unavailable"} ${fee.token}`).join(" · ")
   : "No fee breakdown returned by the provider.";
+const formatNative = (wei: bigint) => { const whole = wei / 10n ** 18n; const fraction = (wei % 10n ** 18n).toString().padStart(18, "0").slice(0, 6).replace(/0+$/, ""); return `${whole}${fraction ? `.${fraction}` : ""}`; };
 const txHash = (value: string): boolean => /^0x[0-9a-fA-F]{64}$/.test(value);
-function showTransactions(target: HTMLElement, label: string, hashes: readonly string[], chain: "Arc" | "Base"): void {
+const FEE_LABEL: Record<string, string> = { forwarder: "Circle forwarder fee", provider: "CCTP fast-transfer fee" };
+const serviceFeeText = (fees: readonly { type: string; token: string; amount: string | null }[], maxFee: string | null) => fees.length
+  ? `${fees.map(fee => `${FEE_LABEL[fee.type] || fee.type}: ${fee.amount ?? "unavailable"} ${fee.token}`).join(" · ")} · maximum bridge fee (burn maxFee): ${maxFee ?? "unavailable"} USDC`
+  : "No provider or forwarder fee returned by Circle.";
+const sourceGasText = (source: BridgeNetwork, fees: readonly { type: string; token: string; amount: string | null; network?: string }[]) => {
+  const own = fees.filter(fee => fee.network === BRIDGE_NETWORKS[source].sdk);
+  return own.length ? `Source (${source}): ${own.map(fee => `${fee.type} ≈ ${fee.amount ?? "unavailable"} ${fee.token}`).join(", ")}` : `Source (${source}): gas estimate not returned by Circle`;
+};
+function showTransactions(target: HTMLElement, label: string, hashes: readonly string[], chain: BridgeNetwork): void {
   target.replaceChildren(document.createTextNode(`${label}: `));
   if (!hashes.length) { target.append(document.createTextNode("not returned")); return; }
   hashes.filter(txHash).forEach((hash, index) => {
     if (index) target.append(document.createTextNode(", "));
     const link = document.createElement("a");
-    link.href = `${chain === "Arc" ? "https://explorer.arc.io/tx/" : "https://basescan.org/tx/"}${hash}`;
+    link.href = `${BRIDGE_NETWORKS[chain].explorerTx}${hash}`;
     link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = hash;
     target.append(link);
   });
@@ -81,9 +91,9 @@ export function mountTrade(root: HTMLElement): void {
       <article class="trade-quote" id="swap-output" hidden><p class="trade-eyebrow">Circle estimate</p><h3 id="swap-receive">—</h3><dl><div><dt>Minimum received</dt><dd id="swap-minimum">—</dd></div><div><dt>Route</dt><dd id="swap-route">—</dd></div><div><dt>Provider</dt><dd>Circle App Kit</dd></div><div><dt>Fees</dt><dd id="swap-fees">—</dd></div><div><dt>Approval metadata</dt><dd>Checked again before wallet confirmation</dd></div><div><dt>Quote window</dt><dd id="swap-time">—</dd></div></dl><div class="trade-review" id="swap-review-panel" hidden><strong>Review swap</strong><p id="swap-review-details"></p><p>USDC → EURC only, up to 1 USDC for this controlled release. An existing Circle adapter allowance blocks this flow; ArcFX never stacks an approval. The wallet may request an exact approval followed by a separate swap confirmation.</p></div><div class="trade-review" id="swap-proof-result" hidden><strong>Swap transaction status</strong><p id="swap-proof-approval">Approval: awaiting wallet result</p><p id="swap-proof-tx">Swap: awaiting wallet result</p></div></article>
     </section>
     <section class="trade-panel" id="trade-bridge" role="tabpanel" hidden><div class="trade-form-card"><div class="trade-section-head"><div><p class="trade-eyebrow">USDC movement</p><h2>Bridge route estimate</h2></div><span class="trade-network">CCTP-aware</span></div>
-      <div class="trade-grid"><label>From network<select id="bridge-from"><option>Arc</option><option>Ethereum</option><option>Base</option></select></label><label>To network<select id="bridge-to"><option>Base</option><option>Ethereum</option><option>Arc</option></select></label><label>Asset<input value="USDC" readonly aria-readonly="true"/></label><label>Amount<input id="bridge-amount" inputmode="decimal" autocomplete="off" placeholder="0.00"/><small id="bridge-balance">Source balance: connect a wallet to read</small></label><label class="trade-wide">Destination wallet<input id="bridge-recipient" autocomplete="off" spellcheck="false" placeholder="0x…"/><small>Defaults visually to the connected owner wallet; it remains editable.</small></label></div>
+      <div class="trade-grid"><label>From network<select id="bridge-from">${sourcesOffered().map(name => `<option>${name}</option>`).join("")}</select></label><label>To network<select id="bridge-to">${destinationsFor("Arc").map(name => `<option>${name}</option>`).join("")}</select></label><label>Asset<input value="USDC" readonly aria-readonly="true"/></label><label>Amount<input id="bridge-amount" inputmode="decimal" autocomplete="off" placeholder="0.00"/><small id="bridge-balance">Source balance: connect a wallet to read</small></label><label class="trade-wide">Destination wallet<input id="bridge-recipient" autocomplete="off" spellcheck="false" placeholder="0x…"/><small>Defaults visually to the connected owner wallet; it remains editable.</small></label></div>
       <p class="trade-gas" id="bridge-context">Routes are shown only after the installed SDK validates the selected pair. Arc chain 5042 is distinct from CCTP domain 26.</p><div class="trade-actions"><button class="trade-button trade-button--primary" id="bridge-quote" type="button">Get route estimate</button><button class="trade-button" id="bridge-review" type="button" disabled>Review bridge</button><button class="trade-button trade-button--primary" id="bridge-confirm" type="button" disabled ${ARCFX_MAINNET_TRADE_EXECUTION_ENABLED ? "" : "hidden"}>Confirm bridge in wallet</button>${LOCAL_BRIDGE_PROOF_ENABLED ? '<button class="trade-button trade-button--danger" id="bridge-local-proof" type="button" disabled>Run local ≤0.5 USDC bridge proof</button>' : ""}</div><p class="trade-message" id="bridge-message" role="status"></p></div>
-      <article class="trade-quote" id="bridge-output" hidden><p class="trade-eyebrow">Circle estimate</p><h3 id="bridge-receive">—</h3><dl><div><dt>Route</dt><dd id="bridge-route">—</dd></div><div><dt>Provider</dt><dd>Circle App Kit</dd></div><div><dt>Protocol / service fees</dt><dd id="bridge-fees">—</dd></div><div><dt>Network fees</dt><dd id="bridge-gas-fees">—</dd></div><div><dt>Transfer / finality mode</dt><dd>Circle forwarder · same owner wallet</dd></div><div><dt>Estimated timing</dt><dd>Not returned by current provider</dd></div><div><dt>Quote identity</dt><dd id="bridge-quote-id">Not returned</dd></div><div><dt>Expected steps</dt><dd>Allowance check → approval if needed → source burn → attestation → destination mint</dd></div><div><dt>Estimate window</dt><dd id="bridge-time">—</dd></div></dl><div class="trade-review" id="bridge-review-panel" hidden><strong>Review bridge</strong><p id="bridge-review-details"></p><p>Arc → Base USDC only, up to 0.5 USDC for this controlled release. Existing Circle bridge allowance must be cleared before this attempt. A source attempt is never automatically retried.</p></div><div class="trade-review" id="bridge-proof-result" hidden><strong>Bridge transaction status</strong><p id="bridge-proof-source">Source: awaiting Circle result</p><p id="bridge-proof-attestation">Attestation: awaiting Circle result</p><p id="bridge-proof-destination">Destination: awaiting Circle result</p><p id="bridge-proof-diagnostic">Diagnostic: awaiting Circle result</p></div></article>
+      <article class="trade-quote" id="bridge-output" hidden><p class="trade-eyebrow">Circle estimate</p><h3 id="bridge-receive">—</h3><dl><div><dt>Route</dt><dd id="bridge-route">—</dd></div><div><dt>Provider</dt><dd>Circle App Kit</dd></div><div><dt>Protocol / service fees</dt><dd id="bridge-fees">—</dd></div><div><dt>Network fees</dt><dd id="bridge-gas-fees">—</dd></div><div><dt>Minimum delivered</dt><dd id="bridge-min">—</dd></div><div><dt>Transfer / finality mode</dt><dd>Circle forwarder · same owner wallet</dd></div><div><dt>Estimated timing</dt><dd>Not returned by current provider</dd></div><div><dt>Quote identity</dt><dd id="bridge-quote-id">Not returned</dd></div><div><dt>Expected steps</dt><dd>Allowance check → approval if needed → source burn → attestation → destination mint</dd></div><div><dt>Estimate window</dt><dd id="bridge-time">—</dd></div></dl><div class="trade-review" id="bridge-review-panel" hidden><strong>Review bridge</strong><p id="bridge-review-details"></p><p id="bridge-review-scope">Same-wallet USDC up to 0.5 USDC for this controlled release. Existing Circle bridge allowance must be cleared before this attempt. A source attempt is never automatically retried.</p></div><div class="trade-review" id="bridge-proof-result" hidden><strong>Bridge transaction status</strong><p id="bridge-proof-source">Source: awaiting Circle result</p><p id="bridge-proof-attestation">Attestation: awaiting Circle result</p><p id="bridge-proof-destination">Destination: awaiting Circle result</p><p id="bridge-proof-diagnostic">Diagnostic: awaiting Circle result</p></div></article>
     </section>`;
   root.replaceChildren(page);
 
@@ -105,11 +115,19 @@ export function mountTrade(root: HTMLElement): void {
   page.querySelectorAll<HTMLInputElement | HTMLSelectElement>("#trade-swap input, #trade-swap select").forEach(input => input.addEventListener("input", invalidateSwap));
   page.querySelectorAll<HTMLInputElement | HTMLSelectElement>("#trade-bridge input, #trade-bridge select").forEach(input => input.addEventListener("input", () => { if (input.id === "bridge-recipient") recipientTouched = true; invalidateBridge(); }));
 
+  $(page, "#bridge-from").addEventListener("change", () => {
+    const to = $(page, "#bridge-to") as HTMLSelectElement; const previous = to.value;
+    const options = destinationsFor($(page, "#bridge-from").value as BridgeNetwork);
+    to.replaceChildren(...options.map(name => Object.assign(document.createElement("option"), { textContent: name })));
+    if (options.includes(previous as BridgeNetwork)) to.value = previous;
+    invalidateBridge(); void refreshBalances();
+  });
+
   const quoteGate = (sourceChain = "Arc"): { binding?: WalletBinding; error?: string } => {
     const binding = currentBinding();
     if (!binding) return { error: `Connect and verify a wallet at ${appPath("/entry")} before requesting a quote.` };
     const expected = BRIDGE_CHAINS[sourceChain as BridgeChain]?.chainIdHex;
-    if (!expected || binding.chainId.toLowerCase() !== expected) return { error: `Switch to ${sourceChain} manually in the selected wallet before requesting this source-chain quote. ArcFX will not switch networks automatically.` };
+    if (!expected || binding.chainId.toLowerCase() !== expected) return { error: switchWalletMessage(sourceChain as BridgeNetwork) };
     return { binding };
   };
 
@@ -188,16 +206,21 @@ export function mountTrade(root: HTMLElement): void {
 
   $(page, "#bridge-quote").addEventListener("click", async () => {
     invalidateBridge(); const request = bridgeRequest; const message = $(page, "#bridge-message"); text(message, "Checking the selected route with Circle…");
-    const form = bridgeForm(); const valid = validateBridgeForm(form); const gate = quoteGate(form.source);
+    const form = bridgeForm(); const valid = validateBridgeForm(form); const route = bridgeRoute(form.source, form.destination);
+    if (!route || route.status === "hidden") { text(message, "ArcFX does not offer this bridge route."); return; }
+    const gate = quoteGate(form.source);
     if (valid.error || gate.error || !gate.binding || !capability?.bridge) { text(message, valid.error || gate.error || "Circle does not advertise Arc Mainnet bridges in this SDK."); return; }
     try {
       const result = await (await circleFor(gate.binding.provider as Eip1193Provider)).estimateBridge({ sourceChain: BRIDGE_CHAINS[form.source].sdk, destinationChain: BRIDGE_CHAINS[form.destination].sdk, recipient: form.recipient.trim(), amount: form.amount.trim() });
       if (request !== bridgeRequest || !sameBinding(currentBinding(), gate.binding) || JSON.stringify(bridgeForm()) !== JSON.stringify(form)) throw new Error("The selected wallet or bridge request changed. Request a fresh estimate.");
       const allFees = [...result.fees, ...result.gasFees];
       bridgeQuote = createBridgeSnapshot({ binding: gate.binding, form, amountAtomic: valid.amountAtomic!, route: result.route, quoteId: result.quoteId, estimatedReceive: result.amount, fees: allFees, warnings: result.warnings, sdk: CIRCLE_SDK_ID });
-      const maxFeeIssue = bridgeAmountMaxFeeIssue(result.amount, result.maxFee);
-      $(page, "#bridge-output").hidden = false; text($(page, "#bridge-receive"), `Bridge amount ${result.amount} USDC`); text($(page, "#bridge-route"), result.route); text($(page, "#bridge-fees"), feeText(result.fees)); text($(page, "#bridge-gas-fees"), feeText(result.gasFees)); text($(page, "#bridge-quote-id"), result.quoteId || "Not returned"); text($(page, "#bridge-time"), `${time(bridgeQuote.createdAt)} · refresh after ${time(bridgeQuote.validUntil)}`); $(page, "#bridge-review").disabled = Boolean(maxFeeIssue); text(message, maxFeeIssue || (result.warnings.length ? `Estimate ready with provider warning: ${result.warnings.join(" · ")}` : "Read-only route estimate ready. It expires locally after 60 seconds."));
-      text($(page, "#bridge-review-details"), `Arc → Base · ${form.amount} USDC · wallet ${gate.binding.account} · destination ${form.recipient.trim()} · Arc Mainnet / 5042 · service fees ${feeText(result.fees)} · approval/burn gas ${feeText(result.gasFees)} · effective maximum burn fee ${result.maxFee ?? "unavailable"} USDC · net destination amount not returned by Circle estimate · expires ${time(bridgeQuote.validUntil)}.`);
+      // Quote-only routes still show Circle's real figures, but never become reviewable.
+      const reviewIssue = route.status === "quote-only" ? routeExecutionIssue(route, "local") : bridgeAmountMaxFeeIssue(result.amount, result.maxFee);
+      const delivered = minimumDelivered(result.amount, result.maxFee);
+      const source = BRIDGE_NETWORKS[form.source];
+      $(page, "#bridge-output").hidden = false; text($(page, "#bridge-receive"), `Bridge amount ${result.amount} USDC`); text($(page, "#bridge-route"), result.route); text($(page, "#bridge-fees"), serviceFeeText(result.fees, result.maxFee)); text($(page, "#bridge-gas-fees"), `${sourceGasText(form.source, result.gasFees)} · ${destinationMintText(form.destination, result.gasFees)}`); text($(page, "#bridge-min"), delivered ? `${delivered} USDC (bridge amount − maximum bridge fee; the actual fee can be lower)` : "Not calculable from this estimate"); text($(page, "#bridge-quote-id"), result.quoteId || "Not returned"); text($(page, "#bridge-time"), `${time(bridgeQuote.createdAt)} · refresh after ${time(bridgeQuote.validUntil)}`); $(page, "#bridge-review").disabled = Boolean(reviewIssue); text(message, reviewIssue || (result.warnings.length ? `Estimate ready with provider warning: ${result.warnings.join(" · ")}` : "Read-only route estimate ready. It expires locally after 60 seconds."));
+      text($(page, "#bridge-review-details"), `${form.source} → ${form.destination} · ${form.amount} USDC · wallet ${gate.binding.account} on ${source.label} / ${source.chainId} (CCTP domain ${source.cctpDomain}) · destination ${form.recipient.trim()} on ${BRIDGE_NETWORKS[form.destination].label} (CCTP domain ${BRIDGE_NETWORKS[form.destination].cctpDomain}) · service fees ${serviceFeeText(result.fees, result.maxFee)} · ${sourceGasText(form.source, result.gasFees)} · minimum delivered ${delivered ?? "not calculable"} USDC · expires ${time(bridgeQuote.validUntil)}.`);
     } catch (error: any) { if (request === bridgeRequest) text(message, `Route unavailable: ${String(error?.message || error)}`); }
   });
   $(page, "#bridge-review").addEventListener("click", () => {
@@ -205,11 +228,14 @@ export function mountTrade(root: HTMLElement): void {
     if (!current) { invalidateBridge(); text($(page, "#bridge-message"), "This estimate is stale or the wallet context changed. Request a fresh estimate."); return; }
     $(page, "#bridge-review-panel").hidden = false;
     const binding = currentBinding(); const form = bridgeForm(); const proof = $(page, "#bridge-local-proof");
-    const executable = Boolean(binding && !bridgeProofSourceStarted && bridgeQuote!.amountAtomic <= PROOF_MAX_BRIDGE_USDC_ATOMIC
-      && form.source === "Arc" && form.destination === "Base" && form.recipient.trim().toLowerCase() === binding.account.toLowerCase());
-    if (proof && executable) proof.disabled = false;
-    $(page, "#bridge-confirm").disabled = !ARCFX_MAINNET_TRADE_EXECUTION_ENABLED || !executable;
-    if ($(page, "#bridge-confirm").disabled) text($(page, "#bridge-message"), "Controlled execution currently supports Arc → Base, same-wallet USDC up to 0.5 USDC; this route remains estimate-only.");
+    const route = bridgeRoute(form.source, form.destination);
+    const bounded = Boolean(binding && !bridgeProofSourceStarted && bridgeQuote!.amountAtomic <= PROOF_MAX_BRIDGE_USDC_ATOMIC
+      && form.recipient.trim().toLowerCase() === binding.account.toLowerCase());
+    const productionIssue = routeExecutionIssue(route, "production");
+    if (proof && bounded && !routeExecutionIssue(route, "local")) proof.disabled = false;
+    $(page, "#bridge-confirm").disabled = !ARCFX_MAINNET_TRADE_EXECUTION_ENABLED || !bounded || Boolean(productionIssue);
+    text($(page, "#bridge-review-scope"), `${form.source} → ${form.destination}: same-wallet USDC up to 0.5 USDC for this controlled release. Your wallet must stay on ${form.source}. Existing Circle bridge allowance must be cleared before this attempt. A source attempt is never automatically retried.`);
+    if ($(page, "#bridge-confirm").disabled) text($(page, "#bridge-message"), productionIssue || "Controlled execution requires same-wallet USDC up to 0.5 USDC; this estimate remains read-only.");
   });
 
   const runBridge = async (action: HTMLButtonElement, production: boolean) => {
@@ -219,21 +245,23 @@ export function mountTrade(root: HTMLElement): void {
     if (!bridgeQuote || !binding || !bridgeSnapshotIsCurrent(bridgeQuote, form, binding) || binding.provider !== bridgeQuote.binding.provider) {
       invalidateBridge(); text($(page, "#bridge-message"), "The reviewed estimate or selected wallet changed. Request and review a fresh estimate."); return;
     }
-    if (bridgeQuote.amountAtomic > PROOF_MAX_BRIDGE_USDC_ATOMIC || form.source !== "Arc" || form.destination !== "Base" || form.recipient.trim().toLowerCase() !== binding.account.toLowerCase()) {
-      text($(page, "#bridge-message"), "This controlled bridge is limited to Arc → Base, same-wallet USDC, and 0.5 USDC or less."); return;
+    const routeIssue = routeExecutionIssue(bridgeRoute(form.source, form.destination), production ? "production" : "local");
+    if (routeIssue || bridgeQuote.amountAtomic > PROOF_MAX_BRIDGE_USDC_ATOMIC || form.recipient.trim().toLowerCase() !== binding.account.toLowerCase()) {
+      text($(page, "#bridge-message"), routeIssue || "This controlled bridge is limited to same-wallet USDC and 0.5 USDC or less."); return;
     }
     const reviewedQuote = bridgeQuote;
+    const source = form.source as BridgeNetwork; const destination = form.destination as BridgeNetwork;
     localBridgeProofBusy = true; action.disabled = true;
-    text($(page, "#bridge-message"), "Checking a fresh Arc → Base estimate, selected wallet, and native gas reserve before any wallet prompt…");
+    text($(page, "#bridge-message"), `Checking a fresh ${source} → ${destination} estimate, selected wallet, allowance, and ${source} gas reserve before any wallet prompt…`);
     const sourceEvents = new Set<string>();
     const showObservation = (observation: any, originalBridgeErrorDiagnostic?: any) => {
       if (!observation) return;
       $(page, "#bridge-proof-result").hidden = false;
       const sourceHashes = [...new Set([...(observation.sourceTxHashes || []), ...sourceEvents])];
-      if (sourceHashes.length) showTransactions($(page, "#bridge-proof-source"), "Source", sourceHashes, "Arc");
+      if (sourceHashes.length) showTransactions($(page, "#bridge-proof-source"), "Source", sourceHashes, source);
       else text($(page, "#bridge-proof-source"), `Source: ${observation.state || "stopped"}${observation.errorState ? ` (${observation.errorState})` : ""}; Circle returned no source transaction hash.`);
       text($(page, "#bridge-proof-attestation"), `Attestation: ${observation.attestationState || "not returned"}`);
-      if (observation.destinationTxHashes?.length) showTransactions($(page, "#bridge-proof-destination"), `Destination (${observation.destinationState})`, observation.destinationTxHashes, "Base");
+      if (observation.destinationTxHashes?.length) showTransactions($(page, "#bridge-proof-destination"), `Destination (${observation.destinationState})`, observation.destinationTxHashes, destination);
       else text($(page, "#bridge-proof-destination"), `Destination: ${observation.destinationState || "not returned"}`);
       const original = originalBridgeErrorDiagnostic || observation.originalError;
       text($(page, "#bridge-proof-diagnostic"), `Diagnostic: state ${observation.state}; provider ${observation.provider}; ${observation.sourceChain} → ${observation.destinationChain}; steps ${observation.steps.map((step: any) => `${step.name}:${step.state}:${step.attempted ? "attempted" : "not-attempted"}${step.errorCategory ? `:${step.errorCategory}` : ""}${step.errorCode ? `:${step.errorCode}` : ""}${step.errorMessage ? `:${step.errorMessage}` : ""}`).join(" · ") || "none"}${observation.errorState ? `; error ${observation.errorState}` : ""}${observation.errorCode ? `:${observation.errorCode}` : ""}${observation.errorMessage ? `:${observation.errorMessage}` : ""}${original ? `; Original Circle error: name ${original.name || "not returned"}; code ${original.code || "not returned"}; message ${original.message || "not returned"}; shortMessage ${original.shortMessage || "not returned"}; reason ${original.reason || "not returned"}; details ${original.details || "not returned"}; cause ${original.cause.join(" | ") || "not returned"}; keys ${original.keys.join(", ") || "none"}` : ""}`);
@@ -243,14 +271,14 @@ export function mountTrade(root: HTMLElement): void {
       if (bridgeQuote !== reviewedQuote || !bridgeSnapshotIsCurrent(reviewedQuote, bridgeForm(), currentBinding())) throw new Error("The reviewed bridge estimate or wallet changed. Request a fresh estimate.");
       $(page, "#bridge-proof-result").hidden = false;
       text($(page, "#bridge-proof-source"), "Source: pending wallet/Circle confirmation; do not start another bridge.");
-      const result = await proof.executeArcToBaseUsdc({
-        account: binding.account, amount: form.amount.trim(), expiresAt: reviewedQuote.validUntil,
+      const result = await proof.executeBridgeUsdc({
+        source, destination, account: binding.account, amount: form.amount.trim(), expiresAt: reviewedQuote.validUntil,
         reviewed: { route: reviewedQuote.route, amount: reviewedQuote.estimatedReceive, sourceChain: form.source, destinationChain: form.destination, recipient: form.recipient.trim(), maxFee: null, fees: reviewedQuote.fees.filter(fee => !fee.network), gasFees: reviewedQuote.fees.filter(fee => Boolean(fee.network)), warnings: reviewedQuote.warnings },
         onSourceSubmissionStart: () => { bridgeProofSourceStarted = true; },
         onSourceTransaction: (kind, hash) => {
           sourceEvents.add(hash);
           $(page, "#bridge-proof-result").hidden = false;
-          showTransactions($(page, "#bridge-proof-source"), `Source ${kind} submitted`, [hash], "Arc");
+          showTransactions($(page, "#bridge-proof-source"), `Source ${kind} submitted`, [hash], source);
           text($(page, "#bridge-message"), `Source ${kind} submitted. Keep this transaction hash; ArcFX will not retry this bridge.`);
         },
       });
@@ -271,12 +299,23 @@ export function mountTrade(root: HTMLElement): void {
 
   const refreshBalances = async () => {
     const request = ++balanceRequest; const binding = currentBinding();
-    if (!binding || binding.chainId.toLowerCase() !== ARC_MAINNET_CHAIN_ID_HEX || !capability) { text($(page, "#swap-balance"), "Available balance: Arc Mainnet wallet required"); text($(page, "#bridge-balance"), "Source balance: available on Arc when selected"); return; }
+    const bridgeSource = $(page, "#bridge-from").value as BridgeNetwork;
+    if (binding && bridgeSource !== "Arc") {
+      const network = BRIDGE_NETWORKS[bridgeSource];
+      if (binding.chainId.toLowerCase() !== network.chainIdHex) text($(page, "#bridge-balance"), `Source balance: switch wallet to ${bridgeSource} to read it`);
+      else {
+        const browser = new BrowserProvider(binding.provider as any);
+        Promise.all([new Contract(network.usdc, ERC20_BALANCE_ABI, browser).balanceOf(binding.account) as Promise<bigint>, browser.getBalance(binding.account)])
+          .then(([usdc, eth]) => { if (request === balanceRequest) text($(page, "#bridge-balance"), `Source balance: ${formatUsdc(usdc)} USDC on ${bridgeSource} · gas ${formatNative(eth)} ETH`); })
+          .catch(() => { if (request === balanceRequest) text($(page, "#bridge-balance"), "Source balance: read unavailable"); });
+      }
+    }
+    if (!binding || binding.chainId.toLowerCase() !== ARC_MAINNET_CHAIN_ID_HEX || !capability) { text($(page, "#swap-balance"), "Available balance: Arc Mainnet wallet required"); if (bridgeSource === "Arc") text($(page, "#bridge-balance"), "Source balance: available on Arc when selected"); return; }
     try {
       const balances = await readArcBalances(binding.provider as Eip1193Provider, binding.account, capability); if (request !== balanceRequest) return;
       const token = swapForm().tokenIn; const atomic = token === "USDC" ? balances.usdc : balances.eurc;
       text($(page, "#swap-balance"), `Available balance: ${atomic == null ? "unavailable" : `${formatUsdc(atomic)} ${token}`}`);
-      text($(page, "#bridge-balance"), `Source balance: ${formatUsdc(balances.usdc)} USDC`);
+      if (bridgeSource === "Arc") text($(page, "#bridge-balance"), `Source balance: ${formatUsdc(balances.usdc)} USDC`);
       const reserveAtomic = balances.native / NATIVE_PER_ATOMIC;
       text($(page, "#swap-gas"), `Arc native gas balance: ${formatUsdc(reserveAtomic)} USDC equivalent. Keep a reserve; Max is intentionally unavailable.`);
     } catch { if (request === balanceRequest) { text($(page, "#swap-balance"), "Available balance: read unavailable"); text($(page, "#bridge-balance"), "Source balance: read unavailable"); } }

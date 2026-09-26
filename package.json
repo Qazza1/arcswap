@@ -27,6 +27,7 @@
     "test:activity": "node --test script/activity.test.mjs",
     "test:swap-bridge-readonly": "node --test script/swap-bridge-readonly.test.mjs",
     "test:trade-execution": "node --test script/trade-execution.test.mjs",
+    "test:bridge-routes": "node --test script/bridge-routes.test.mjs",
     "test:payer-mainnet": "node --test script/payer-mainnet.test.mjs",
     "test:payer-precision": "node --test script/payer-precision.test.mjs",
     "test:public-shell": "node --test script/public-shell.test.mjs",

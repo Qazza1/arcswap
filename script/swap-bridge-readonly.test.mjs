@@ -7,7 +7,10 @@ const ARC_USDC = "0x3600000000000000000000000000000000000000";
 const OWNER = "0x4F81E3939232815e3C98B124A17BaC75304C82D8";
 const ARC_SWAP_ADAPTER = "0x7FB8c7260b63934d8da38aF902f87ae6e284a845";
 const ARC_BRIDGE_SPENDER = "0xB3FA262d0fB521cc93bE83d87b322b8A23DAf3F0";
-const arc = (patch = {}) => ({ type: "evm", chain: "Arc", name: "Arc", title: "Arc Mainnet", chainId: 5042, isTestnet: false, explorerUrl: "https://explorer.arc.io/tx/{hash}", rpcEndpoints: ["https://rpc.mainnet.arc.io/"], usdcAddress: ARC_USDC, eurcAddress: "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1", cctp: { domain: 26 }, kitContracts: { adapter: ARC_SWAP_ADAPTER, bridge: ARC_BRIDGE_SPENDER }, ...patch });
+const arc = (patch = {}) => ({ type: "evm", chain: "Arc", name: "Arc", title: "Arc Mainnet", chainId: 5042, isTestnet: false, explorerUrl: "https://explorer.arc.io/tx/{hash}", rpcEndpoints: ["https://rpc.mainnet.arc.io/"], usdcAddress: ARC_USDC, eurcAddress: "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1", cctp: { domain: 26, forwarderSupported: { source: false, destination: true } }, kitContracts: { adapter: ARC_SWAP_ADAPTER, bridge: ARC_BRIDGE_SPENDER }, ...patch });
+// The installed SDK registry also lists Base and Ethereum with the same Circle bridge contract.
+const base = () => ({ type: "evm", chain: "Base", chainId: 8453, isTestnet: false, usdcAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", cctp: { domain: 6, forwarderSupported: { source: false, destination: true } }, kitContracts: { adapter: ARC_SWAP_ADAPTER, bridge: ARC_BRIDGE_SPENDER } });
+const ethereum = () => ({ type: "evm", chain: "Ethereum", chainId: 1, isTestnet: false, usdcAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", cctp: { domain: 0, forwarderSupported: { source: false, destination: true } }, kitContracts: { adapter: ARC_SWAP_ADAPTER, bridge: ARC_BRIDGE_SPENDER } });
 const arcTestnet = () => arc({ chain: "Arc_Testnet", title: "Arc Testnet", chainId: 5042002, isTestnet: true, usdcAddress: "0x3600000000000000000000000000000000000000" });
 const source = ({ all = [arc()], swap = [arc()], bridge = [arc()] } = {}) => ({ getSupportedChains: operation => operation === "swap" ? swap : operation === "bridge" ? bridge : all });
 
@@ -66,7 +69,7 @@ function readOnlyHarness() {
   let adapterInput;
   const adapter = { provider };
   const kit = {
-    ...source(),
+    ...source({ bridge: [arc(), base(), ethereum()] }),
     estimateSwap: async params => { await params.from.adapter.provider.request({ method: "eth_accounts" }); return { tokenIn: params.tokenIn, tokenOut: params.tokenOut, amountIn: params.amountIn, chainIn: "Arc", chainOut: "Arc", estimatedOutput: { token: params.tokenOut, amount: "9.95" }, stopLimit: { token: params.tokenOut, amount: "9.90" }, fees: [{ type: "provider", token: "USDC", amount: "0.05" }] }; },
     estimateBridge: async params => { await params.from.adapter.provider.request({ method: "eth_chainId" }); return { token: "USDC", amount: params.amount, source: { address: OWNER, chain: params.from.chain }, destination: { address: OWNER, recipientAddress: params.to.recipientAddress, chain: params.to.chain }, fees: [], gasFees: [] }; },
   };

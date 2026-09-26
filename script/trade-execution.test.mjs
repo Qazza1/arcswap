@@ -6,6 +6,15 @@ import { createServer } from "vite";
 const root = process.cwd();
 const source = Object.fromEntries(["tradeExecutionCore.ts", "tradeExecutionGate.ts", "tradeOperationApi.ts", "circleAppKit.ts", "trade.ts"].map((file) => [file, fs.readFileSync(new URL(`../src/workspace/${file}`, import.meta.url), "utf8")]));
 let server, core, gate, circle;
+// Mirrors the installed SDK bridge registry: Arc, Base and Ethereum share Circle's bridge contract.
+const SPENDER = "0xB3FA262d0fB521cc93bE83d87b322b8A23DAf3F0";
+const ADAPTER = "0x7FB8c7260b63934d8da38aF902f87ae6e284a845";
+const fwd = { source: false, destination: true };
+const registry = () => [
+  { type: "evm", chain: "Arc", name: "Arc", title: "Arc Mainnet", chainId: 5042, isTestnet: false, usdcAddress: "0x3600000000000000000000000000000000000000", cctp: { domain: 26, forwarderSupported: fwd }, kitContracts: { adapter: ADAPTER, bridge: SPENDER } },
+  { type: "evm", chain: "Base", chainId: 8453, isTestnet: false, usdcAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", cctp: { domain: 6, forwarderSupported: fwd }, kitContracts: { adapter: ADAPTER, bridge: SPENDER } },
+  { type: "evm", chain: "Ethereum", chainId: 1, isTestnet: false, usdcAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", cctp: { domain: 0, forwarderSupported: fwd }, kitContracts: { adapter: ADAPTER, bridge: SPENDER } },
+];
 test.before(async () => {
   server = await createServer({ root, server: { middlewareMode: true, hmr: false }, appType: "custom", logLevel: "silent" });
   core = await server.ssrLoadModule("/src/workspace/tradeExecutionCore.ts");
@@ -64,7 +73,7 @@ test("production bridge rejects changed account, chain, and route before source 
   let account = binding.account, chain = "0x13b2", bridges = 0;
   const provider = { request: async ({ method }) => method === "eth_accounts" ? [account] : method === "eth_chainId" ? chain : (() => { throw new Error(`unexpected wallet request ${method}`); })() };
   const arc = { type: "evm", chain: "Arc", chainId: 5042, isTestnet: false, usdcAddress: circle.ARC_MAINNET_USDC, kitContracts: { adapter: "0x7FB8c7260b63934d8da38aF902f87ae6e284a845", bridge: "0xB3FA262d0fB521cc93bE83d87b322b8A23DAf3F0" } };
-  const kit = { getSupportedChains: () => [arc], estimateBridge: async () => ({ amount: "0.1", source: { chain: "Arc" }, destination: { chain: "Base" }, fees: [{ type: "forwarder", token: "USDC", amount: "0.05" }], gasFees: [], warnings: [] }), bridge: async () => { bridges++; throw new Error("source transaction must not run"); } };
+  const kit = { getSupportedChains: () => registry(), estimateBridge: async () => ({ amount: "0.1", source: { chain: "Arc" }, destination: { chain: "Base" }, fees: [{ type: "forwarder", token: "USDC", amount: "0.05" }], gasFees: [], warnings: [] }), bridge: async () => { bridges++; throw new Error("source transaction must not run"); } };
   const client = await circle.createControlledBridgeClient(provider, { kit, createAdapter: async () => ({}) });
   const input = { account: binding.account, amount: "0.1", expiresAt: Date.now() + 60_000, reviewed: { route: "Arc → Base", amount: "0.1", sourceChain: "Arc", destinationChain: "Base", recipient: binding.account, maxFee: "0.05", fees: [{ type: "forwarder", token: "USDC", amount: "0.05" }], gasFees: [], warnings: [] } };
   await assert.rejects(() => client.executeArcToBaseUsdc({ ...input, expiresAt: Date.now() - 1 }), /expired/);
@@ -123,8 +132,9 @@ test("the local bridge seam allows one Arc-to-Base attempt only and fails closed
   assert.match(ui, /`Bridge amount \$\{result\.amount\} USDC`/);
   assert.match(ui, /bridgeQuote!\.amountAtomic <= PROOF_MAX_BRIDGE_USDC_ATOMIC/);
   assert.match(ui, /bridgeQuote\.amountAtomic > PROOF_MAX_BRIDGE_USDC_ATOMIC/);
-  assert.match(proof, /to: \{ chain: "Base", recipientAddress: input\.account, useForwarder: true \}/);
-  assert.match(proof, /\{ chain: "Base", recipientAddress: input\.recipient, useForwarder: true \}/);
+  // Every route: the wallet account is the recipient and Circle's forwarder mints on the destination.
+  assert.match(proof, /to: \{ chain: destinationNetwork\.sdk, recipientAddress: input\.account, useForwarder: true \}/);
+  assert.match(proof, /\{ chain: BRIDGE_NETWORKS\[resolved\.route\.destination\]\.sdk, recipientAddress: input\.recipient, useForwarder: true \}/);
   assert.match(proof, /token: "USDC", config: \{ batchTransactions: false \}/);
   assert.match(proof, /arcMainnetNoSwitchProvider/);
   assert.match(proof, /wallet_switchEthereumChain/);
@@ -180,7 +190,7 @@ test("Circle runtime bridge estimate fees become the exact six-decimal CCTP maxF
   assert.equal(circle.bridgeQuotedMaxFee([{ type: "forwarder", token: "USDC", amount: "not-a-fee" }]), null);
   assert.equal(circle.bridgeQuotedMaxFee([{ type: "forwarder", token: "EURC", amount: "0.05" }]), null);
   const arc = { type: "evm", chain: "Arc", name: "Arc", title: "Arc Mainnet", chainId: 5042, isTestnet: false, usdcAddress: circle.ARC_MAINNET_USDC, kitContracts: { adapter: "0x7FB8c7260b63934d8da38aF902f87ae6e284a845", bridge: "0xB3FA262d0fB521cc93bE83d87b322b8A23DAf3F0" } };
-  const kit = { getSupportedChains: () => [arc], estimateBridge: async () => ({ token: "USDC", amount: "0.5", source: { address: binding.account, chain: "Arc" }, destination: { address: binding.account, chain: "Base" }, fees: runtimeFees, gasFees: [] }) };
+  const kit = { getSupportedChains: () => registry(), estimateBridge: async () => ({ token: "USDC", amount: "0.5", source: { address: binding.account, chain: "Arc" }, destination: { address: binding.account, chain: "Base" }, fees: runtimeFees, gasFees: [] }) };
   const client = await circle.createReadonlyCircleClient({ request: async () => { throw new Error("wallet request is forbidden in this test"); } }, { kit, createAdapter: async () => ({}) });
   const estimate = await client.estimateBridge({ sourceChain: "Arc", destinationChain: "Base", recipient: binding.account, amount: "0.5" });
   assert.equal(estimate.maxFee, "0.055001", "installed SDK result has no top-level maxFee");

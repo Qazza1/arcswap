@@ -27,17 +27,24 @@ test("all Mainnet business pages wait for the shared restored owner session", ()
 });
 
 test("status navigation does not represent Testnet tools as Mainnet execution", () => {
-  for (const label of ["Payment Links", "Swap & Bridge", "Agent Payments"]) {
-    assert.match(shell, new RegExp(`label: "${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^\\n]*status: "TESTNET"`));
-  }
+  // Payment Links remains the legacy Arc Testnet generator; it is unrelated to Mainnet receivables.
+  assert.match(shell, /label: "Payment Links"[^\n]*status: "TESTNET"/);
+  // Step 8F: Swap & Bridge is MAINNET after the Arc treasury bridge route matrix shipped (Arc -> Base
+  // is production executable). Step 7A.3/7A.4: Agent Payments is MAINNET for its owner-authorized
+  // proposal/settlement-preparation flow, even though payment execution itself remains gated.
+  assert.match(shell, /label: "Swap & Bridge"[^\n]*status: "MAINNET"/);
+  assert.match(shell, /label: "Agent Payments"[^\n]*status: "MAINNET"/);
   // Step 7A.1: Send and Multisend / Payouts are LIVE after controlled Mainnet execution was verified on chain.
   assert.match(shell, /label: "Send"[^\n]*status: "LIVE"/);
   assert.match(shell, /label: "Multisend \/ Payouts"[^\n]*status: "LIVE"/);
   assert.match(shell, /label: "Activity"[^\n]*status: "LIVE"/);
   assert.match(shell, /label: "Analytics"[^\n]*status: "LIVE"/);
   assert.doesNotMatch(tools, /Mainnet Payouts execution is not enabled/);
-  assert.match(tools, /Arc Mainnet swap, bridge, and CCTP execution are not enabled/);
-  assert.match(tools, /Mainnet automation is not enabled/);
+  // Step 8F: Arc -> Base bridge execution is enabled, so ArcFX no longer claims swap/bridge/CCTP
+  // execution is blanket-disabled; only the unproven/estimate-only routes remain gated (bridgeRoutes.ts).
+  assert.doesNotMatch(tools, /Arc Mainnet swap, bridge, and CCTP execution are not enabled/);
+  // The legacy x402/EIP-3009 demo's own copy still names what remains gated (agent payment execution).
+  assert.match(tools, /Agent payment and x402 execution remain gated/);
 });
 
 test("the app uses one primary Mainnet indicator and focus-only skip links", () => {
@@ -67,7 +74,10 @@ test("legacy transaction tools remain deliberately Testnet-scoped", () => {
   }
   assert.match(tools, /href: "\/pay"/);
   assert.doesNotMatch(tools, /href: "\/multisend"/, "the authenticated app no longer links out to the legacy Testnet multisend page");
-  assert.match(tools, /href: "\/trade"/);
+  // Step 8F: the authenticated app mounts the Mainnet-native Swap & Bridge module in-app; it no
+  // longer links out to the legacy Testnet trade.html page (trade.html itself remains Testnet-scoped
+  // for anyone who reaches it directly, checked above).
+  assert.doesNotMatch(tools, /href: "\/trade"/, "the authenticated app no longer links out to the legacy Testnet trade page");
   assert.match(tools, /href: "\/agent"/);
 });
 

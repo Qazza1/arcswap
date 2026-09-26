@@ -7,6 +7,7 @@ import { BrowserProvider, Contract } from "ethers";
 import type { Eip1193Provider } from "../shared/wallet";
 import { parseUsdcAmount } from "./mainnetPayments";
 import { requireLocalBridgeProofEnabled, requireLocalSwapProofEnabled, requireTradeExecutionEnabled } from "./tradeExecutionGate";
+import { BRIDGE_NETWORKS, resolveSdkRoute, routeExecutionIssue, sourceGasRequirement, sourceGasReserve, type BridgeNetwork, type SdkChain } from "./bridgeRoutes";
 
 export const CIRCLE_SDK_ID = "@circle-fin/app-kit@1.15.2";
 export const ARC_MAINNET_CHAIN_ID = 5042;
@@ -205,11 +206,12 @@ export async function createReadonlyCircleClient(
     },
     async estimateBridge(input) {
       if (!capability.bridge) throw new Error("Circle SDK does not currently advertise bridges on Arc Mainnet.");
-      const destination = input.sourceChain === "Arc" && input.destinationChain === "Base"
-        ? { chain: "Base", recipientAddress: input.recipient, useForwarder: true }
-        : { adapter, chain: input.destinationChain, recipientAddress: input.recipient };
+      // Every ArcFX route validates against the installed SDK registry and uses Circle's forwarder,
+      // so the destination mint never needs the wallet on the destination chain.
+      const resolved = resolveSdkRoute(kit.getSupportedChains("bridge") as SdkChain[], input.sourceChain, input.destinationChain);
+      const destination = { chain: BRIDGE_NETWORKS[resolved.route.destination].sdk, recipientAddress: input.recipient, useForwarder: true };
       const result = await kit.estimateBridge({
-        from: { adapter, chain: input.sourceChain },
+        from: { adapter, chain: BRIDGE_NETWORKS[resolved.route.source].sdk },
         to: destination,
         amount: input.amount,
         token: "USDC",
@@ -253,12 +255,12 @@ function reviewEquals(left: LocalSwapProofReview, right: LocalSwapProofReview): 
     && left.minimumReceived === right.minimumReceived && JSON.stringify(left.fees) === JSON.stringify(right.fees);
 }
 
-async function assertProofProviderBinding(provider: Eip1193Provider, expectedAccount: string): Promise<void> {
+async function assertProofProviderBinding(provider: Eip1193Provider, expectedAccount: string, expectedChainIdHex = "0x13b2"): Promise<void> {
   const [accounts, chainId] = await Promise.all([
     provider.request({ method: "eth_accounts" }), provider.request({ method: "eth_chainId" }),
   ]);
   if (!Array.isArray(accounts) || String(accounts[0] || "").toLowerCase() !== expectedAccount.toLowerCase()
-      || String(chainId).toLowerCase() !== "0x13b2") {
+      || canonicalChainId(chainId) !== canonicalChainId(expectedChainIdHex)) {
     throw new Error("The selected provider account or network changed. Request a fresh review.");
   }
 }
@@ -459,11 +461,21 @@ function canonicalChainId(value: unknown): string | null {
  * switch and every add-chain request remains fail-closed.
  */
 export function arcMainnetNoSwitchProvider(provider: Eip1193Provider): Eip1193Provider {
+  return noSwitchProvider(provider, ARC_MAINNET_CHAIN_ID_HEX);
+}
+
+/**
+ * The same guard for any source chain. A "switch" is acknowledged only as a verified no-op: the
+ * target equals the wallet's current chain (and, when given, the expected source chain). The wallet
+ * never receives wallet_switchEthereumChain or wallet_addEthereumChain from ArcFX.
+ */
+export function noSwitchProvider(provider: Eip1193Provider, expectedChainIdHex?: string): Eip1193Provider {
+  const expected = expectedChainIdHex === undefined ? null : canonicalChainId(expectedChainIdHex);
   return Object.freeze({ request: async (request: { method: string; params?: unknown[] }) => {
     if (request.method === "wallet_switchEthereumChain") {
       const target = canonicalChainId((request.params?.[0] as { chainId?: unknown } | undefined)?.chainId);
       const current = canonicalChainId(await provider.request({ method: "eth_chainId" }));
-      if (target === ARC_MAINNET_CHAIN_ID_HEX && current === ARC_MAINNET_CHAIN_ID_HEX) return null;
+      if (target && target === current && (expected === null || target === expected)) return null;
       throw new Error("ArcFX bridge never switches the wallet network automatically.");
     }
     if (request.method === "wallet_addEthereumChain") throw new Error("ArcFX bridge never adds or switches the wallet network automatically.");
@@ -471,12 +483,16 @@ export function arcMainnetNoSwitchProvider(provider: Eip1193Provider): Eip1193Pr
   } });
 }
 
+export type BridgeExecutionInput = {
+  account: string; amount: string; reviewed: LocalBridgeProofReview; expiresAt: number; onSourceSubmissionStart?: () => void;
+  onSourceTransaction?: (kind: "approval" | "burn", hash: string) => void;
+};
 export type LocalBridgeProofClient = Readonly<{
   capability: ArcCapability;
-  executeArcToBaseUsdc(input: {
-    account: string; amount: string; reviewed: LocalBridgeProofReview; expiresAt: number; onSourceSubmissionStart?: () => void;
-    onSourceTransaction?: (kind: "approval" | "burn", hash: string) => void;
-  }): Promise<LocalBridgeProofResult>;
+  /** Any route the ArcFX matrix marks executable (production also requires a proven route). */
+  executeBridgeUsdc(input: BridgeExecutionInput & { source: BridgeNetwork; destination: BridgeNetwork }): Promise<LocalBridgeProofResult>;
+  /** The original proven route, kept as a thin alias. */
+  executeArcToBaseUsdc(input: BridgeExecutionInput): Promise<LocalBridgeProofResult>;
 }>;
 
 /**
@@ -496,34 +512,46 @@ export async function createLocalBridgeProofClient(
   const kit = dependencies.kit || new AppKit() as AppKitLocalBridgeSurface;
   const capability = discoverArcMainnetCapabilities(kit);
   if (!capability.bridge) throw new Error("Circle SDK does not currently advertise bridging from Arc Mainnet.");
-  const sourceOnlyProvider = arcMainnetNoSwitchProvider(provider);
-  const adapter = dependencies.createAdapter
-    ? await dependencies.createAdapter({ provider: sourceOnlyProvider })
-    : await createViemAdapterFromProvider({ provider: sourceOnlyProvider as any });
-  return Object.freeze({
-    capability,
-    async executeArcToBaseUsdc(input) {
+  const executeBridgeUsdc: LocalBridgeProofClient["executeBridgeUsdc"] = async (input) => {
       if (!Number.isFinite(input.expiresAt) || Date.now() >= input.expiresAt) throw new Error("The reviewed bridge estimate expired. Request and review a fresh estimate.");
+      // The route must be offered, validated against the installed SDK registry (canonical USDC,
+      // CCTP domain, Circle bridge spender, destination forwarder), and allowed in this mode.
+      const resolved = resolveSdkRoute(kit.getSupportedChains("bridge") as SdkChain[], input.source, input.destination);
+      const routeIssue = routeExecutionIssue(resolved.route, mode);
+      if (routeIssue) throw new Error(routeIssue);
+      const source = BRIDGE_NETWORKS[resolved.route.source];
+      const destinationNetwork = BRIDGE_NETWORKS[resolved.route.destination];
       const parsed = parseUsdcAmount(input.amount);
       if (!parsed.ok || parsed.value > PROOF_MAX_BRIDGE_USDC_ATOMIC) throw new Error("Bridge amount must be greater than zero and no more than 0.5 USDC.");
-      await assertProofProviderBinding(provider, input.account);
+      await assertProofProviderBinding(provider, input.account, source.chainIdHex);
+      const sourceOnlyProvider = noSwitchProvider(provider, source.chainIdHex);
+      const adapter = dependencies.createAdapter
+        ? await dependencies.createAdapter({ provider: sourceOnlyProvider })
+        : await createViemAdapterFromProvider({ provider: sourceOnlyProvider as any });
       const params = {
-        from: { adapter, chain: capability.chainIdentifier },
-        to: { chain: "Base", recipientAddress: input.account, useForwarder: true },
+        from: { adapter, chain: source.sdk },
+        to: { chain: destinationNetwork.sdk, recipientAddress: input.account, useForwarder: true },
         amount: input.amount, token: "USDC", config: { batchTransactions: false },
       };
-      const freshReview = bridgeReview(await kit.estimateBridge(params), input.amount, capability.chainIdentifier, "Base", input.account);
+      const freshReview = bridgeReview(await kit.estimateBridge(params), input.amount, source.sdk, destinationNetwork.sdk, input.account);
       const freshIssue = bridgeProofFreshEstimateIssue(freshReview);
       if (!bridgeReviewEquals(input.reviewed, freshReview)) throw new Error(freshIssue || "The bridge route, amount, recipient, or warnings changed. Review the fresh estimate and explicitly confirm again.");
       const browser = new BrowserProvider(provider as any);
       const [nativeBalance, existingAllowance] = await Promise.all([
         browser.getBalance(input.account),
-        new Contract(ARC_MAINNET_USDC, ERC20_ALLOWANCE_ABI, browser).allowance(input.account, capability.bridgeSpenderAddress) as Promise<bigint>,
+        new Contract(resolved.sourceUsdc, ERC20_ALLOWANCE_ABI, browser).allowance(input.account, resolved.spender) as Promise<bigint>,
       ]);
       const allowanceIssue = bridgeExistingAllowanceIssue(existingAllowance);
       if (allowanceIssue) throw new Error(allowanceIssue);
-      if (nativeBalance < LOCAL_SWAP_PROOF_NATIVE_GAS_RESERVE) throw new Error("Native Arc gas reserve is below the bridge minimum.");
-      await assertProofProviderBinding(provider, input.account);
+      if (source.sdk === "Arc") {
+        if (nativeBalance < LOCAL_SWAP_PROOF_NATIVE_GAS_RESERVE) throw new Error("Native Arc gas reserve is below the bridge minimum.");
+      } else {
+        // Base/Ethereum gas is paid in ETH: require twice Circle's own approve + burn estimate.
+        const estimate = sourceGasRequirement(freshReview.gasFees, resolved.route.source);
+        if (estimate == null) throw new Error(`Circle returned no usable ${source.label} approve/burn gas estimate; ArcFX will not start this bridge.`);
+        if (nativeBalance < sourceGasReserve(estimate)) throw new Error(`${source.label} ETH balance is below twice Circle's approve + burn gas estimate.`);
+      }
+      await assertProofProviderBinding(provider, input.account, source.chainIdHex);
       if (Date.now() >= input.expiresAt) throw new Error("The reviewed bridge estimate expired before wallet confirmation. Request a fresh estimate.");
       input.onSourceSubmissionStart?.();
       const onApprove = (payload: any) => { const hash = String(payload?.values?.txHash || ""); if (/^0x[0-9a-fA-F]{64}$/.test(hash)) input.onSourceTransaction?.("approval", hash); };
@@ -554,7 +582,11 @@ export async function createLocalBridgeProofClient(
         kit.off?.("bridge.approve", onApprove);
         kit.off?.("bridge.burn", onBurn);
       }
-    },
+  };
+  return Object.freeze({
+    capability,
+    executeBridgeUsdc,
+    executeArcToBaseUsdc: (input: BridgeExecutionInput) => executeBridgeUsdc({ ...input, source: "Arc", destination: "Base" }),
   });
 }
 
