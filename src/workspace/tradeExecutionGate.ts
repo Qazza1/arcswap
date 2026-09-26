@@ -4,7 +4,7 @@
  * future release must change this reviewed constant alongside its execution
  * adapter policy; environment configuration alone is never an authorization.
  */
-export const ARCFX_MAINNET_TRADE_EXECUTION_ENABLED = false as const;
+export const ARCFX_MAINNET_TRADE_EXECUTION_ENABLED = true as const;
 export const TRADE_EXECUTION_DISABLED_REASON = "Mainnet trade execution is not enabled in this release.";
 
 /**

@@ -17,28 +17,84 @@ test.after(async () => { await server?.close(); });
 const binding = { provider: {}, providerId: "eip6963.arcfx-pinned", account: "0x4F81E3939232815e3C98B124A17BaC75304C82D8", chainId: "0x13b2" };
 const intent = () => ({ idempotencyKey: "trade-execution-idempotency-key", kind: "swap", binding, sourceNetwork: "arc-mainnet", sourceChainId: 5042, sourceToken: "USDC", destinationToken: "EURC", amountAtomic: "1000000", minimumOutputAtomic: "990000", slippageBps: 50, quoteSnapshot: { route: "Arc" }, quoteExpiresAt: Date.now() + 60_000 });
 
-test("Step 8C execution gate remains off and no UI execution method is reachable", () => {
-  assert.equal(gate.ARCFX_MAINNET_TRADE_EXECUTION_ENABLED, false);
-  assert.throws(() => core.assertExecutionRouteEnabled(), /not enabled/);
-  assert.match(source["trade.ts"], /Execution gated off/);
-  assert.doesNotMatch(source["trade.ts"], />\s*(Approve|Swap now|Bridge now|Execute swap|Execute bridge)\s*</i);
+test("Step 8E production gate exposes explicit reviewed wallet confirmations only", () => {
+  assert.equal(gate.ARCFX_MAINNET_TRADE_EXECUTION_ENABLED, true);
+  assert.doesNotThrow(() => core.assertExecutionRouteEnabled());
+  assert.match(source["trade.ts"], /Confirm swap in wallet/);
+  assert.match(source["trade.ts"], /Confirm bridge in wallet/);
+  assert.match(source["trade.ts"], /swapSnapshotIsCurrent\(swapQuote, form, binding\)/);
+  assert.match(source["trade.ts"], /bridgeSnapshotIsCurrent\(bridgeQuote, form, binding\)/);
+  assert.match(source["trade.ts"], /if \(localProofBusy\) return/);
+  assert.match(source["trade.ts"], /if \(localBridgeProofBusy\) return/);
   assert.doesNotMatch(source["tradeExecutionCore.ts"] + source["tradeOperationApi.ts"], /\.swap\(|\.bridge\(|retryBridge|eth_sendTransaction|wallet_sendCalls|window\.ethereum/);
 });
 
-test("Step 8D.1 proof is a dev-only opt-in and cannot enable the production execution gate", () => {
-  assert.equal(gate.ARCFX_MAINNET_TRADE_EXECUTION_ENABLED, false);
+test("Step 8D.1 local proof remains a separate dev-only opt-in", () => {
   assert.equal(gate.LOCAL_SWAP_PROOF_ENABLED, false);
   assert.throws(() => gate.requireLocalSwapProofEnabled(), /local Vite server/);
   assert.match(source["tradeExecutionGate.ts"], /import\.meta\.env\.DEV/);
   assert.match(source["tradeExecutionGate.ts"], /VITE_ARCFX_LOCAL_SWAP_PROOF/);
 });
 
-test("Step 8D.2 bridge proof is independently dev-only and cannot enable the production execution gate", () => {
-  assert.equal(gate.ARCFX_MAINNET_TRADE_EXECUTION_ENABLED, false);
+test("Step 8D.2 local bridge proof remains a separate dev-only opt-in", () => {
   assert.equal(gate.LOCAL_BRIDGE_PROOF_ENABLED, false);
   assert.throws(() => gate.requireLocalBridgeProofEnabled(), /local Vite server/);
   assert.match(source["tradeExecutionGate.ts"], /VITE_ARCFX_LOCAL_BRIDGE_PROOF/);
   assert.match(source["tradeExecutionGate.ts"], /import\.meta\.env\.DEV/);
+});
+
+test("production swap rejects changed account, chain, and quote before any wallet transaction", async () => {
+  let account = binding.account, chain = "0x13b2", swaps = 0;
+  const provider = { request: async ({ method }) => method === "eth_accounts" ? [account] : method === "eth_chainId" ? chain : (() => { throw new Error(`unexpected wallet request ${method}`); })() };
+  const arc = { type: "evm", chain: "Arc", chainId: 5042, isTestnet: false, usdcAddress: circle.ARC_MAINNET_USDC, kitContracts: { adapter: "0x7FB8c7260b63934d8da38aF902f87ae6e284a845", bridge: "0xB3FA262d0fB521cc93bE83d87b322b8A23DAf3F0" } };
+  const kit = { getSupportedChains: () => [arc], estimateSwap: async () => ({ chainIn: "Arc", chainOut: "Arc", estimatedOutput: { amount: "0.009" }, stopLimit: { amount: "0.008" }, fees: [] }), swap: async () => { swaps++; throw new Error("wallet transaction must not run"); } };
+  const client = await circle.createControlledSwapClient(provider, { kit, createAdapter: async () => ({}) });
+  const input = { account: binding.account, amount: "0.01", slippageBps: 50, expiresAt: Date.now() + 60_000, reviewed: { route: "Arc → Arc", estimatedOutput: "0.009", minimumReceived: "0.008", fees: [] } };
+  await assert.rejects(() => client.executeExactUsdcToEurc({ ...input, expiresAt: Date.now() - 1 }), /expired/);
+  account = "0x0000000000000000000000000000000000000001";
+  await assert.rejects(() => client.executeExactUsdcToEurc(input), /account or network changed/);
+  account = binding.account; chain = "0x1";
+  await assert.rejects(() => client.executeExactUsdcToEurc(input), /account or network changed/);
+  chain = "0x13b2";
+  await assert.rejects(() => client.executeExactUsdcToEurc({ ...input, reviewed: { ...input.reviewed, minimumReceived: "0.01" } }), /quote changed/);
+  assert.equal(swaps, 0);
+});
+
+test("production bridge rejects changed account, chain, and route before source submission", async () => {
+  let account = binding.account, chain = "0x13b2", bridges = 0;
+  const provider = { request: async ({ method }) => method === "eth_accounts" ? [account] : method === "eth_chainId" ? chain : (() => { throw new Error(`unexpected wallet request ${method}`); })() };
+  const arc = { type: "evm", chain: "Arc", chainId: 5042, isTestnet: false, usdcAddress: circle.ARC_MAINNET_USDC, kitContracts: { adapter: "0x7FB8c7260b63934d8da38aF902f87ae6e284a845", bridge: "0xB3FA262d0fB521cc93bE83d87b322b8A23DAf3F0" } };
+  const kit = { getSupportedChains: () => [arc], estimateBridge: async () => ({ amount: "0.1", source: { chain: "Arc" }, destination: { chain: "Base" }, fees: [{ type: "forwarder", token: "USDC", amount: "0.05" }], gasFees: [], warnings: [] }), bridge: async () => { bridges++; throw new Error("source transaction must not run"); } };
+  const client = await circle.createControlledBridgeClient(provider, { kit, createAdapter: async () => ({}) });
+  const input = { account: binding.account, amount: "0.1", expiresAt: Date.now() + 60_000, reviewed: { route: "Arc → Base", amount: "0.1", sourceChain: "Arc", destinationChain: "Base", recipient: binding.account, maxFee: "0.05", fees: [{ type: "forwarder", token: "USDC", amount: "0.05" }], gasFees: [], warnings: [] } };
+  await assert.rejects(() => client.executeArcToBaseUsdc({ ...input, expiresAt: Date.now() - 1 }), /expired/);
+  account = "0x0000000000000000000000000000000000000001";
+  await assert.rejects(() => client.executeArcToBaseUsdc(input), /account or network changed/);
+  account = binding.account; chain = "0x1";
+  await assert.rejects(() => client.executeArcToBaseUsdc(input), /account or network changed/);
+  chain = "0x13b2";
+  await assert.rejects(() => client.executeArcToBaseUsdc({ ...input, reviewed: { ...input.reviewed, route: "Arc → Ethereum" } }), /route, amount, recipient, or warnings changed/);
+  assert.equal(bridges, 0);
+});
+
+test("bridge source hashes are surfaced from Circle events without an automatic second attempt", () => {
+  assert.match(source["circleAppKit.ts"], /kit\.on\?\.\("bridge\.approve", onApprove\)/);
+  assert.match(source["circleAppKit.ts"], /kit\.on\?\.\("bridge\.burn", onBurn\)/);
+  assert.match(source["circleAppKit.ts"], /input\.onSourceTransaction\?\.\("burn", hash\)/);
+  assert.match(source["circleAppKit.ts"], /kit\.off\?\.\("bridge\.burn", onBurn\)/);
+  assert.match(source["trade.ts"], /sourceEvents\.add\(hash\)/);
+  assert.match(source["trade.ts"], /showTransactions\(\$\(page, "#bridge-proof-source"\)/);
+  assert.doesNotMatch(source["circleAppKit.ts"], /retryBridge|resumeBridge|reAttest/);
+});
+
+test("controlled swap retains the pinned no-switch provider and preserves submitted hashes", () => {
+  const proof = source["circleAppKit.ts"];
+  const ui = source["trade.ts"];
+  assert.match(proof, /const guardedProvider = arcMainnetNoSwitchProvider\(provider\)/);
+  assert.match(proof, /request\.method === "eth_sendTransaction"/);
+  assert.match(proof, /onWalletTransaction\?\.\(String\(response\)\)/);
+  assert.match(ui, /submittedHashes\.add\(hash\)/);
+  assert.match(ui, /Check the linked transaction before any new attempt/);
 });
 
 test("the local proof seam is strictly pinned, capped, freshly quoted, and never bridges or retries", () => {

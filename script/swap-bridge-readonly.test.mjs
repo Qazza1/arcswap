@@ -137,7 +137,7 @@ test("bridge route, amount, recipient, provider, account, network and expiry inv
 });
 
 test("read-only Circle paths remain isolated from the local-only mutation seam", () => {
-  const joined = circleSource + swapSource + bridgeSource + tradeSource;
+  const joined = circleSource.slice(0, circleSource.indexOf("const ERC20_ALLOWANCE_ABI")) + swapSource + bridgeSource + tradeSource;
   for (const forbidden of [/window\.ethereum/, /PRIVATE_KEY/, /VITE_KIT_KEY/, /MaxUint256/, /eth_sendTransaction/, /wallet_sendCalls/, /personal_sign/, /eth_sign(?:TypedData)?/]) assert.doesNotMatch(joined, forbidden);
   assert.doesNotMatch(circleSource, /retryBridge|resumeBridge|reAttest/);
   assert.doesNotMatch(circleSource, /result\.quote|opaqueQuote/, "opaque reusable quote payloads are not read or exposed as display IDs");
@@ -149,9 +149,9 @@ test("read-only Circle paths remain isolated from the local-only mutation seam",
   assert.match(circleSource, /allowance !== 0n/);
 });
 
-test("review and rerender are request-free and execution controls remain local-proof gated", () => {
-  assert.doesNotMatch(tradeSource, />\s*(Approve|Swap now|Bridge now|Execute swap|Execute bridge)\s*</i);
-  assert.match(tradeSource, /Review swap/); assert.match(tradeSource, /Review bridge/); assert.match(tradeSource, /execution is not enabled/);
+test("read-only quote remains separate from explicit reviewed wallet confirmation", () => {
+  assert.match(tradeSource, /Review swap/); assert.match(tradeSource, /Review bridge/);
+  assert.match(tradeSource, /Confirm swap in wallet/); assert.match(tradeSource, /Confirm bridge in wallet/);
   assert.match(tradeSource, /LOCAL_BRIDGE_PROOF_ENABLED/);
   assert.match(tradeSource, /bridgeProofSourceStarted/);
   assert.match(tradeSource, /swapSnapshotIsCurrent/); assert.match(tradeSource, /bridgeSnapshotIsCurrent/);

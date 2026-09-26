@@ -6,7 +6,7 @@ import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 import { BrowserProvider, Contract } from "ethers";
 import type { Eip1193Provider } from "../shared/wallet";
 import { parseUsdcAmount } from "./mainnetPayments";
-import { requireLocalBridgeProofEnabled, requireLocalSwapProofEnabled } from "./tradeExecutionGate";
+import { requireLocalBridgeProofEnabled, requireLocalSwapProofEnabled, requireTradeExecutionEnabled } from "./tradeExecutionGate";
 
 export const CIRCLE_SDK_ID = "@circle-fin/app-kit@1.15.2";
 export const ARC_MAINNET_CHAIN_ID = 5042;
@@ -163,7 +163,7 @@ type AppKitEstimateSurface = CapabilitySource & {
   estimateBridge(params: any): Promise<any>;
 };
 type AppKitLocalSwapSurface = AppKitEstimateSurface & { swap(params: any): Promise<any> };
-type AppKitLocalBridgeSurface = AppKitEstimateSurface & { bridge(params: any): Promise<any> };
+type AppKitLocalBridgeSurface = AppKitEstimateSurface & { bridge(params: any): Promise<any>; on?(action: string, handler: (payload: any) => void): void; off?(action: string, handler: (payload: any) => void): void };
 type AdapterFactory = (input: { provider: Eip1193Provider }) => Promise<any>;
 
 /**
@@ -259,14 +259,15 @@ async function assertProofProviderBinding(provider: Eip1193Provider, expectedAcc
   ]);
   if (!Array.isArray(accounts) || String(accounts[0] || "").toLowerCase() !== expectedAccount.toLowerCase()
       || String(chainId).toLowerCase() !== "0x13b2") {
-    throw new Error("The selected provider account or network changed. Request a fresh local proof review.");
+    throw new Error("The selected provider account or network changed. Request a fresh review.");
   }
 }
 
 export type LocalSwapProofClient = Readonly<{
   capability: ArcCapability;
   executeExactUsdcToEurc(input: {
-    account: string; amount: string; slippageBps: number; reviewed: LocalSwapProofReview;
+    account: string; amount: string; slippageBps: number; reviewed: LocalSwapProofReview; expiresAt: number;
+    onWalletTransaction?: (hash: string) => void;
   }): Promise<LocalSwapProofResult>;
 }>;
 
@@ -341,7 +342,7 @@ export function bridgeAmountMaxFeeIssue(amount: string, maxFee: string | null): 
 }
 
 export function bridgeExistingAllowanceIssue(allowance: bigint): string | null {
-  return allowance === 0n ? null : `Existing Circle bridge allowance must be cleared before starting a new bridge proof. Current allowance: ${formatAtomicUsdc(allowance)} USDC.`;
+  return allowance === 0n ? null : `Existing Circle bridge allowance must be cleared before starting a new bridge. Current allowance: ${formatAtomicUsdc(allowance)} USDC.`;
 }
 
 export function bridgeProofFreshEstimateIssue(fresh: LocalBridgeProofReview): string | null {
@@ -349,8 +350,8 @@ export function bridgeProofFreshEstimateIssue(fresh: LocalBridgeProofReview): st
   if (maxFeeIssue) return maxFeeIssue;
   const feeTotal = freshBridgeServiceFeeTotal(fresh.fees);
   if (feeTotal == null) return "Fresh provider/service/forwarder fee data is invalid.";
-  if (feeTotal > MAX_LOCAL_BRIDGE_SERVICE_FEE_ATOMIC) return `Fresh provider/service/forwarder fees are ${formatAtomicUsdc(feeTotal)} USDC, above the 0.10 USDC local-proof cap.`;
-  if (fresh.warnings.some(warning => /block|error|fail|reject|unsupported|unavailable/i.test(warning))) return "Fresh provider warning blocks this local bridge proof.";
+  if (feeTotal > MAX_LOCAL_BRIDGE_SERVICE_FEE_ATOMIC) return `Fresh provider/service/forwarder fees are ${formatAtomicUsdc(feeTotal)} USDC, above the 0.10 USDC controlled-bridge cap.`;
+  if (fresh.warnings.some(warning => /block|error|fail|reject|unsupported|unavailable/i.test(warning))) return "Fresh provider warning blocks this bridge.";
   return null;
 }
 
@@ -463,9 +464,9 @@ export function arcMainnetNoSwitchProvider(provider: Eip1193Provider): Eip1193Pr
       const target = canonicalChainId((request.params?.[0] as { chainId?: unknown } | undefined)?.chainId);
       const current = canonicalChainId(await provider.request({ method: "eth_chainId" }));
       if (target === ARC_MAINNET_CHAIN_ID_HEX && current === ARC_MAINNET_CHAIN_ID_HEX) return null;
-      throw new Error("ArcFX local bridge proof never switches the wallet network automatically.");
+      throw new Error("ArcFX bridge never switches the wallet network automatically.");
     }
-    if (request.method === "wallet_addEthereumChain") throw new Error("ArcFX local bridge proof never adds or switches the wallet network automatically.");
+    if (request.method === "wallet_addEthereumChain") throw new Error("ArcFX bridge never adds or switches the wallet network automatically.");
     return provider.request(request);
   } });
 }
@@ -473,7 +474,8 @@ export function arcMainnetNoSwitchProvider(provider: Eip1193Provider): Eip1193Pr
 export type LocalBridgeProofClient = Readonly<{
   capability: ArcCapability;
   executeArcToBaseUsdc(input: {
-    account: string; amount: string; reviewed: LocalBridgeProofReview; onSourceSubmissionStart?: () => void;
+    account: string; amount: string; reviewed: LocalBridgeProofReview; expiresAt: number; onSourceSubmissionStart?: () => void;
+    onSourceTransaction?: (kind: "approval" | "burn", hash: string) => void;
   }): Promise<LocalBridgeProofResult>;
 }>;
 
@@ -486,8 +488,10 @@ export type LocalBridgeProofClient = Readonly<{
 export async function createLocalBridgeProofClient(
   provider: Eip1193Provider,
   dependencies: { kit?: AppKitLocalBridgeSurface; createAdapter?: AdapterFactory } = {},
+  mode: "local" | "production" = "local",
 ): Promise<LocalBridgeProofClient> {
-  requireLocalBridgeProofEnabled();
+  if (mode === "local") requireLocalBridgeProofEnabled();
+  else requireTradeExecutionEnabled();
   if (!provider || typeof provider.request !== "function") throw new Error("The selected ArcFX wallet provider is unavailable.");
   const kit = dependencies.kit || new AppKit() as AppKitLocalBridgeSurface;
   const capability = discoverArcMainnetCapabilities(kit);
@@ -499,8 +503,9 @@ export async function createLocalBridgeProofClient(
   return Object.freeze({
     capability,
     async executeArcToBaseUsdc(input) {
+      if (!Number.isFinite(input.expiresAt) || Date.now() >= input.expiresAt) throw new Error("The reviewed bridge estimate expired. Request and review a fresh estimate.");
       const parsed = parseUsdcAmount(input.amount);
-      if (!parsed.ok || parsed.value > PROOF_MAX_BRIDGE_USDC_ATOMIC) throw new Error("Local bridge proof amount must be greater than zero and no more than 0.5 USDC.");
+      if (!parsed.ok || parsed.value > PROOF_MAX_BRIDGE_USDC_ATOMIC) throw new Error("Bridge amount must be greater than zero and no more than 0.5 USDC.");
       await assertProofProviderBinding(provider, input.account);
       const params = {
         from: { adapter, chain: capability.chainIdentifier },
@@ -509,7 +514,7 @@ export async function createLocalBridgeProofClient(
       };
       const freshReview = bridgeReview(await kit.estimateBridge(params), input.amount, capability.chainIdentifier, "Base", input.account);
       const freshIssue = bridgeProofFreshEstimateIssue(freshReview);
-      if (!bridgeReviewEquals(input.reviewed, freshReview)) throw new Error(freshIssue || "The local bridge route, amount, recipient, or warnings changed. Review the fresh estimate and explicitly confirm again.");
+      if (!bridgeReviewEquals(input.reviewed, freshReview)) throw new Error(freshIssue || "The bridge route, amount, recipient, or warnings changed. Review the fresh estimate and explicitly confirm again.");
       const browser = new BrowserProvider(provider as any);
       const [nativeBalance, existingAllowance] = await Promise.all([
         browser.getBalance(input.account),
@@ -517,9 +522,14 @@ export async function createLocalBridgeProofClient(
       ]);
       const allowanceIssue = bridgeExistingAllowanceIssue(existingAllowance);
       if (allowanceIssue) throw new Error(allowanceIssue);
-      if (nativeBalance < LOCAL_SWAP_PROOF_NATIVE_GAS_RESERVE) throw new Error("Native Arc gas reserve is below the local bridge proof minimum.");
+      if (nativeBalance < LOCAL_SWAP_PROOF_NATIVE_GAS_RESERVE) throw new Error("Native Arc gas reserve is below the bridge minimum.");
       await assertProofProviderBinding(provider, input.account);
+      if (Date.now() >= input.expiresAt) throw new Error("The reviewed bridge estimate expired before wallet confirmation. Request a fresh estimate.");
       input.onSourceSubmissionStart?.();
+      const onApprove = (payload: any) => { const hash = String(payload?.values?.txHash || ""); if (/^0x[0-9a-fA-F]{64}$/.test(hash)) input.onSourceTransaction?.("approval", hash); };
+      const onBurn = (payload: any) => { const hash = String(payload?.values?.txHash || ""); if (/^0x[0-9a-fA-F]{64}$/.test(hash)) input.onSourceTransaction?.("burn", hash); };
+      kit.on?.("bridge.approve", onApprove);
+      kit.on?.("bridge.burn", onBurn);
       try {
         const observation = localBridgeProofDiagnostic(await kit.bridge(params));
         if (!/^(success|complete)$/i.test(observation.state) && observation.sourceTxHashes.length === 0) {
@@ -540,6 +550,9 @@ export async function createLocalBridgeProofClient(
           : "Bridge stopped before Circle returned a source transaction. ArcFX will not retry it.");
         Object.assign(stopped, { bridgeProofObservation: observation, originalBridgeErrorDiagnostic });
         throw stopped;
+      } finally {
+        kit.off?.("bridge.approve", onApprove);
+        kit.off?.("bridge.burn", onBurn);
       }
     },
   });
@@ -556,21 +569,31 @@ export async function createLocalBridgeProofClient(
 export async function createLocalSwapProofClient(
   provider: Eip1193Provider,
   dependencies: { kit?: AppKitLocalSwapSurface; createAdapter?: AdapterFactory } = {},
+  mode: "local" | "production" = "local",
 ): Promise<LocalSwapProofClient> {
-  requireLocalSwapProofEnabled();
+  if (mode === "local") requireLocalSwapProofEnabled();
+  else requireTradeExecutionEnabled();
   if (!provider || typeof provider.request !== "function") throw new Error("The selected ArcFX wallet provider is unavailable.");
   const kit = dependencies.kit || new AppKit() as AppKitLocalSwapSurface;
   const capability = discoverArcMainnetCapabilities(kit);
   if (!capability.swap) throw new Error("Circle SDK does not currently advertise swaps on Arc Mainnet.");
+  let onWalletTransaction: ((hash: string) => void) | null = null;
+  const guardedProvider = arcMainnetNoSwitchProvider(provider);
+  const observedProvider: Eip1193Provider = Object.freeze({ request: async (request: { method: string; params?: unknown[] }) => {
+    const response = await guardedProvider.request(request);
+    if (request.method === "eth_sendTransaction" && /^0x[0-9a-fA-F]{64}$/.test(String(response))) onWalletTransaction?.(String(response));
+    return response;
+  } });
   const adapter = dependencies.createAdapter
-    ? await dependencies.createAdapter({ provider })
-    : await createViemAdapterFromProvider({ provider: provider as any });
+    ? await dependencies.createAdapter({ provider: observedProvider })
+    : await createViemAdapterFromProvider({ provider: observedProvider as any });
   return Object.freeze({
     capability,
     async executeExactUsdcToEurc(input) {
+      if (!Number.isFinite(input.expiresAt) || Date.now() >= input.expiresAt) throw new Error("The reviewed swap quote expired. Request and review a fresh quote.");
       const parsed = parseUsdcAmount(input.amount);
-      if (!parsed.ok || parsed.value > PROOF_MAX_USDC_ATOMIC) throw new Error("Local proof amount must be greater than zero and no more than 1 USDC.");
-      if (!Number.isInteger(input.slippageBps) || input.slippageBps < 1 || input.slippageBps > 500) throw new Error("Local proof slippage is invalid.");
+      if (!parsed.ok || parsed.value > PROOF_MAX_USDC_ATOMIC) throw new Error("Swap amount must be greater than zero and no more than 1 USDC.");
+      if (!Number.isInteger(input.slippageBps) || input.slippageBps < 1 || input.slippageBps > 500) throw new Error("Swap slippage is invalid.");
       await assertProofProviderBinding(provider, input.account);
       // Pull a new route immediately before the explicit execution click. Any
       // economic/routing change returns to review rather than submitting it.
@@ -583,7 +606,7 @@ export async function createLocalSwapProofClient(
         estimatedOutput: String(fresh.estimatedOutput?.amount || ""), minimumReceived: String(fresh.stopLimit?.amount || ""),
         fees: Array.isArray(fresh.fees) ? fresh.fees.map((fee: any) => ({ type: String(fee.type || "provider"), token: String(fee.token || ""), amount: fee.amount == null ? null : String(fee.amount), error: Boolean(fee.error) })) : [],
       };
-      if (!reviewEquals(input.reviewed, freshReview)) throw new Error("The local proof quote changed. Review the fresh quote and explicitly confirm again.");
+      if (!reviewEquals(input.reviewed, freshReview)) throw new Error("The swap quote changed. Review the fresh quote and explicitly confirm again.");
       const browser = new BrowserProvider(provider as any);
       const [allowance, nativeBalance] = await Promise.all([
         new Contract(ARC_MAINNET_USDC, ERC20_ALLOWANCE_ABI, browser).allowance(input.account, capability.swapAdapterAddress) as Promise<bigint>,
@@ -592,13 +615,18 @@ export async function createLocalSwapProofClient(
       // Circle Swap Kit's USDC path is increaseAllowance(amount). Require zero
       // existing allowance so the exact requested amount is also the final
       // allowance; do not silently stack a second approval.
-      if (allowance !== 0n) throw new Error("Local proof requires zero existing Circle adapter allowance. Do not stack an approval; revoke it or stop.");
-      if (nativeBalance < LOCAL_SWAP_PROOF_NATIVE_GAS_RESERVE) throw new Error("Native Arc gas reserve is below the local proof minimum.");
+      if (allowance !== 0n) throw new Error("Swap requires zero existing Circle adapter allowance. Do not stack an approval; revoke it or stop.");
+      if (nativeBalance < LOCAL_SWAP_PROOF_NATIVE_GAS_RESERVE) throw new Error("Native Arc gas reserve is below the swap minimum.");
       await assertProofProviderBinding(provider, input.account);
-      const result = await kit.swap({
-        from: { adapter, chain: capability.chainIdentifier }, tokenIn: "USDC", tokenOut: "EURC", amountIn: input.amount,
-        config: { slippageBps: input.slippageBps, allowanceStrategy: "approve", batchTransactions: false },
-      });
+      if (Date.now() >= input.expiresAt) throw new Error("The reviewed swap quote expired before wallet confirmation. Request a fresh quote.");
+      onWalletTransaction = input.onWalletTransaction || null;
+      let result: any;
+      try {
+        result = await kit.swap({
+          from: { adapter, chain: capability.chainIdentifier }, tokenIn: "USDC", tokenOut: "EURC", amountIn: input.amount,
+          config: { slippageBps: input.slippageBps, allowanceStrategy: "approve", batchTransactions: false },
+        });
+      } finally { onWalletTransaction = null; }
       const executed = Array.isArray(result.executedTransactions) ? result.executedTransactions : [];
       const approvalTxHashes = executed
         .filter((item: any) => item?.type === "approval" && /^0x[0-9a-fA-F]{64}$/.test(String(item.txHash || "")))
@@ -612,3 +640,7 @@ export async function createLocalSwapProofClient(
     },
   });
 }
+
+/** Production entry points reuse the proven, bounded Step 8D wallet paths. */
+export const createControlledSwapClient = (provider: Eip1193Provider, dependencies: { kit?: AppKitLocalSwapSurface; createAdapter?: AdapterFactory } = {}) => createLocalSwapProofClient(provider, dependencies, "production");
+export const createControlledBridgeClient = (provider: Eip1193Provider, dependencies: { kit?: AppKitLocalBridgeSurface; createAdapter?: AdapterFactory } = {}) => createLocalBridgeProofClient(provider, dependencies, "production");
